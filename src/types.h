@@ -32,7 +32,7 @@ enum Piece {
     PIECE_COUNT
 };
 
-enum CastlingRights : uint8_t {
+enum CastlingRights {
     NO_CASTLING = 0,
 
     WHITE_00 = 1U,

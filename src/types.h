@@ -7,6 +7,9 @@
 
 
 
+typedef uint64_t Bitboard;
+
+
 enum Color {
     WHITE,
     BLACK,
@@ -27,6 +30,21 @@ enum Piece {
     BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING,
 
     PIECE_COUNT
+};
+
+enum CastlingRights : uint8_t {
+    NO_CASTLING = 0,
+
+    WHITE_00 = 1U,
+    WHITE_000 = WHITE_00 << 1U,
+    BLACK_00 = WHITE_00 << 2U,
+    BLACK_000 = WHITE_00 << 3U,
+
+    KING_SIDE = WHITE_00 | BLACK_00,
+    QUEEN_SIDE = WHITE_000 | BLACK_000,
+    WHITE_CASTLING = WHITE_00 | WHITE_000,
+    BLACK_CASSTLING = BLACK_00 | BLACK_000,
+    ANY_CASTLING = WHITE_00 | WHITE_000 | BLACK_00 | BLACK_000
 };
 
 

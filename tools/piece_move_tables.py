@@ -124,8 +124,18 @@ def print_move_table_bitboards(move_table):
         print()
 
 def print_move_table(move_table):
-    for bitboard in move_table:
-        print(f"{bitboard:#018X}")
+    for square, bitboard in enumerate(move_table):
+        print(f"{bitboard:#018X}", end="")
+
+        # Do not print a comma after the last move table entry.
+        if square != Square.H8.value:
+            print(",", end="")
+
+        # Print newline every eighth square.
+        if square % 8 == 7:
+            print()
+        else:
+            print(" ", end="")
 
 
 def generate_pawn_move_table(color):

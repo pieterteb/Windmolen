@@ -108,6 +108,13 @@ enum Rank {
 };
 static_assert(RANK_COUNT == 8U);
 
+enum Direction {
+    DIRECTION_NORTH = 8,
+    DIRECTION_EAST = 1,
+    DIRECTION_SOUTH = -DIRECTION_NORTH,
+    DIRECTION_WEST = -DIRECTION_EAST
+};
+
 
 
 #endif /* TYPES_H */

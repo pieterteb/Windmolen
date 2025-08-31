@@ -17,6 +17,9 @@ const int file_rank_to_square[FILE_COUNT][RANK_COUNT] = {
     { SQUARE_H1, SQUARE_H2, SQUARE_H3, SQUARE_H4, SQUARE_H5, SQUARE_H6, SQUARE_H7, SQUARE_H8 }
 };
 
+#define SQUARE_MASK(square)             ((Bitboard)1 << (square))
+#define COORDINATE_MASK(file, rank)     (SQUARE_MASK(file_rank_to_square[(file)][(rank)]))
+
 
 
 #endif /* UTILS_H */

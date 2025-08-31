@@ -102,7 +102,7 @@ def print_bitboard(square, bitboard):
     for rank in range(7, -1, -1):
         print(f"{rank + 1}  ", end="")
         for file in range(8):
-            mask = 1 << (8 * rank + file)
+            mask = 1 << (Direction.NORTH.value * rank + Direction.EAST.value * file)
             if bitboard & mask == 0:
                 print(" 0", end="")
             else:

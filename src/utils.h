@@ -6,7 +6,7 @@
 
 
 
-const int file_rank_to_square[FILE_COUNT][RANK_COUNT] = {
+const int coordinates_to_square[FILE_COUNT][RANK_COUNT] = {
     { SQUARE_A1, SQUARE_A2, SQUARE_A3, SQUARE_A4, SQUARE_A5, SQUARE_A6, SQUARE_A7, SQUARE_A8 },
     { SQUARE_B1, SQUARE_B2, SQUARE_B3, SQUARE_B4, SQUARE_B5, SQUARE_B6, SQUARE_B7, SQUARE_B8 },
     { SQUARE_C1, SQUARE_C2, SQUARE_C3, SQUARE_C4, SQUARE_C5, SQUARE_C6, SQUARE_C7, SQUARE_C8 },
@@ -18,7 +18,7 @@ const int file_rank_to_square[FILE_COUNT][RANK_COUNT] = {
 };
 
 #define SQUARE_MASK(square)             ((Bitboard)1 << (square))
-#define COORDINATE_MASK(file, rank)     (SQUARE_MASK(file_rank_to_square[(file)][(rank)]))
+#define COORDINATES_MASK(file, rank)    (SQUARE_MASK(file_rank_to_square[(file)][(rank)]))
 
 
 

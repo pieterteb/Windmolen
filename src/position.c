@@ -7,47 +7,40 @@
 
 
 Position position_from_FEN(const char* fen) {
-    static const int letter_to_piece[] = {
-        ['P'] = PIECE_WHITE_PAWN,
-        ['N'] = PIECE_WHITE_KNIGHT,
-        ['B'] = PIECE_WHITE_BISHOP,
-        ['R'] = PIECE_WHITE_ROOK,
-        ['Q'] = PIECE_WHITE_QUEEN,
-        ['K'] = PIECE_WHITE_KING,
-
-        ['p'] = PIECE_BLACK_PAWN,
-        ['n'] = PIECE_BLACK_KNIGHT,
-        ['b'] = PIECE_BLACK_BISHOP,
-        ['r'] = PIECE_BLACK_ROOK,
-        ['q'] = PIECE_BLACK_QUEEN,
-        ['k'] = PIECE_BLACK_KING
+    static const int piece_map[] = {
+        ['P'] = PIECE_WHITE_PAWN,   ['p'] = PIECE_BLACK_PAWN,
+        ['N'] = PIECE_WHITE_KNIGHT, ['n'] = PIECE_BLACK_KNIGHT,
+        ['B'] = PIECE_WHITE_BISHOP, ['b'] = PIECE_BLACK_BISHOP,
+        ['R'] = PIECE_WHITE_ROOK,   ['r'] = PIECE_BLACK_ROOK,
+        ['Q'] = PIECE_WHITE_QUEEN,  ['q'] = PIECE_BLACK_QUEEN,
+        ['K'] = PIECE_WHITE_KING,   ['k'] = PIECE_BLACK_KING
     };
 
     Position position = { 0 };
     int file = FILE_A;
     int rank = RANK_8;
-    while (*fen != ' ') {
-        if (*fen == '/') {
+
+    /* Board parsing. */
+    for (; *fen != ' '; ++fen) {
+        char c = *fen;
+        if (c == '/') {
             file = FILE_A;
             --rank;
-        } else if (isdigit(*fen)) {
-            file += *fen - '0';
+        } else if (c >= '1' && c <= '8') {
+            file += c - '0';
         } else {
-            position.board[letter_to_piece[(int)*fen]] |= COORDINATES_MASK(file, rank);
-            ++file;
+            position.board[piece_map[(int)c]] |= COORDINATES_MASK(file++, rank);
         }
-        ++fen;
     }
-    ++fen;
+    ++fen; // Skip space.
 
-    position.side_to_move = *fen++ == 'w' ? COLOR_WHITE : COLOR_BLACK;
-    ++fen;
+    /* Side to move. */
+    position.side_to_move = (*fen++ == 'w') ? COLOR_WHITE : COLOR_BLACK;
+    ++fen; // Skip space.
 
-    if (*fen == '-') {
-        position.castling_rights = NO_CASTLING;
-        ++fen;
-    } else {
-        while (*fen != ' ') {
+    /* Castling rights. */
+    if (*fen != '-') {
+        for (; *fen != ' '; ++fen) {
             switch (*fen) {
                 case 'K':
                     position.castling_rights |= WHITE_00;
@@ -61,30 +54,33 @@ Position position_from_FEN(const char* fen) {
                 case 'q':
                     position.castling_rights |= BLACK_000;
                     break;
-                default:
-                    break;
             }
-
-            ++fen;
         }
+    } else {
+        ++fen;
     }
-    ++fen;
+    ++fen; // Skip space.
     
+    /* En passant. */
     if (*fen != '-') {
         file = CHAR_TO_FILE(*fen++);
         rank = CHAR_TO_RANK(*fen++);
-
         position.en_passant = COORDINATES_MASK(file, rank);
     } else {
         ++fen;
     }
-    ++fen;
+    ++fen; // Skip space.
 
-    position.halfmove_clock = *fen++ - '0';
-    if (*fen != ' ') position.halfmove_clock = 10 * position.halfmove_clock + *fen++ - '0';
-    ++fen;
-    
-    position.fullmove_counter = (int)strtol(fen, NULL, 10);
+    /* Halfmove clock. */
+    int h = 0;
+    while (*fen >= '0' && *fen <= '9') h = h * 10 + (*fen++ - '0');
+    position.halfmove_clock = h;
+    ++fen; // Skip space.
+
+    /* Fullmove counter. */
+    h = 0;
+    while (*fen >= '0' && *fen <= '9') h = h * 10 + (*fen++ - '0');
+    position.fullmove_counter = h;
 
     return position;
 }

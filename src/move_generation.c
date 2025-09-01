@@ -1,5 +1,6 @@
 #include "move_generation.h"
-#include "types.h"
+#include "bitboard.h"
+#include "constants.h"
 
 
 

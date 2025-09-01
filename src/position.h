@@ -18,6 +18,7 @@ typedef struct Position {
 
 
 Position position_from_FEN(const char* fen);
+void position_to_FEN(Position* position, char* fen_out);
 
 
 

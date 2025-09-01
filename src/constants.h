@@ -126,6 +126,8 @@ const int coordinates_to_square[FILE_COUNT][RANK_COUNT] = {
 #define SQUARE_MASK(square)             ((Bitboard)1 << (square))
 #define COORDINATES_MASK(file, rank)    (SQUARE_MASK(coordinates_to_square[(file)][(rank)]))
 
+#define FILE_TO_CHAR(file)              ((char)(file) + 'a')
+#define RANK_TO_CHAR(rank)              ((char)(rank) + '1')
 
 
 #endif /* CONSTANTS_H */

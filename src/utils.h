@@ -3,7 +3,7 @@
 
 
 
-static inline int ctzll(unsigned long long x);
+inline int ctzll(unsigned long long x);
 
 
 

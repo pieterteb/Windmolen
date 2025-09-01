@@ -2,7 +2,7 @@
 
 
 
-static inline int ctzll(unsigned long long x) {
+inline int ctzll(unsigned long long x) {
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_ctzll(x);
 #elif defined(_MSC_VER)

@@ -3,8 +3,9 @@ CC = gcc
 CFLAGS = -fdiagnostics-color=always -Wall -Wextra -Werror -Wno-error=unused-result -Wpedantic -Wshadow -Wconversion -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all -D_FORTIFY_SOURCE=2 -O3 -fsanitize=address
 
 # Project files.
-SRC = main.c bitboard.c
+SRC = main.c bitboard.c position.c
 OBJ = $(SRC:.c=.o)
+ASM = $(SRC:.c=.s)
 TARGET = windmolen
 
 # Default target.
@@ -31,7 +32,7 @@ asm:
 # Cleanup build artefacts.
 .PHONY: clean
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(ASM) $(OBJ) $(TARGET)
 
 # Run program.
 .PHONY: run

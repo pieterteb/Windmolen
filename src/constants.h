@@ -127,7 +127,9 @@ const int coordinates_to_square[FILE_COUNT][RANK_COUNT] = {
 #define COORDINATES_MASK(file, rank)    (SQUARE_MASK(coordinates_to_square[(file)][(rank)]))
 
 #define FILE_TO_CHAR(file)              ((char)(file) + 'a')
+#define CHAR_TO_FILE(c)                 ((int)(c) - 'a')
 #define RANK_TO_CHAR(rank)              ((char)(rank) + '1')
+#define CHAR_TO_RANK(c)                 ((int)(c) - '1')
 
 
 #endif /* CONSTANTS_H */

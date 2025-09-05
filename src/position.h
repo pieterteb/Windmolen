@@ -17,6 +17,8 @@ typedef struct Position {
 } Position;
 
 
+void print_position(FILE* stream, Position* position);
+
 Position position_from_FEN(const char* fen);
 void position_to_FEN(Position* position, char* fen_out);
 

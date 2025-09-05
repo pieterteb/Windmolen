@@ -11,14 +11,12 @@
 enum Color {
     COLOR_WHITE,
     COLOR_BLACK,
-
-    COLOR_COUNT
 };
-static_assert(COLOR_COUNT == 2U);
 
 
 enum PieceType {
-    PIECE_TYPE_PAWN,
+    PIECE_TYPE_WHITE_PAWN,
+    PIECE_TYPE_BLACK_PAWN,
     PIECE_TYPE_KNIGHT,
     PIECE_TYPE_BISHOP,
     PIECE_TYPE_ROOK,
@@ -27,7 +25,7 @@ enum PieceType {
 
     PIECE_TYPE_COUNT
 };
-static_assert(PIECE_TYPE_COUNT == 6U);
+static_assert(PIECE_TYPE_COUNT == 7U);
 
 enum Piece {
     PIECE_WHITE_PAWN,

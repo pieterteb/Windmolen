@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include "types.h"
+
 
 
 /*
@@ -20,27 +22,31 @@
  */
 typedef uint16_t Move;
 
-#define MOVE_SOURCE(move)                   ((move) & 0x003f)
-#define MOVE_DESTINATION(move)              ((move) & 0x0fc0)
-
 typedef Move MoveType;
+enum MoveType {
+    MOVE_TYPE_QUIET =                       0b0000 << 12,
+    MOVE_TYPE_KING_CASTLE =                 0b1000 << 12,
+    MOVE_TYPE_QUEEN_CASTLE =                0b1100 << 12,
+    MOVE_TYPE_CAPTURE =                     0b0001 << 12,
+    MOVE_TYPE_EN_PASSANT_CAPTURE =          0b0101 << 12,
+    MOVE_TYPE_DOUBLE_PAWN_PUSH =            0b0100 << 12,
+    MOVE_TYPE_KNIGHT_PROMOTION =            0b0010 << 12,
+    MOVE_TYPE_BISHOP_PROMOTION =            0b0110 << 12,
+    MOVE_TYPE_ROOK_PROMOTION =              0b1010 << 12,
+    MOVE_TYPE_QUEEN_PROMOTION =             0b1110 << 12,
+    MOVE_TYPE_KNIGHT_PROMOTION_CAPTURE =    MOVE_TYPE_CAPTURE | MOVE_TYPE_KNIGHT_PROMOTION,
+    MOVE_TYPE_BISHOP_PROMOTION_CAPTURE =    MOVE_TYPE_CAPTURE | MOVE_TYPE_BISHOP_PROMOTION,
+    MOVE_TYPE_ROOK_PROMOTION_CAPTURE =      MOVE_TYPE_CAPTURE | MOVE_TYPE_ROOK_PROMOTION,
+    MOVE_TYPE_QUEEN_PROMOTION_CAPTURE =     MOVE_TYPE_CAPTURE | MOVE_TYPE_QUEEN_PROMOTION,
+};
 
-#define MOVE_TYPE(move)                     ((move) & (MoveType)0xf000)
+static inline Square move_source(Move move) {
+    return (Square)(move & 0x003f);
+}
 
-#define MOVE_TYPE_QUIET                     ((MoveType)0b0000 << 12U)
-#define MOVE_TYPE_KING_CASTLE               ((MoveType)0b1000 << 12U)
-#define MOVE_TYPE_QUEEN_CASTLE              ((MoveType)0b1100 << 12U)
-#define MOVE_TYPE_CAPTURE                   ((MoveType)0b0001 << 12U)
-#define MOVE_TYPE_EN_PASSANT_CAPTURE        ((MoveType)0b0101 << 12U)
-#define MOVE_TYPE_DOUBLE_PAWN_PUSH          ((MoveType)0b0100 << 12U)
-#define MOVE_TYPE_KNIGHT_PROMOTION          ((MoveType)0b0010 << 12U)
-#define MOVE_TYPE_BISHOP_PROMOTION          ((MoveType)0b0110 << 12U)
-#define MOVE_TYPE_ROOK_PROMOTION            ((MoveType)0b1010 << 12U)
-#define MOVE_TYPE_QUEEN_PROMOTION           ((MoveType)0b1110 << 12U)
-#define MOVE_TYPE_KNIGHT_PROMOTION_CAPTURE  (MOVE_TYPE_CAPTURE | MOVE_TYPE_KNIGHT_PROMOTION)
-#define MOVE_TYPE_BISHOP_PROMOTION_CAPTURE  (MOVE_TYPE_CAPTURE | MOVE_TYPE_BISHOP_PROMOTION)
-#define MOVE_TYPE_ROOK_PROMOTION_CAPTURE    (MOVE_TYPE_CAPTURE | MOVE_TYPE_ROOK_PROMOTION)
-#define MOVE_TYPE_QUEEN_PROMOTION_CAPTURE   (MOVE_TYPE_CAPTURE | MOVE_TYPE_QUEEN_PROMOTION)
+static inline Square move_destination(Move move) {
+    return (Square)((move & 0x0fc0) >> 6);
+}
 
 
 

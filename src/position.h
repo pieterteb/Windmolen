@@ -3,7 +3,7 @@
 
 
 #include "bitboard.h"
-#include "constants.h"
+#include "types.h"
 
 
 

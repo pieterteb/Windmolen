@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "bitboard.h"
-#include "constants.h"
+#include "types.h"
 
 
 void print_bitboard(FILE* stream, const Bitboard bitboard) {

@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#ifndef TYPES_H
+#define TYPES_H
 
 
 #include <assert.h>
@@ -201,4 +201,4 @@ static inline Rank char_to_rank(char c) {
 
 
 
-#endif /* CONSTANTS_H */
+#endif /* TYPES_H */

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "position.h"
-#include "constants.h"
+#include "types.h"
 #include "utils.h"
 
 

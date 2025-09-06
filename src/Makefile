@@ -38,11 +38,6 @@ $(TARGET): $(OBJ)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile specified file into object file.
-.PHONY: build
-build:
-	$(CC) $(CFLAGS) -c $(FILE) -o $(FILE:.c=.o)
-
 # Compile specified file into assembly.
 .PHONY: asm
 asm:

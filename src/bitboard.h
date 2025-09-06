@@ -30,14 +30,19 @@ typedef uint64_t Bitboard;
 #define RANK_8_BITBOARD (RANK_1_BITBOARD << 7 * 8)
 
 
-/*
-Returns
-*/
+/**
+ * Bitboard with only the given square set.
+ */
 #define SQUARE_BITBOARD(square) ( \
     (Bitboard)1 << (square)       \
 )
 
 
+/**
+ * Shifts a bitboard in the given dir, masking wrap-around on files A/H.
+ * Supports { N, S, E, W, NE, SE, SW, NW, 2N, 2S }.
+ * Returns BITBOARD_EMPTY if dir is invalid.
+ */
 #define SHIFT_BITBOARD(bitboard, direction) (                                   \
       (direction) == DIRECTION_NORTH     ? (bitboard) << 8                      \
     : (direction) == 2 * DIRECTION_NORTH ? (bitboard) << 16                     \
@@ -55,6 +60,9 @@ Returns
 )
 
 
+/**
+ * Computes pawn attack squares for a bitboard of pawns of given color.
+ */
 #define PAWN_ATTACKS_BITBOARD(bitboard, color) (                                                                         \
     color == COLOR_WHITE ? SHIFT_BITBOARD(bitboard, DIRECTION_NORTHEAST) | SHIFT_BITBOARD(bitboard, DIRECTION_NORTHWEST) \
                          : SHIFT_BITBOARD(bitboard, DIRECTION_SOUTHEAST) | SHIFT_BITBOARD(bitboard, DIRECTION_SOUTHWEST) \

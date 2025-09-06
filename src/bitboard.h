@@ -33,9 +33,13 @@ typedef uint64_t Bitboard;
 /**
  * Bitboard with only the given square set.
  */
-#define SQUARE_BITBOARD(square) ( \
-    (Bitboard)1 << (square)       \
-)
+#define SQUARE_BITBOARD(square) ((Bitboard)1 << (square))
+
+
+/**
+ * True if square is a valid board square (A1–H8).
+ */
+#define IS_VALID_SQUARE(square) ((square) >= SQUARE_A1 && (square) <= SQUARE_H8)
 
 
 /**

@@ -4,7 +4,7 @@
 
 
 static inline int ctzll(unsigned long long x) {
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__)
     return __builtin_ctzll(x);
 #elif defined(_MSC_VER)
     unsigned long index;
@@ -18,7 +18,7 @@ static inline int ctzll(unsigned long long x) {
         ++i;
     }
     return i
-#endif /* defined(__GNUC__) || defined(__clang__) */
+#endif /* defined(__GNUC__) */
 }
 
 

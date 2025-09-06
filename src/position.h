@@ -9,8 +9,8 @@
 
 typedef struct Position {
     Bitboard board[PIECE_COUNT];
-    int side_to_move;
-    int castling_rights;
+    Color side_to_move;
+    CastlingRights castling_rights;
     Bitboard en_passant;
     int halfmove_clock;
     int fullmove_counter;

@@ -3,30 +3,42 @@
 
 
 #include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "bitboard.h"
 
 
 
+typedef uint8_t Color;
 enum Color {
     COLOR_WHITE,
     COLOR_BLACK,
+
+    COLOR_COUNT
 };
+static_assert(COLOR_COUNT == 2);
 
 
+typedef uint8_t PieceType;
 enum PieceType {
-    PIECE_TYPE_WHITE_PAWN,
-    PIECE_TYPE_BLACK_PAWN,
+    PIECE_TYPE_NONE,
+    PIECE_TYPE_PAWN,
     PIECE_TYPE_KNIGHT,
     PIECE_TYPE_BISHOP,
     PIECE_TYPE_ROOK,
     PIECE_TYPE_QUEEN,
     PIECE_TYPE_KING,
 
-    PIECE_TYPE_COUNT
+    PIECE_TYPE_COUNT = 6
 };
-static_assert(PIECE_TYPE_COUNT == 7U);
+static_assert(PIECE_TYPE_COUNT == 6);
 
+static inline bool is_valid_piece_type(PieceType piece_type) {
+    return piece_type <= PIECE_TYPE_COUNT;
+}
+
+typedef uint8_t Piece;
 enum Piece {
     PIECE_WHITE_PAWN,
     PIECE_WHITE_KNIGHT,
@@ -44,24 +56,34 @@ enum Piece {
 
     PIECE_COUNT
 };
-static_assert(PIECE_COUNT == 12U);
+static_assert(PIECE_COUNT == 12);
 
+static inline bool is_valid_piece(Piece piece) {
+    return piece < PIECE_COUNT;
+}
+
+// __attribute__((always_inline)) 
+static inline Color get_piece_color(Piece piece) {
+    assert(is_valid_piece(piece));
+    return (Color)(piece > PIECE_WHITE_KING);
+}
+
+typedef uint8_t CastlingRights;
 enum CastlingRights {
-    NO_CASTLING = 0,
-
-    WHITE_00 = 1U,
-    WHITE_000 = WHITE_00 << 1U,
-    BLACK_00 = WHITE_00 << 2U,
-    BLACK_000 = WHITE_00 << 3U,
-
+    NO_CASTLING,
+    WHITE_00 = 1,
+    WHITE_000 = WHITE_00 << 1,
+    BLACK_00 = WHITE_00 << 2,
+    BLACK_000 = WHITE_00 << 3,
     KING_SIDE = WHITE_00 | BLACK_00,
     QUEEN_SIDE = WHITE_000 | BLACK_000,
     WHITE_CASTLING = WHITE_00 | WHITE_000,
-    BLACK_CASSTLING = BLACK_00 | BLACK_000,
-    ANY_CASTLING = WHITE_00 | WHITE_000 | BLACK_00 | BLACK_000
+    BLACK_CASTLING = BLACK_00 | BLACK_000,
+    ANY_CASTLING = WHITE_CASTLING | BLACK_CASTLING
 };
 
 
+typedef uint8_t Square;
 enum Square {
     SQUARE_A1, SQUARE_B1, SQUARE_C1, SQUARE_D1, SQUARE_E1, SQUARE_F1, SQUARE_G1, SQUARE_H1,
     SQUARE_A2, SQUARE_B2, SQUARE_C2, SQUARE_D2, SQUARE_E2, SQUARE_F2, SQUARE_G2, SQUARE_H2,
@@ -74,8 +96,13 @@ enum Square {
 
     SQUARE_COUNT
 };
-static_assert(SQUARE_COUNT == 64U);
+static_assert(SQUARE_COUNT == 64);
 
+static inline bool is_valid_square(Square square) {
+    return square < SQUARE_COUNT;
+}
+
+typedef uint8_t File;
 enum File {
     FILE_A,
     FILE_B,
@@ -88,8 +115,13 @@ enum File {
 
     FILE_COUNT
 };
-static_assert(FILE_COUNT == 8U);
+static_assert(FILE_COUNT == 8);
 
+static inline bool is_valid_file(File file) {
+    return file < FILE_COUNT;
+}
+
+typedef uint8_t Rank;
 enum Rank {
     RANK_1,
     RANK_2,
@@ -102,25 +134,71 @@ enum Rank {
 
     RANK_COUNT
 };
-static_assert(RANK_COUNT == 8U);
+static_assert(RANK_COUNT == 8);
 
+static inline bool is_valid_rank(Rank rank) {
+    return rank < RANK_COUNT;
+}
+
+typedef int8_t Direction;
 enum Direction {
     DIRECTION_NORTH = 8,
     DIRECTION_EAST = 1,
     DIRECTION_SOUTH = -DIRECTION_NORTH,
-    DIRECTION_WEST = -DIRECTION_EAST
+    DIRECTION_WEST = -DIRECTION_EAST,
+
+    DIRECTION_NORTHEAST = DIRECTION_NORTH + DIRECTION_EAST,
+    DIRECTION_SOUTHEAST = DIRECTION_SOUTH + DIRECTION_EAST,
+    DIRECTION_SOUTHWEST = DIRECTION_SOUTH + DIRECTION_WEST,
+    DIRECTION_NORTHWEST = DIRECTION_NORTH + DIRECTION_WEST
 };
 
 
-#define COORDINATES_TO_SQUARE(file, rank)   (DIRECTION_EAST * (file) + DIRECTION_NORTH * (rank))
+static inline File file_from_square(Square square) {
+    assert(is_valid_square(square));
+    return (File)(square & 7); // Fast modulo 8.
+}
 
-#define SQUARE_MASK(square)                 ((Bitboard)1 << (square))
-#define COORDINATES_MASK(file, rank)        (SQUARE_MASK(COORDINATES_TO_SQUARE(file,rank)))
+static inline Rank rank_from_square(Square square) {
+    assert(is_valid_square(square));
+    return (Rank)(square >> 3); // Fast division by 8.
+}
 
-#define FILE_TO_CHAR(file)                  ((char)(file) + 'a')
-#define CHAR_TO_FILE(c)                     ((int)(c) - 'a')
-#define RANK_TO_CHAR(rank)                  ((char)(rank) + '1')
-#define CHAR_TO_RANK(c)                     ((int)(c) - '1')
+static inline Square coordinates_to_square(File file, Rank rank) {
+    assert(is_valid_file(file) && is_valid_rank(rank));
+    return (Square)(DIRECTION_NORTH * rank + DIRECTION_EAST * file);
+}
+
+static inline Bitboard square_mask(Square square) {
+    assert(is_valid_square(square));
+    return (Bitboard)1 << square;
+}
+
+static inline Bitboard coordinates_mask(File file, Rank rank) {
+    assert(is_valid_file(file) && is_valid_rank(rank));
+    return square_mask(coordinates_to_square(file, rank));
+}
+
+static inline char file_to_char(File file) {
+    assert(is_valid_file(file));
+    return (char)('a' + file);
+}
+
+static inline File char_to_file(char c) {
+    assert(c >= 'a' && c <= 'h');
+    return (File)(c - 'a');
+}
+
+static inline char rank_to_char(Rank rank) {
+    assert(is_valid_rank(rank));
+    return (char)('1' + rank);
+}
+
+static inline Rank char_to_rank(char c) {
+    assert(c >= '1' && c <= '8');
+    return (Rank)(c - '1');
+}
+
 
 
 #endif /* CONSTANTS_H */

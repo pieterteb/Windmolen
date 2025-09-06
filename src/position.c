@@ -20,13 +20,13 @@ void print_position(FILE* stream, Position* position) {
     };
 
     fprintf(stream, "  +---+---+---+---+---+---+---+---+\n");
-    for (int rank = RANK_8; rank >= RANK_1; --rank) {
+    for (Rank rank = RANK_8; rank <= RANK_8; --rank) {
         fprintf(stream, "%d |", rank + 1);
-        for (int file = FILE_A; file <= FILE_H; ++file) {
-            Bitboard mask = COORDINATES_MASK(file, rank);
+        for (File file = FILE_A; file <= FILE_H; ++file) {
+            Bitboard mask = coordinates_mask(file, rank);
             bool piece_found = false;
 
-            for (int piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {
+            for (Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {
                 if (position->board[piece] & mask) {
                     fprintf(stream, " %c |", piece_to_letter[piece]);
                     piece_found = true;
@@ -57,8 +57,8 @@ Position position_from_FEN(const char* fen) {
     };
 
     Position position = { 0 };
-    int file = FILE_A;
-    int rank = RANK_8;
+    File file = FILE_A;
+    Rank rank = RANK_8;
 
     /* Board. */
     for (; *fen != ' '; ++fen) {
@@ -67,9 +67,9 @@ Position position_from_FEN(const char* fen) {
             file = FILE_A;
             --rank;
         } else if (c >= '1' && c <= '8') {
-            file += c - '0';
+            file += (File)(c - '0');
         } else {
-            position.board[letter_to_piece[(int)c]] |= COORDINATES_MASK(file++, rank);
+            position.board[letter_to_piece[(int)c]] |= coordinates_mask(file++, rank);
         }
     }
     ++fen; // Skip space.
@@ -103,9 +103,9 @@ Position position_from_FEN(const char* fen) {
     
     /* En passant. */
     if (*fen != '-') {
-        file = CHAR_TO_FILE(*fen++);
-        rank = CHAR_TO_RANK(*fen++);
-        position.en_passant = COORDINATES_MASK(file, rank);
+        file = char_to_file(*fen++);
+        rank = char_to_rank(*fen++);
+        position.en_passant = coordinates_mask(file, rank);
     } else {
         ++fen;
     }
@@ -137,13 +137,13 @@ void position_to_FEN(Position* position, char* fen_out) {
 
     /* Board. */
     int empty;
-    for (int rank = RANK_8; rank >= RANK_1; --rank) {
+    for (Rank rank = RANK_8; rank <= RANK_8; --rank) {
         empty = 0;
-        for (int file = FILE_A; file <= FILE_H; ++file) {
-            Bitboard mask = COORDINATES_MASK(file, rank);
+        for (File file = FILE_A; file <= FILE_H; ++file) {
+            Bitboard mask = coordinates_mask(file, rank);
             bool piece_found = false;
             
-            for (int piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {
+            for (Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {
                 if ((position->board[piece] & mask)) {
                     if (empty) {
                         *fen_out = '0' + (char)empty;

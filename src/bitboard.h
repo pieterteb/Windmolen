@@ -10,7 +10,7 @@
 typedef uint64_t Bitboard;
 
 
-void print_bitboard(FILE* stream, const Bitboard bitboard);
+void print_bitboard(FILE* stream, Bitboard bitboard);
 
 
 

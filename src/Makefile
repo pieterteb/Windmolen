@@ -1,17 +1,36 @@
-# Compiler and flags.
+# Compiler and base flags.
 CC = gcc
-CFLAGS = -std=c11 -fdiagnostics-color=always -Wall -Wextra -Werror -Wno-error=unused-result -Wpedantic -Wshadow -Wconversion -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all -D_FORTIFY_SOURCE=2 -O3 -fsanitize=address
+BASEFLAGS = -std=c11 -fdiagnostics-color=always -Wall -Wextra -Werror \
+            -Wno-error=unused-result -Wpedantic -Wshadow -Wconversion \
+            -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all
+
+# Build type flags.
+DEBUGFLAGS   = -g -O0 -fsanitize=address
+RELEASEFLAGS = -O3 -DNDEBUG -D_FORTIFY_SOURCE=2
+
+# Default: release build.
+CFLAGS = $(BASEFLAGS) $(RELEASEFLAGS)
 
 # Project files.
-SRC = main.c bitboard.c position.c
-OBJ = $(SRC:.c=.o)
-ASM = $(SRC:.c=.s)
+SRC    = main.c bitboard.c position.c
+OBJ    = $(SRC:.c=.o)
+ASM    = $(SRC:.c=.s)
 TARGET = windmolen
 
 # Default target.
-all: $(TARGET)
+all: release
 
-# Link objects into final executables.
+# Debug build (asserts enabled).
+.PHONY: debug
+debug: CFLAGS = $(BASEFLAGS) $(DEBUGFLAGS)
+debug: $(TARGET)
+
+# Release build (asserts disabled).
+.PHONY: release
+release: CFLAGS = $(BASEFLAGS) $(RELEASEFLAGS)
+release: $(TARGET)
+
+# Link objects into final executable.
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
 

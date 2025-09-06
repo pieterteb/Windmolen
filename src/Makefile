@@ -1,6 +1,6 @@
 # Compiler and flags.
 CC = gcc
-CFLAGS = -fdiagnostics-color=always -Wall -Wextra -Werror -Wno-error=unused-result -Wpedantic -Wshadow -Wconversion -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all -D_FORTIFY_SOURCE=2 -O3 -fsanitize=address
+CFLAGS = -std=c11 -fdiagnostics-color=always -Wall -Wextra -Werror -Wno-error=unused-result -Wpedantic -Wshadow -Wconversion -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all -D_FORTIFY_SOURCE=2 -O3 -fsanitize=address
 
 # Project files.
 SRC = main.c bitboard.c position.c

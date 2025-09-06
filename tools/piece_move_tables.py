@@ -115,7 +115,7 @@ def print_bitboard(square, bitboard):
 
     print(f"Square:             {square}")
     print(f"Decimal value:      {bitboard}")
-    print(f"Hexadecimal value:  {bitboard:#018X}")
+    print(f"Hexadecimal value:  {bitboard:#018x}")
     print()
 
 def print_move_table_bitboards(move_table):
@@ -125,7 +125,7 @@ def print_move_table_bitboards(move_table):
 
 def print_move_table(move_table):
     for square, bitboard in enumerate(move_table):
-        print(f"{bitboard:#018X}", end="")
+        print(f"{bitboard:#018x}", end="")
 
         # Do not print a comma after the last move table entry.
         if square != Square.H8.value:

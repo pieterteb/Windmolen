@@ -39,7 +39,7 @@ typedef uint64_t Bitboard;
 /**
  * True if square is a valid board square (A1–H8).
  */
-#define IS_VALID_SQUARE(square) ((square) >= SQUARE_A1 && (square) <= SQUARE_H8)
+#define IS_VALID_SQUARE(square) ((square) <= SQUARE_H8)
 
 
 /**
@@ -53,8 +53,8 @@ typedef uint64_t Bitboard;
     : (direction) == DIRECTION_SOUTH     ? (bitboard) >> 8                      \
     : (direction) == 2 * DIRECTION_SOUTH ? (bitboard) >> 16                     \
                                                                                 \
-    : (direction) == DIRECTION_EAST      ? ((bitboard) & ~FILE_H_BITBOARD) >> 1 \
-    : (direction) == DIRECTION_WEST      ? ((bitboard) & ~FILE_A_BITBOARD) << 1 \
+    : (direction) == DIRECTION_EAST      ? ((bitboard) & ~FILE_H_BITBOARD) << 1 \
+    : (direction) == DIRECTION_WEST      ? ((bitboard) & ~FILE_A_BITBOARD) >> 1 \
                                                                                 \
     : (direction) == DIRECTION_NORTHEAST ? ((bitboard) & ~FILE_H_BITBOARD) << 9 \
     : (direction) == DIRECTION_SOUTHEAST ? ((bitboard) & ~FILE_H_BITBOARD) >> 7 \

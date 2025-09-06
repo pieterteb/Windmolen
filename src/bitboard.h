@@ -39,9 +39,9 @@ typedef uint64_t Bitboard;
 
 
 /**
- * Shifts a bitboard in the given dir, masking wrap-around on files A/H.
+ * Shifts a bitboard in the given direction, masking wrap-around on files A/H.
  * Supports { N, S, E, W, NE, SE, SW, NW, 2N, 2S }.
- * Returns BITBOARD_EMPTY if dir is invalid.
+ * Returns BITBOARD_EMPTY if direction is invalid.
  */
 #define SHIFT_BITBOARD(bitboard, direction) (                                   \
       (direction) == DIRECTION_NORTH     ? (bitboard) << 8                      \

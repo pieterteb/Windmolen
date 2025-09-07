@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef UTIL_H
+#define UTIL_H
 
 
 #include <stdint.h>
@@ -30,4 +30,4 @@ static inline int ctzll(unsigned long long x) {
 
 
 
-#endif /* UTILS_H */
+#endif /* UTIL_H */

@@ -2,6 +2,13 @@
 #define UTILS_H
 
 
+#include <stdint.h>
+
+
+
+void seed_rand64(uint64_t seed);
+uint64_t rand64();
+
 
 static inline int ctzll(unsigned long long x) {
 #if defined(__GNUC__)

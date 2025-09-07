@@ -22,17 +22,17 @@ static_assert(COLOR_COUNT == 2);
 
 typedef uint8_t PieceType;
 enum PieceType {
-    PIECE_TYPE_NONE,
-    PIECE_TYPE_PAWN,
+    PIECE_TYPE_WHITE_PAWN,
+    PIECE_TYPE_BLACK_PAWN,
     PIECE_TYPE_KNIGHT,
     PIECE_TYPE_BISHOP,
     PIECE_TYPE_ROOK,
     PIECE_TYPE_QUEEN,
     PIECE_TYPE_KING,
 
-    PIECE_TYPE_COUNT = 6
+    PIECE_TYPE_COUNT = 7
 };
-static_assert(PIECE_TYPE_COUNT == 6);
+static_assert(PIECE_TYPE_COUNT == 7);
 
 static inline bool is_valid_piece_type(PieceType piece_type) {
     return piece_type <= PIECE_TYPE_COUNT;
@@ -101,6 +101,7 @@ static_assert(SQUARE_COUNT == 64);
 static inline bool is_valid_square(Square square) {
     return square < SQUARE_COUNT;
 }
+
 
 typedef uint8_t File;
 enum File {
@@ -198,6 +199,17 @@ static inline Rank char_to_rank(char c) {
     assert(c >= '1' && c <= '8');
     return (Rank)(c - '1');
 }
+
+static inline Bitboard file_bitboard(File file) {
+    assert(is_valid_file(file));
+    return (Bitboard)1 << file;
+}
+
+static inline Bitboard rank_bitboard(Rank rank) {
+    assert(is_valid_rank(rank));
+    return (Bitboard)1 << 8 * rank;
+}
+
 
 
 

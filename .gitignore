@@ -2,4 +2,8 @@
 /src/*.s
 /src/windmolen
 
+/tools/magic_finder/*.o
+/tools/magic_finder/*.s
+/tools/magic_finder/magic_finder
+
 .vscode/

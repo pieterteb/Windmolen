@@ -8,6 +8,7 @@
 
 void seed_rand64(uint64_t seed);
 uint64_t rand64();
+uint64_t sparse_rand64();
 
 
 static inline int ctzll(unsigned long long x) {

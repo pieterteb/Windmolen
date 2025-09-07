@@ -18,3 +18,7 @@ uint64_t rand64() {
     s ^= s >> 27;
     return 2685821657736338717ull * s;
 }
+
+uint64_t sparse_rand64() {
+    return rand64() & rand64() & rand64();
+}

@@ -76,6 +76,8 @@ typedef uint64_t Bitboard;
 
 void print_bitboard(FILE* stream, Bitboard bitboard);
 
+void initialise_bitboards();
+
 
 
 #endif /* BITBOARD_H */

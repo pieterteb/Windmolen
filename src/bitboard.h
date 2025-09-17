@@ -67,9 +67,9 @@ typedef uint64_t Bitboard;
 /**
  * Computes pawn attack squares for a bitboard of pawns of given color.
  */
-#define PAWN_ATTACKS_BITBOARD(bitboard, color) (                                                                         \
-    color == COLOR_WHITE ? SHIFT_BITBOARD(bitboard, DIRECTION_NORTHEAST) | SHIFT_BITBOARD(bitboard, DIRECTION_NORTHWEST) \
-                         : SHIFT_BITBOARD(bitboard, DIRECTION_SOUTHEAST) | SHIFT_BITBOARD(bitboard, DIRECTION_SOUTHWEST) \
+#define PAWN_ATTACKS_BITBOARD(square, color) (                                                                         \
+    color == COLOR_WHITE ? SHIFT_BITBOARD(SQUARE_BITBOARD(square), DIRECTION_NORTHEAST) | SHIFT_BITBOARD(SQUARE_BITBOARD(square), DIRECTION_NORTHWEST) \
+                         : SHIFT_BITBOARD(SQUARE_BITBOARD(square), DIRECTION_SOUTHEAST) | SHIFT_BITBOARD(SQUARE_BITBOARD(square), DIRECTION_SOUTHWEST) \
 )
 
 

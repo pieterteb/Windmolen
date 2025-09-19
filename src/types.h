@@ -10,6 +10,9 @@
 
 
 
+typedef uint64_t Bitboard;
+
+
 typedef uint8_t Color;
 enum Color {
     COLOR_WHITE,

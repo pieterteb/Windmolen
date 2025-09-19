@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "types.h"
 
 
-typedef uint64_t Bitboard;
 
 #define BITBOARD_EMPTY ((Bitboard)0)
 
@@ -77,6 +77,17 @@ typedef uint64_t Bitboard;
 void print_bitboard(FILE* stream, Bitboard bitboard);
 
 void initialise_bitboards();
+
+
+struct Magic {
+    Bitboard* attack_table;
+    Bitboard  mask;
+    Bitboard  factor;
+    unsigned  shift;
+};
+
+unsigned magic_index(PieceType piece_type, Square square, Bitboard occupancy);
+extern Bitboard slider_attacks(PieceType piece_type, Square square, Bitboard occupancy);
 
 
 

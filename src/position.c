@@ -182,7 +182,7 @@ void position_to_FEN(Position* position, char* fen_out) {
 
     /* En passant. */
     if (position->en_passant) {
-        int trailing_zeroes = ctzll(position->en_passant);
+        int trailing_zeroes = ctz64(position->en_passant);
         int file = trailing_zeroes & 7; // Fast modulo 8.
         int rank = trailing_zeroes >> 3; // Fast divide by 8.
         *fen_out++ = 'a' + (char)file;

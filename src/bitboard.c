@@ -151,6 +151,7 @@ extern Bitboard slider_attacks(PieceType piece_type, Square square, Bitboard occ
     return magic_table[square].attack_table[magic_index(piece_type, square, occupancy)];
 }
 
+
 char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
     char* string = malloc(4096 * sizeof(*string));
     size_t size = (size_t)sprintf(string, "+---+---+---+---+---+---+---+---+\n");

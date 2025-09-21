@@ -13,7 +13,7 @@
 typedef uint64_t Bitboard;
 
 
-typedef uint8_t Color;
+typedef int8_t Color;
 enum Color {
     COLOR_WHITE,
     COLOR_BLACK,
@@ -23,7 +23,7 @@ enum Color {
 static_assert(COLOR_COUNT == 2);
 
 
-typedef uint8_t PieceType;
+typedef int8_t PieceType;
 enum PieceType {
     PIECE_TYPE_WHITE_PAWN,
     PIECE_TYPE_BLACK_PAWN,
@@ -41,7 +41,7 @@ static inline bool is_valid_piece_type(PieceType piece_type) {
     return piece_type <= PIECE_TYPE_COUNT;
 }
 
-typedef uint8_t Piece;
+typedef int8_t Piece;
 enum Piece {
     PIECE_WHITE_PAWN,
     PIECE_WHITE_KNIGHT,
@@ -71,7 +71,7 @@ static inline Color get_piece_color(Piece piece) {
     return (Color)(piece > PIECE_WHITE_KING);
 }
 
-typedef uint8_t CastlingRights;
+typedef int8_t CastlingRights;
 enum CastlingRights {
     NO_CASTLING,
     WHITE_00 = 1,
@@ -86,7 +86,7 @@ enum CastlingRights {
 };
 
 
-typedef uint8_t Square;
+typedef int8_t Square;
 enum Square {
     SQUARE_A1, SQUARE_B1, SQUARE_C1, SQUARE_D1, SQUARE_E1, SQUARE_F1, SQUARE_G1, SQUARE_H1,
     SQUARE_A2, SQUARE_B2, SQUARE_C2, SQUARE_D2, SQUARE_E2, SQUARE_F2, SQUARE_G2, SQUARE_H2,
@@ -106,7 +106,7 @@ static inline bool is_valid_square(Square square) {
 }
 
 
-typedef uint8_t File;
+typedef int8_t File;
 enum File {
     FILE_A,
     FILE_B,
@@ -125,7 +125,7 @@ static inline bool is_valid_file(File file) {
     return file < FILE_COUNT;
 }
 
-typedef uint8_t Rank;
+typedef int8_t Rank;
 enum Rank {
     RANK_1,
     RANK_2,

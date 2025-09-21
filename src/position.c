@@ -1,5 +1,4 @@
-#include <ctype.h>
-#include <stdbool.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -9,41 +8,50 @@
 
 
 
-void print_position(FILE* stream, Position* position) {
-    const int piece_to_letter[] = {
+char* position_to_string(Position* position, size_t* size_out) {
+    const int piece_to_char[] = {
         [PIECE_WHITE_PAWN] =    'P',   [PIECE_BLACK_PAWN] = 'p',
         [PIECE_WHITE_KNIGHT] =  'N', [PIECE_BLACK_KNIGHT] = 'n',
         [PIECE_WHITE_BISHOP] =  'B', [PIECE_BLACK_BISHOP] = 'b',
         [PIECE_WHITE_ROOK] =    'R',   [PIECE_BLACK_ROOK] = 'r',
         [PIECE_WHITE_QUEEN] =   'Q',  [PIECE_BLACK_QUEEN] = 'q',
-        [PIECE_WHITE_KING] =    'K',   [PIECE_BLACK_KING] = 'k'
+        [PIECE_WHITE_KING] =    'K',   [PIECE_BLACK_KING] = 'k',
+
+        [PIECE_COUNT] = ' '
     };
 
-    fprintf(stream, "  +---+---+---+---+---+---+---+---+\n");
+    char* string = malloc(4096 * sizeof(*string));
+    size_t size = (size_t)sprintf(string, "+---+---+---+---+---+---+---+---+\n");
+
     for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
-        fprintf(stream, "%d |", rank + 1);
         for (File file = FILE_A; file <= FILE_H; ++file) {
             Bitboard mask = coordinates_bitboard(file, rank);
-            bool piece_found = false;
 
+            Piece current_piece = PIECE_COUNT;
             for (Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {
                 if (position->board[piece] & mask) {
-                    fprintf(stream, " %c |", piece_to_letter[piece]);
-                    piece_found = true;
+                    current_piece = piece;
                     break;
                 }
             }
-
-            if (!piece_found) fprintf(stream, "   |");
+            
+            size += (size_t)sprintf(string + size, "| %c ", piece_to_char[current_piece]);
         }
-        fprintf(stream, "\n  +---+---+---+---+---+---+---+---+\n");
+
+        size += (size_t)sprintf(string + size, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", rank + 1);
     }
-    fprintf(stream, "    a   b   c   d   e   f   g   h\n");
-    
+    size += (size_t)sprintf(string + size, "  a   b   c   d   e   f   g   h\n");
+
     char fen[128];
     position_to_FEN(position, fen);
+    size += (size_t)sprintf(string + size, "FEN: %s\n", fen);
 
-    fprintf(stream, "FEN: %s\n", fen);
+    string = realloc(string, size + 1); // +1 for \0.
+
+    if (size_out != NULL)
+        *size_out = size;
+
+    return string;
 }
 
 Position position_from_FEN(const char* fen) {

@@ -16,11 +16,15 @@ int main(int argc, char* argv[]) {
     Position position = position_from_FEN("3Q4/1Q4Q1/4Q3/2Q4R/Q4Q2/3Q4/1Q4Rp/1K1BBNNk w - - 0 1");
 
     
-    print_position(stdout, &position);
+    char* position_string = position_to_string(&position, NULL);
+    printf("%s", position_string);
+    free(position_string);
 
-    char* bitboard = bitboard_to_string(slider_attacks(PIECE_TYPE_BISHOP, SQUARE_E4, FILE_C_BITBOARD | RANK_5_BITBOARD), NULL);
-    printf("%s", bitboard);
-    free(bitboard);
+    printf("\n");
+
+    char* bitboard_string = bitboard_to_string(slider_attacks(PIECE_TYPE_BISHOP, SQUARE_E4, FILE_C_BITBOARD | RANK_5_BITBOARD), NULL);
+    printf("%s", bitboard_string);
+    free(bitboard_string);
 
     return 0;
 }

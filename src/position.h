@@ -2,6 +2,8 @@
 #define POSITION_H
 
 
+#include <ctype.h>
+
 #include "bitboard.h"
 #include "types.h"
 
@@ -17,7 +19,7 @@ typedef struct Position {
 } Position;
 
 
-void print_position(FILE* stream, Position* position);
+char* position_to_string(Position* position, size_t* size_out);
 
 Position position_from_FEN(const char* fen);
 void position_to_FEN(Position* position, char* fen_out);

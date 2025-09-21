@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "bitboard.h"
 #include "types.h"
@@ -24,7 +25,8 @@ static void initialise_magics(PieceType piece_type);
 
 static Bitboard step_safe(Square square, Direction step) {
     Square to = square + (Square)step;
-    return IS_VALID_SQUARE(to) ? SQUARE_BITBOARD(to) : BITBOARD_EMPTY;
+
+    return is_valid_square(to) ? square_bitboard(to) : BITBOARD_EMPTY;
 }
 
 
@@ -149,22 +151,24 @@ extern Bitboard slider_attacks(PieceType piece_type, Square square, Bitboard occ
     return magic_table[square].attack_table[magic_index(piece_type, square, occupancy)];
 }
 
-void print_bitboard(FILE* stream, const Bitboard bitboard) {
-    for (Rank rank = RANK_8; rank <= RANK_8; --rank) {
-        fprintf(stream, "%d  ", rank + 1);
-        for (File file = FILE_A; file <= FILE_H; ++file) {
-            if ((bitboard & coordinates_mask(file, rank)) == 0)
-                fprintf(stream, " 0");
-            else
-                fprintf(stream, " 1");
-        }
-        fputc('\n', stream);
+char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
+    char* string = malloc(4096 * sizeof(*string));
+    size_t size = (size_t)sprintf(string, "+---+---+---+---+---+---+---+---+\n");
+
+    for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
+
+        for (File file = FILE_A; file <= FILE_H; ++file)
+            size += (size_t)sprintf(string + size, (bitboard & coordinates_bitboard(file, rank)) ? "| X " : "|   ");
+
+        size += (size_t)sprintf(string + size, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", rank + 1);
     }
+    size += (size_t)sprintf(string + size, "  a   b   c   d   e   f   g   h\n");
+    size += (size_t)sprintf(string + size, "Hex: %#018" PRIx64 "\n", bitboard);
 
-    fprintf(stream, "\n    a b c d e f g h\n"
+    string = realloc(string, size + 1); // +1 for \0.
 
-                    "\nDecimal value:     %" PRIu64
-                    "\nHexadecimal value: %#018" PRIx64,
-                    bitboard,
-                    bitboard);
+    if (size_out != NULL)
+        *size_out = size;
+    
+    return string;
 }

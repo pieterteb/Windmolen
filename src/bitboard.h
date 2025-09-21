@@ -46,10 +46,20 @@
 // Bitboard with only the given square set.
 #define SQUARE_BITBOARD(square) ((Bitboard)1 << (square))
 
+// Static evaluation version of file_bitboard().
+//
+// Bitboard with all squares on file set.
+#define FILE_BITBOARD(file) (FILE_A_BITBOARD << (file))
+
+// Static evaluation version of rank_bitboard().
+//
+// Bitboard with all squares on rank set.
+#define RANK_BITBOARD(rank) (RANK_1_BITBOARD << ((rank) * 8))
+
 // Static evaluation version of coordinates_bitboard().
 //
 // Bitboard with only the square specified by file and rank set.
-#define COORDINATES_BITBOARD(file, rank) ((Bitboard)1 << ((file) * DIRECTION_EAST + (rank) * DIRECTION_NORTH))
+#define COORDINATES_BITBOARD(file, rank) (FILE_BITBOARD(file) & RANK_BITBOARD(rank))
 
 // Static evaluation version of shift_bitboard().
 //
@@ -103,13 +113,6 @@ static inline Bitboard square_bitboard(Square square) {
     return (Bitboard)1 << square;
 }
 
-// Bitboard with only the square specified by file and rank set.
-static inline Bitboard coordinates_bitboard(File file, Rank rank) {
-    assert(is_valid_file(file) && is_valid_rank(rank));
-
-    return (Bitboard)1 << (file * DIRECTION_EAST + rank * DIRECTION_NORTH);
-}
-
 // Bitboard with all squares on file set.
 static inline Bitboard file_bitboard(File file) {
     assert(is_valid_file(file));
@@ -136,6 +139,13 @@ static inline Bitboard rank_bitboard_from_square(Square square) {
     assert(is_valid_square(square));
 
     return rank_bitboard(rank_from_square(square));
+}
+
+// Bitboard with only the square specified by file and rank set.
+static inline Bitboard coordinates_bitboard(File file, Rank rank) {
+    assert(is_valid_file(file) && is_valid_rank(rank));
+
+    return file_bitboard(file) & rank_bitboard(rank);
 }
 
 // Shifts a bitboard in the given direction, masking wrap-around on files A/H.

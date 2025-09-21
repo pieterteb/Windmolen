@@ -22,6 +22,10 @@ enum Color {
 };
 static_assert(COLOR_COUNT == 2);
 
+static inline bool is_valid_color(Color color) {
+    return color == COLOR_WHITE || color == COLOR_BLACK;
+}
+
 
 typedef int8_t PieceType;
 enum PieceType {
@@ -38,7 +42,7 @@ enum PieceType {
 static_assert(PIECE_TYPE_COUNT == 7);
 
 static inline bool is_valid_piece_type(PieceType piece_type) {
-    return piece_type <= PIECE_TYPE_COUNT;
+    return piece_type >= 0 && piece_type < PIECE_TYPE_COUNT;
 }
 
 typedef int8_t Piece;
@@ -62,12 +66,13 @@ enum Piece {
 static_assert(PIECE_COUNT == 12);
 
 static inline bool is_valid_piece(Piece piece) {
-    return piece < PIECE_COUNT;
+    return piece >= 0 && piece < PIECE_COUNT;
 }
 
 // __attribute__((always_inline)) 
 static inline Color get_piece_color(Piece piece) {
     assert(is_valid_piece(piece));
+
     return (Color)(piece > PIECE_WHITE_KING);
 }
 
@@ -102,7 +107,7 @@ enum Square {
 static_assert(SQUARE_COUNT == 64);
 
 static inline bool is_valid_square(Square square) {
-    return square < SQUARE_COUNT;
+    return square >= SQUARE_A1 && square <= SQUARE_H8;
 }
 
 
@@ -122,7 +127,7 @@ enum File {
 static_assert(FILE_COUNT == 8);
 
 static inline bool is_valid_file(File file) {
-    return file < FILE_COUNT;
+    return file >= FILE_A && file <= FILE_H;
 }
 
 typedef int8_t Rank;
@@ -141,7 +146,7 @@ enum Rank {
 static_assert(RANK_COUNT == 8);
 
 static inline bool is_valid_rank(Rank rank) {
-    return rank < RANK_COUNT;
+    return rank >= RANK_1 && rank <= RANK_8;
 }
 
 typedef int8_t Direction;
@@ -160,56 +165,61 @@ enum Direction {
 
 static inline File file_from_square(Square square) {
     assert(is_valid_square(square));
+
     return (File)(square & 7); // Fast modulo 8.
 }
 
 static inline Rank rank_from_square(Square square) {
     assert(is_valid_square(square));
+
     return (Rank)(square >> 3); // Fast division by 8.
 }
 
 static inline Square coordinates_to_square(File file, Rank rank) {
     assert(is_valid_file(file) && is_valid_rank(rank));
-    return (Square)(DIRECTION_NORTH * rank + DIRECTION_EAST * file);
-}
 
-static inline Bitboard square_mask(Square square) {
-    assert(is_valid_square(square));
-    return (Bitboard)1 << square;
+    return (Square)(DIRECTION_NORTH * rank + DIRECTION_EAST * file);
 }
 
 static inline Bitboard coordinates_mask(File file, Rank rank) {
     assert(is_valid_file(file) && is_valid_rank(rank));
+
     return square_mask(coordinates_to_square(file, rank));
 }
 
 static inline char file_to_char(File file) {
     assert(is_valid_file(file));
+
     return (char)('a' + file);
 }
 
 static inline File char_to_file(char c) {
     assert(c >= 'a' && c <= 'h');
+
     return (File)(c - 'a');
 }
 
 static inline char rank_to_char(Rank rank) {
     assert(is_valid_rank(rank));
+
     return (char)('1' + rank);
 }
 
 static inline Rank char_to_rank(char c) {
     assert(c >= '1' && c <= '8');
+
     return (Rank)(c - '1');
 }
 
 static inline Bitboard file_bitboard(File file) {
     assert(is_valid_file(file));
+
     return (Bitboard)1 << file;
 }
 
 static inline Bitboard rank_bitboard(Rank rank) {
     assert(is_valid_rank(rank));
+
     return (Bitboard)1 << 8 * rank;
 }
 

@@ -157,7 +157,6 @@ char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
     size_t size = (size_t)sprintf(string, "+---+---+---+---+---+---+---+---+\n");
 
     for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
-
         for (File file = FILE_A; file <= FILE_H; ++file)
             size += (size_t)sprintf(string + size, (bitboard & coordinates_bitboard(file, rank)) ? "| X " : "|   ");
 

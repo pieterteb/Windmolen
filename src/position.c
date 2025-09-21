@@ -10,7 +10,7 @@
 
 
 void print_position(FILE* stream, Position* position) {
-    static const int piece_to_letter[] = {
+    const int piece_to_letter[] = {
         [PIECE_WHITE_PAWN] =    'P',   [PIECE_BLACK_PAWN] = 'p',
         [PIECE_WHITE_KNIGHT] =  'N', [PIECE_BLACK_KNIGHT] = 'n',
         [PIECE_WHITE_BISHOP] =  'B', [PIECE_BLACK_BISHOP] = 'b',
@@ -20,10 +20,10 @@ void print_position(FILE* stream, Position* position) {
     };
 
     fprintf(stream, "  +---+---+---+---+---+---+---+---+\n");
-    for (Rank rank = RANK_8; rank <= RANK_8; --rank) {
+    for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
         fprintf(stream, "%d |", rank + 1);
         for (File file = FILE_A; file <= FILE_H; ++file) {
-            Bitboard mask = coordinates_mask(file, rank);
+            Bitboard mask = coordinates_bitboard(file, rank);
             bool piece_found = false;
 
             for (Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {
@@ -47,7 +47,7 @@ void print_position(FILE* stream, Position* position) {
 }
 
 Position position_from_FEN(const char* fen) {
-    static const int letter_to_piece[] = {
+    const int letter_to_piece[] = {
         ['P'] = PIECE_WHITE_PAWN,   ['p'] = PIECE_BLACK_PAWN,
         ['N'] = PIECE_WHITE_KNIGHT, ['n'] = PIECE_BLACK_KNIGHT,
         ['B'] = PIECE_WHITE_BISHOP, ['b'] = PIECE_BLACK_BISHOP,
@@ -69,7 +69,7 @@ Position position_from_FEN(const char* fen) {
         } else if (c >= '1' && c <= '8') {
             file += (File)(c - '0');
         } else {
-            position.board[letter_to_piece[(int)c]] |= coordinates_mask(file++, rank);
+            position.board[letter_to_piece[(int)c]] |= coordinates_bitboard(file++, rank);
         }
     }
     ++fen; // Skip space.
@@ -105,7 +105,7 @@ Position position_from_FEN(const char* fen) {
     if (*fen != '-') {
         file = char_to_file(*fen++);
         rank = char_to_rank(*fen++);
-        position.en_passant = coordinates_mask(file, rank);
+        position.en_passant = coordinates_bitboard(file, rank);
     } else {
         ++fen;
     }
@@ -126,7 +126,7 @@ Position position_from_FEN(const char* fen) {
 }
 
 void position_to_FEN(Position* position, char* fen_out) {
-    static const char piece_to_letter[] = {
+    const char piece_to_letter[] = {
         [PIECE_WHITE_PAWN] = 'P',   [PIECE_BLACK_PAWN] = 'p',
         [PIECE_WHITE_KNIGHT] = 'N', [PIECE_BLACK_KNIGHT] = 'n',
         [PIECE_WHITE_BISHOP] = 'B', [PIECE_BLACK_BISHOP] = 'b',
@@ -137,10 +137,10 @@ void position_to_FEN(Position* position, char* fen_out) {
 
     /* Board. */
     int empty;
-    for (Rank rank = RANK_8; rank <= RANK_8; --rank) {
+    for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
         empty = 0;
         for (File file = FILE_A; file <= FILE_H; ++file) {
-            Bitboard mask = coordinates_mask(file, rank);
+            Bitboard mask = coordinates_bitboard(file, rank);
             bool piece_found = false;
             
             for (Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {

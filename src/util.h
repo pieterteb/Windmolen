@@ -2,6 +2,7 @@
 #define UTIL_H
 
 
+#include <assert.h>
 #include <stdint.h>
 
 
@@ -12,11 +13,13 @@ uint64_t sparse_rand64();
 
 
 static inline int ctz64(unsigned long long x) {
+    assert(x != 0);
+
 #if defined(__GNUC__)
     return __builtin_ctzll(x);
 #elif defined(_MSC_VER)
     unsigned long index;
-    _BitScanForward(&index, x);
+    _BitScanForward64(&index, x);
     return (int)index;
 #else
     // Fallback.
@@ -54,6 +57,15 @@ static inline int popcount64(unsigned long long x) {
     // x = x + (x >> 16);
     // return (int)(x & 0x3F);
 #endif /* defined(__GNUC__) */
+}
+
+static inline int pop_lsb64(unsigned long long* x) {
+    assert(*x != 0);
+
+    int lsb_index = ctz64(x);
+    *x &= *x - 1; // pop lsb.
+
+    return lsb_index;
 }
 
 

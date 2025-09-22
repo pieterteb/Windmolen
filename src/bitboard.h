@@ -85,9 +85,9 @@
 // Static evaluation version of pawn_attacks_bitboard().
 //
 // Computes pawn attack squares for a bitboard of pawns of given color.
-#define PAWN_ATTACKS_BITBOARD(square, color) (                                                                                                         \
-    color == COLOR_WHITE ? SHIFT_BITBOARD(SQUARE_BITBOARD(square), DIRECTION_NORTHEAST) | SHIFT_BITBOARD(SQUARE_BITBOARD(square), DIRECTION_NORTHWEST) \
-                         : SHIFT_BITBOARD(SQUARE_BITBOARD(square), DIRECTION_SOUTHEAST) | SHIFT_BITBOARD(SQUARE_BITBOARD(square), DIRECTION_SOUTHWEST) \
+#define PAWN_ATTACKS_BITBOARD(bitboard, color) (                                                                             \
+    color == COLOR_WHITE ? SHIFT_BITBOARD((bitboard), DIRECTION_NORTHEAST) | SHIFT_BITBOARD((bitboard), DIRECTION_NORTHWEST) \
+                         : SHIFT_BITBOARD((bitboard), DIRECTION_SOUTHEAST) | SHIFT_BITBOARD((bitboard), DIRECTION_SOUTHWEST) \
 )
 
 
@@ -168,10 +168,8 @@ static inline Bitboard shift_bitboard(Bitboard bitboard, Direction direction) {
 }
 
 // Computes pawn attack squares for a bitboard of pawns of given color.
-static inline Bitboard pawn_attacks_bitboard(Square square, Color color) {
-    assert(is_valid_square(square) && is_valid_color(color));
-
-    Bitboard bitboard = square_bitboard(square);
+static inline Bitboard pawn_attacks_bitboard(Bitboard bitboard, Color color) {
+    assert(is_valid_color(color));
 
     // We use static evaluation here because directions are known beforehand.
     return (color == COLOR_WHITE) ? SHIFT_BITBOARD(bitboard, DIRECTION_NORTHEAST) | SHIFT_BITBOARD(bitboard, DIRECTION_NORTHWEST)

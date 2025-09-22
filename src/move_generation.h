@@ -8,6 +8,9 @@
 
 
 
+#define MAX_MOVES   256
+
+
 /*
  * We use 16 bits to describe a move. We need 6 bits or the source square as well as the destination square. 
  * The remaining 4 bits are used for special moves:

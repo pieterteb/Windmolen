@@ -12,7 +12,7 @@ uint64_t rand64();
 uint64_t sparse_rand64();
 
 
-static inline int ctz64(unsigned long long x) {
+static inline int ctz64(uint64_t x) {
     assert(x != 0);
 
 #if defined(__GNUC__)
@@ -37,7 +37,7 @@ static inline int ctz64(unsigned long long x) {
 #endif /* defined(__GNUC__) */
 }
 
-static inline int popcount64(unsigned long long x) {
+static inline int popcount64(uint64_t x) {
 #if defined(__GNUC__)
     return __builtin_popcountll(x);
 #elif defined(_MSC_VER)
@@ -59,7 +59,7 @@ static inline int popcount64(unsigned long long x) {
 #endif /* defined(__GNUC__) */
 }
 
-static inline int pop_lsb64(unsigned long long* x) {
+static inline int pop_lsb64(uint64_t* x) {
     assert(*x != 0);
 
     int lsb_index = ctz64(*x);

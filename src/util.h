@@ -62,7 +62,7 @@ static inline int popcount64(unsigned long long x) {
 static inline int pop_lsb64(unsigned long long* x) {
     assert(*x != 0);
 
-    int lsb_index = ctz64(x);
+    int lsb_index = ctz64(*x);
     *x &= *x - 1; // pop lsb.
 
     return lsb_index;

@@ -2,11 +2,11 @@
 CC = gcc
 BASEFLAGS = -std=c11 -fdiagnostics-color=always -Wall -Wextra -Werror \
             -Wno-error=unused-result -Wpedantic -Wshadow -Wconversion \
-            -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all -flto
+            -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all
 
 # Build type flags.
 DEBUGFLAGS   = -g -O0 -fsanitize=address
-RELEASEFLAGS = -O3 -DNDEBUG -D_FORTIFY_SOURCE=2
+RELEASEFLAGS = -O3 -flto -DNDEBUG -D_FORTIFY_SOURCE=2
 
 # Default: release build.
 CFLAGS = $(BASEFLAGS) $(RELEASEFLAGS)

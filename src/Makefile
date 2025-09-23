@@ -2,7 +2,7 @@
 CC = gcc
 BASEFLAGS = -std=c11 -fdiagnostics-color=always -Wall -Wextra -Werror \
             -Wno-error=unused-result -Wpedantic -Wshadow -Wconversion \
-            -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all
+            -Wunused -Wnull-dereference -Wformat=2 -fstack-protector-all -flto
 
 # Build type flags.
 DEBUGFLAGS   = -g -O0 -fsanitize=address

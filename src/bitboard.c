@@ -8,12 +8,8 @@
 
 
 
-Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
-
-#define BISHOP_ENTRY_COUNT 5248
-#define ROOK_ENTRY_COUNT 102400
-
-Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
+extern Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
+extern Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 
 static struct Magic bishop_magic_table[SQUARE_COUNT];
 static struct Magic rook_magic_table[SQUARE_COUNT];

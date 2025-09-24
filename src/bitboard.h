@@ -13,7 +13,7 @@ Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT];
 extern Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 
 
-#define BITBOARD_EMPTY ((Bitboard)0)
+#define EMPTY_BITBOARD  ((Bitboard)0)
 
 #define FILE_A_BITBOARD ((Bitboard)0x0101010101010101)
 #define FILE_B_BITBOARD (FILE_A_BITBOARD << 1)

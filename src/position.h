@@ -9,6 +9,9 @@
 
 
 
+const char start_position[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+
 typedef struct Position {
     Bitboard board[PIECE_COUNT];
     Bitboard occupancy[COLOR_COUNT];

@@ -26,7 +26,7 @@ typedef uint16_t Move;
 
 typedef Move MoveType;
 enum MoveType {
-    MOVE_TYPE_QUIET             =   0 << 14,
+    MOVE_TYPE_NORMAL            =   0 << 14,
     MOVE_TYPE_PROMOTION         =   1 << 14,
     MOVE_TYPE_CASTLE            =   2 << 14,
     MOVE_TYPE_EN_PASSANT        =   3 << 14,

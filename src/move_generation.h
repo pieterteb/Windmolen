@@ -49,7 +49,7 @@ static inline Square move_destination(Move move) {
 static inline Move new_move(Square from, Square to, MoveType type) {
     assert(is_valid_square(from) && is_valid_square(to));
 
-    return from | (to << 6) | type;
+    return (Move)(from | (to << 6) | type);
 }
 
 static inline Move new_promotion(Square from, Square to, PieceType piece_type) {

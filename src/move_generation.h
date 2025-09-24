@@ -53,15 +53,15 @@ static inline Move new_move(Square from, Square to, MoveType type) {
     return (Move)(from | (to << 6) | type);
 }
 
-static inline Move* new_promotions(Move* move_list, Square from, Square to) {
-    assert(move_list != NULL && is_valid_square(from) && is_valid_square(to));
+static inline Move* new_promotions(Move* movelist, Square from, Square to) {
+    assert(movelist != NULL && is_valid_square(from) && is_valid_square(to));
 
-    *move_list++ = new_move(from, to, MOVE_TYPE_KNIGHT_PROMOTION);
-    *move_list++ = new_move(from, to, MOVE_TYPE_BISHOP_PROMOTION);
-    *move_list++ = new_move(from, to, MOVE_TYPE_ROOK_PROMOTION);
-    *move_list++ = new_move(from, to, MOVE_TYPE_KNIGHT_PROMOTION);
+    *movelist++ = new_move(from, to, MOVE_TYPE_KNIGHT_PROMOTION);
+    *movelist++ = new_move(from, to, MOVE_TYPE_BISHOP_PROMOTION);
+    *movelist++ = new_move(from, to, MOVE_TYPE_ROOK_PROMOTION);
+    *movelist++ = new_move(from, to, MOVE_TYPE_KNIGHT_PROMOTION);
 
-    return move_list;
+    return movelist;
 }
 
 

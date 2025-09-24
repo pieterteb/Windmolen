@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "types.h"
@@ -52,10 +53,15 @@ static inline Move new_move(Square from, Square to, MoveType type) {
     return (Move)(from | (to << 6) | type);
 }
 
-static inline Move new_promotion(Square from, Square to, PieceType piece_type) {
-    assert(is_valid_square(from) && is_valid_square(to) && piece_type >= PIECE_TYPE_KNIGHT && piece_type <= PIECE_TYPE_QUEEN);
+static inline Move* new_promotions(Move* move_list, Square from, Square to) {
+    assert(move_list != NULL && is_valid_square(from) && is_valid_square(to));
 
-    return new_move(from, to, (piece_type - 2) << 12);
+    *move_list++ = new_move(from, to, MOVE_TYPE_KNIGHT_PROMOTION);
+    *move_list++ = new_move(from, to, MOVE_TYPE_BISHOP_PROMOTION);
+    *move_list++ = new_move(from, to, MOVE_TYPE_ROOK_PROMOTION);
+    *move_list++ = new_move(from, to, MOVE_TYPE_KNIGHT_PROMOTION);
+
+    return move_list;
 }
 
 

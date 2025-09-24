@@ -53,6 +53,7 @@ static inline Move new_move(Square from, Square to, MoveType type) {
     return (Move)(from | (to << 6) | type);
 }
 
+// Add promotion moves from from to to to movelist.
 static inline Move* new_promotions(Move* movelist, Square from, Square to) {
     assert(movelist != NULL && is_valid_square(from) && is_valid_square(to));
 

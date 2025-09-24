@@ -8,8 +8,8 @@
 
 
 
-extern Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
-extern Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
+Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
+Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 
 static struct Magic bishop_magic_table[SQUARE_COUNT];
 static struct Magic rook_magic_table[SQUARE_COUNT];
@@ -22,7 +22,7 @@ static void initialise_magics(PieceType piece_type);
 static Bitboard step_safe(Square square, Direction step) {
     Square to = square + (Square)step;
 
-    return is_valid_square(to) ? square_bitboard(to) : BITBOARD_EMPTY;
+    return is_valid_square(to) ? square_bitboard(to) : EMPTY_BITBOARD;
 }
 
 
@@ -53,8 +53,8 @@ void initialise_bitboards() {
             piece_base_attack_table[PIECE_TYPE_KING][square] |= step_safe(square, king_steps[i]);
         }
 
-        piece_base_attack_table[PIECE_TYPE_BISHOP][square] = slider_attacks(PIECE_TYPE_BISHOP, square, BITBOARD_EMPTY);
-        piece_base_attack_table[PIECE_TYPE_ROOK][square] = slider_attacks(PIECE_TYPE_ROOK, square, BITBOARD_EMPTY);
+        piece_base_attack_table[PIECE_TYPE_BISHOP][square] = slider_attacks(PIECE_TYPE_BISHOP, square, EMPTY_BITBOARD);
+        piece_base_attack_table[PIECE_TYPE_ROOK][square] = slider_attacks(PIECE_TYPE_ROOK, square, EMPTY_BITBOARD);
 
         piece_base_attack_table[PIECE_TYPE_QUEEN][square] = piece_base_attack_table[PIECE_TYPE_BISHOP][square] | piece_base_attack_table[PIECE_TYPE_ROOK][square];
     }
@@ -70,7 +70,7 @@ static Bitboard sliding_attacks(PieceType piece_type, Square square, Bitboard oc
     Direction rook_directions[4] = { DIRECTION_NORTH, DIRECTION_EAST, DIRECTION_SOUTH, DIRECTION_WEST };
     Direction* directions = (piece_type == PIECE_TYPE_BISHOP) ? bishop_directions : rook_directions;
 
-    Bitboard attacks = BITBOARD_EMPTY;
+    Bitboard attacks = EMPTY_BITBOARD;
 
     for (size_t i = 0; i < 4; ++i) {
         Direction direction = directions[i];
@@ -120,7 +120,7 @@ static void initialise_magics(PieceType piece_type) {
         else
             magic_table[square].attack_table = magic_table[square - 1].attack_table + (1ULL << (64U - magic_table[square - 1].shift));
 
-        magic_table[square].mask = sliding_attacks(piece_type, square, BITBOARD_EMPTY) & ~edges;
+        magic_table[square].mask = sliding_attacks(piece_type, square, EMPTY_BITBOARD) & ~edges;
         magic_table[square].shift = 64U - (unsigned)popcount64(magic_table[square].mask);
         magic_table[square].factor = magics[square];
 

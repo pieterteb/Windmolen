@@ -10,7 +10,7 @@
 #define ROOK_ENTRY_COUNT 102400
 
 Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT];
-extern Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
+Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 
 
 #define EMPTY_BITBOARD  ((Bitboard)0)
@@ -86,7 +86,7 @@ extern Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
     : (direction) == DIRECTION_SOUTHEAST ? ((bitboard) & ~FILE_H_BITBOARD) >> 7 \
     : (direction) == DIRECTION_SOUTHWEST ? ((bitboard) & ~FILE_A_BITBOARD) >> 9 \
     : (direction) == DIRECTION_NORTHWEST ? ((bitboard) & ~FILE_A_BITBOARD) << 7 \
-                                         : BITBOARD_EMPTY                       \
+                                         : EMPTY_BITBOARD                       \
 )
 
 // Static evaluation version of pawn_attacks_bitboard().
@@ -155,6 +155,13 @@ static inline Bitboard coordinates_bitboard(File file, Rank rank) {
     return file_bitboard(file) & rank_bitboard(rank);
 }
 
+// Square with given coordinates.
+static inline Square coordinates_square(File file, Rank rank) {
+    assert(is_valid_file(file) && is_valid_rank(rank));
+
+    return file * DIRECTION_EAST + rank * DIRECTION_NORTH;
+}
+
 // Shifts a bitboard in the given direction, masking wrap-around on files A/H.
 // Supports { N, S, E, W, NE, SE, SW, NW, 2N, 2S }.
 // Returns BITBOARD_EMPTY if direction is invalid.
@@ -171,7 +178,7 @@ static inline Bitboard shift_bitboard(Bitboard bitboard, Direction direction) {
          : (direction == DIRECTION_SOUTHEAST) ? (bitboard & ~FILE_H_BITBOARD) >> 7
          : (direction == DIRECTION_SOUTHWEST) ? (bitboard & ~FILE_A_BITBOARD) >> 9
          : (direction == DIRECTION_NORTHWEST) ? (bitboard & ~FILE_A_BITBOARD) << 7
-                                              : BITBOARD_EMPTY;
+                                              : EMPTY_BITBOARD;
 }
 
 // Computes pawn attack squares for a bitboard of pawns of given color.

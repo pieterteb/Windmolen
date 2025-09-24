@@ -40,13 +40,13 @@ static Move* white_pawn_pseudo_moves(const Position* position, Move* movelist, B
     movelist = splat_pawn_moves(movelist, attacks_right, DIRECTION_NORTHEAST);
     movelist = splat_pawn_moves(movelist, attacks_left, DIRECTION_NORTHWEST);
 
-    if (position->en_passant_square != -1) {
-        assert(rank_from_square(position->en_passant_square) == RANK_7);
+    if (position->en_passant_square != SQUARE_NONE) {
+        assert(rank_from_square(position->en_passant_square) == RANK_6);
 
         Bitboard en_passant_attackers = regular_pawns & piece_base_attack(PIECE_BLACK_PAWN, position->en_passant_square);
 
         while (en_passant_attackers != EMPTY_BITBOARD)
-            *movelist++ = new_move(pop_lsb64(&en_passant_attackers), position->en_passant_square, MOVE_TYPE_EN_PASSANT);
+            *movelist++ = new_move((Square)pop_lsb64(&en_passant_attackers), position->en_passant_square, MOVE_TYPE_EN_PASSANT);
     }
 
     /* Promotions. */
@@ -59,20 +59,28 @@ static Move* white_pawn_pseudo_moves(const Position* position, Move* movelist, B
 
         Square to;
         while (attacks_right != EMPTY_BITBOARD) {
-            to = pop_lsb64(&attacks_right);
+            to = (Square)pop_lsb64(&attacks_right);
             movelist = new_promotions(movelist, to - DIRECTION_NORTHEAST, to);
         }
 
         while (attacks_left != EMPTY_BITBOARD) {
-            to = pop_lsb64(&attacks_left);
+            to = (Square)pop_lsb64(&attacks_left);
             movelist = new_promotions(movelist, to - DIRECTION_NORTHWEST, to);
         }
 
         while (push_once != EMPTY_BITBOARD) {
-            to = pop_lsb64(&push_once);
+            to = (Square)pop_lsb64(&push_once);
             movelist = new_promotions(movelist, to - DIRECTION_NORTH, to);
         }
     }
 
     return movelist;
+}
+
+size_t generate_all_pseudo_moves(const Position* position, Move* movelist) {
+    Move* current = movelist;
+
+    current = white_pawn_pseudo_moves(position, movelist, ~EMPTY_BITBOARD);
+
+    return (size_t)(current - movelist);
 }

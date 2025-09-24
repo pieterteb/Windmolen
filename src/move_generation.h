@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "position.h"
 #include "types.h"
 
 
@@ -64,6 +65,10 @@ static inline Move* new_promotions(Move* movelist, Square from, Square to) {
 
     return movelist;
 }
+
+
+
+size_t generate_all_pseudo_moves(const Position* position, Move* movelist);
 
 
 

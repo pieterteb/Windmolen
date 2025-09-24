@@ -8,8 +8,14 @@
 
 
 
-Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
-Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
+static Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
+static Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
+
+Bitboard piece_base_attack(PieceType piece_type, Square square) {
+    assert(is_valid_piece_type(piece_type) && is_valid_square(square));
+
+    return piece_base_attack_table[piece_type][square];
+}
 
 static struct Magic bishop_magic_table[SQUARE_COUNT];
 static struct Magic rook_magic_table[SQUARE_COUNT];

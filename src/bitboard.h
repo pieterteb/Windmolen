@@ -9,9 +9,7 @@
 #define BISHOP_ENTRY_COUNT 5248
 #define ROOK_ENTRY_COUNT 102400
 
-Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT];
-Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
-
+Bitboard piece_base_attack(PieceType piece_type, Square square);
 
 #define EMPTY_BITBOARD  ((Bitboard)0)
 
@@ -159,7 +157,7 @@ static inline Bitboard coordinates_bitboard(File file, Rank rank) {
 static inline Square coordinates_square(File file, Rank rank) {
     assert(is_valid_file(file) && is_valid_rank(rank));
 
-    return file * DIRECTION_EAST + rank * DIRECTION_NORTH;
+    return (Square)(file * DIRECTION_EAST + rank * DIRECTION_NORTH);
 }
 
 // Shifts a bitboard in the given direction, masking wrap-around on files A/H.

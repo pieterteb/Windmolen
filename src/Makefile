@@ -12,7 +12,7 @@ RELEASEFLAGS = -O3 -flto -DNDEBUG -D_FORTIFY_SOURCE=2
 CFLAGS = $(BASEFLAGS) $(RELEASEFLAGS)
 
 # Project files.
-SRC    = main.c bitboard.c position.c
+SRC    = main.c bitboard.c move_generation.c position.c
 OBJ    = $(SRC:.c=.o)
 ASM    = $(SRC:.c=.s)
 TARGET = windmolen

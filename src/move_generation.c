@@ -9,39 +9,69 @@
 
 
 
-static Move* splat_white_pawn_attacks(Move* movelist, Bitboard pawn_attacks, Direction step) {
+static inline Move* splat_pawn_moves(Move* movelist, Bitboard pawn_attacks, Direction step) {
     assert(movelist != NULL);
 
-    while (pawn_attacks) {
+    while (pawn_attacks != EMPTY_BITBOARD) {
         Square to = (Square)pop_lsb64(&pawn_attacks);
-        *movelist++ = new_move(to - step, to, MOVE_TYPE_CAPTURE);
+        *movelist++ = new_move(to - step, to, MOVE_TYPE_NORMAL);
     }
 
     return movelist;
 }
 
-static Move* pawn_pseudo_attacks(const Position* position, Move* movelist, Color color, Bitboard target) {
+
+static Move* white_pawn_pseudo_moves(const Position* position, Move* movelist, Bitboard target) {
     assert(position != NULL && movelist != NULL);
 
-    const Bitboard pawn_bitboard = (color == COLOR_WHITE) ? position->board[PIECE_WHITE_PAWN] : position->board[PIECE_BLACK_PAWN];
+    const Bitboard regular_pawns = position->board[PIECE_WHITE_PAWN] & ~RANK_7_BITBOARD;
+    const Bitboard enemies = position->occupancy[COLOR_BLACK] & target;
+    const Bitboard empty_squares = ~position->occupancy[COLOR_BLACK] & target; // For pawn pushes.
 
-    const Direction up_direction = (color == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH;
-    const Direction up_right_direction = up_direction + ((color == COLOR_WHITE) ? DIRECTION_EAST : DIRECTION_WEST);
-    const Direction up_left_direction = up_direction + ((color == COLOR_WHITE) ? DIRECTION_WEST : DIRECTION_EAST);
+    /* Pawn pushes. */
+    Bitboard push_once = shift_bitboard(regular_pawns, DIRECTION_NORTH) & empty_squares;
+    Bitboard push_twice = shift_bitboard(push_once & RANK_3_BITBOARD, DIRECTION_NORTH) & empty_squares;
+    movelist = splat_pawn_moves(movelist, push_once, DIRECTION_NORTH);
+    movelist = splat_pawn_moves(movelist, push_twice, 2 * DIRECTION_NORTH);
 
-    /* Captures. */
-    Bitboard attacks_up_right = shift_bitboard(pawn_bitboard, up_right_direction) & target;
-    Bitboard attacks_up_left = shift_bitboard(pawn_bitboard, up_left_direction) & target;
-    movelist = splat_white_pawn_attacks(movelist, attacks_up_right, up_right_direction);
-    movelist = splat_white_pawn_attacks(movelist, attacks_up_left, up_left_direction);
+    /* Non-promotion captures. */
+    Bitboard attacks_right = shift_bitboard(regular_pawns, DIRECTION_NORTHEAST) & enemies;
+    Bitboard attacks_left = shift_bitboard(regular_pawns, DIRECTION_NORTHWEST) & enemies;
+    movelist = splat_pawn_moves(movelist, attacks_right, DIRECTION_NORTHEAST);
+    movelist = splat_pawn_moves(movelist, attacks_left, DIRECTION_NORTHWEST);
 
-    if (position->en_passant != BITBOARD_EMPTY) {
-        Square en_passant_square = ctz64(position->en_passant);
+    if (position->en_passant_square != -1) {
+        assert(rank_from_square(position->en_passant_square) == RANK_7);
 
-        if (shift_bitboard(position->en_passant, -up_right_direction) & pawn_bitboard)
-            *movelist++ = new_move(en_passant_square, en_passant_square - up_right_direction, MOVE_TYPE_EN_PASSANT_CAPTURE);
-        if (shift_bitboard(position->en_passant, -up_left_direction) & pawn_bitboard)
-            *movelist++ = new_move(en_passant_square, en_passant_square - up_left_direction, MOVE_TYPE_EN_PASSANT_CAPTURE);
+        Bitboard en_passant_attackers = regular_pawns & piece_base_attack(PIECE_BLACK_PAWN, position->en_passant_square);
+
+        while (en_passant_attackers != EMPTY_BITBOARD)
+            *movelist++ = new_move(pop_lsb64(&en_passant_attackers), position->en_passant_square, MOVE_TYPE_EN_PASSANT);
+    }
+
+    /* Promotions. */
+    const Bitboard promotion_pawns = position->board[PIECE_WHITE_PAWN] & RANK_7_BITBOARD;
+    
+    if (promotion_pawns != EMPTY_BITBOARD) {
+        attacks_right = shift_bitboard(promotion_pawns, DIRECTION_NORTHEAST);
+        attacks_left = shift_bitboard(promotion_pawns, DIRECTION_NORTHWEST);
+        push_once = shift_bitboard(promotion_pawns, DIRECTION_NORTH) & empty_squares;
+
+        Square to;
+        while (attacks_right != EMPTY_BITBOARD) {
+            to = pop_lsb64(&attacks_right);
+            movelist = new_promotions(movelist, to - DIRECTION_NORTHEAST, to);
+        }
+
+        while (attacks_left != EMPTY_BITBOARD) {
+            to = pop_lsb64(&attacks_left);
+            movelist = new_promotions(movelist, to - DIRECTION_NORTHWEST, to);
+        }
+
+        while (push_once != EMPTY_BITBOARD) {
+            to = pop_lsb64(&push_once);
+            movelist = new_promotions(movelist, to - DIRECTION_NORTH, to);
+        }
     }
 
     return movelist;

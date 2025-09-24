@@ -121,6 +121,7 @@ Position position_from_FEN(const char* fen) {
         rank = char_to_rank(*fen++);
         position.en_passant_square = coordinates_square(file, rank);
     } else {
+        position.en_passant_square = SQUARE_NONE;
         ++fen;
     }
     ++fen; // Skip space.
@@ -195,7 +196,7 @@ char* position_to_FEN(Position* position, size_t* size_out) {
     *current_fen++ = ' ';
 
     /* En passant. */
-    if (position->en_passant_square) {
+    if (position->en_passant_square != SQUARE_NONE) {
         *current_fen++ = 'a' + (char)file_from_square(position->en_passant_square);
         *current_fen++ = '1' + (char)rank_from_square(position->en_passant_square);
     } else {

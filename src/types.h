@@ -64,7 +64,9 @@ enum Piece {
     PIECE_BLACK_QUEEN,
     PIECE_BLACK_KING,
 
-    PIECE_COUNT
+    PIECE_COUNT,
+
+    PIECE_NONE = PIECE_COUNT
 };
 static_assert(PIECE_COUNT == 12);
 

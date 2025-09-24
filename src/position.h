@@ -8,13 +8,10 @@
 #include "types.h"
 
 
-
-const char start_position[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-
 typedef struct Position {
     Bitboard board[PIECE_COUNT];
     Bitboard occupancy[COLOR_COUNT];
+    Bitboard total_occupancy;
     Bitboard checkers[COLOR_COUNT];
     Piece pieces[SQUARE_COUNT];
     Square en_passant_square;
@@ -29,7 +26,7 @@ typedef struct Position {
 char* position_to_string(Position* position, size_t* size_out);
 
 Position position_from_FEN(const char* fen);
-void position_to_FEN(Position* position, char* fen_out);
+char* position_to_FEN(Position* position, size_t* size_out);
 
 
 

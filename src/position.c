@@ -10,6 +10,9 @@
 
 
 
+const char start_position[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+
 char* position_to_string(Position* position, size_t* size_out) {
     assert(position != NULL);
 
@@ -36,9 +39,9 @@ char* position_to_string(Position* position, size_t* size_out) {
     }
     size += (size_t)sprintf(string + size, "  a   b   c   d   e   f   g   h\n");
 
-    char fen[128];
-    position_to_FEN(position, fen);
+    char* fen = position_to_FEN(position, NULL);
     size += (size_t)sprintf(string + size, "FEN: %s\n", fen);
+    free(fen);
 
     string = realloc(string, size + 1); // +1 for \0.
 
@@ -49,7 +52,9 @@ char* position_to_string(Position* position, size_t* size_out) {
 }
 
 Position position_from_FEN(const char* fen) {
-    const int letter_to_piece[] = {
+    assert(fen != NULL);
+
+    const Piece letter_to_piece[] = {
         ['P'] = PIECE_WHITE_PAWN,   ['p'] = PIECE_BLACK_PAWN,
         ['N'] = PIECE_WHITE_KNIGHT, ['n'] = PIECE_BLACK_KNIGHT,
         ['B'] = PIECE_WHITE_BISHOP, ['b'] = PIECE_BLACK_BISHOP,
@@ -59,19 +64,26 @@ Position position_from_FEN(const char* fen) {
     };
 
     Position position = { 0 };
+    
+    /* Board. */
     File file = FILE_A;
     Rank rank = RANK_8;
-
-    /* Board. */
     for (; *fen != ' '; ++fen) {
         char c = *fen;
         if (c == '/') {
             file = FILE_A;
             --rank;
         } else if (c >= '1' && c <= '8') {
+            Square square = coordinates_square(file, rank);
+            for (size_t i = 0; i < (size_t)(c - '0'); ++i)
+                position.pieces[square++] = PIECE_NONE;
             file += (File)(c - '0');
         } else {
-            position.board[letter_to_piece[(int)c]] |= coordinates_bitboard(file++, rank);
+            Piece piece = letter_to_piece[(int)c];
+            position.board[piece] |= coordinates_bitboard(file, rank);
+            position.pieces[coordinates_square(file, rank)] = piece;
+
+            ++file;
         }
     }
     ++fen; // Skip space.
@@ -107,7 +119,7 @@ Position position_from_FEN(const char* fen) {
     if (*fen != '-') {
         file = char_to_file(*fen++);
         rank = char_to_rank(*fen++);
-        position.en_passant = coordinates_bitboard(file, rank);
+        position.en_passant_square = coordinates_square(file, rank);
     } else {
         ++fen;
     }
@@ -127,7 +139,9 @@ Position position_from_FEN(const char* fen) {
     return position;
 }
 
-void position_to_FEN(Position* position, char* fen_out) {
+char* position_to_FEN(Position* position, size_t* size_out) {
+    assert(position != NULL);
+
     const char piece_to_letter[] = {
         [PIECE_WHITE_PAWN] = 'P',   [PIECE_BLACK_PAWN] = 'p',
         [PIECE_WHITE_KNIGHT] = 'N', [PIECE_BLACK_KNIGHT] = 'n',
@@ -137,69 +151,69 @@ void position_to_FEN(Position* position, char* fen_out) {
         [PIECE_WHITE_KING] = 'K',   [PIECE_BLACK_KING] = 'k'
     };
 
+    char* fen = malloc(1024 * sizeof(*fen));
+    char* current_fen = fen;
+
     /* Board. */
     int empty;
     for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
         empty = 0;
         for (File file = FILE_A; file <= FILE_H; ++file) {
-            Bitboard mask = coordinates_bitboard(file, rank);
-            bool piece_found = false;
+            Square square = coordinates_square(file, rank);
             
-            for (Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {
-                if ((position->board[piece] & mask)) {
-                    if (empty) {
-                        *fen_out = '0' + (char)empty;
-                        ++fen_out;
-                        empty = 0;
-                    }
-                    *fen_out = piece_to_letter[piece];
-                    ++fen_out;
-                    piece_found = true;
-                    break;
+            if (position->pieces[square] == PIECE_NONE) {
+                ++empty;
+            } else {
+                if (empty != 0) {
+                    *current_fen++ = '0' + (char)empty;
+                    empty = 0;
                 }
+                *current_fen++ = piece_to_letter[position->pieces[square]];
             }
-
-            if (!piece_found) ++empty;
         }
 
-        if (empty) *fen_out++ = '0' + (char)empty;
-        if (rank != RANK_1) *fen_out++ = '/';
+        if (empty != 0)
+            *current_fen++ = '0' + (char)empty;
+        if (rank != RANK_1)
+            *current_fen++ = '/';
     }
-    *fen_out++ = ' ';
+    *current_fen++ = ' ';
 
     /* Side to move. */
-    *fen_out++ = (position->side_to_move == COLOR_WHITE) ? 'w' : 'b';
-    *fen_out++ = ' ';
+    *current_fen++ = (position->side_to_move == COLOR_WHITE) ? 'w' : 'b';
+    *current_fen++ = ' ';
 
     /* Castling rights. */
     if (position->castling_rights == NO_CASTLING) {
-        *fen_out++ = '-';
+        *current_fen++ = '-';
     } else {
-        if (position->castling_rights & WHITE_00) *fen_out++ = 'K';
-        if (position->castling_rights & WHITE_000) *fen_out++ = 'Q';
-        if (position->castling_rights & BLACK_00) *fen_out++ = 'k';
-        if (position->castling_rights & BLACK_000) *fen_out++ = 'q';
+        if (position->castling_rights & WHITE_00) *current_fen++ = 'K';
+        if (position->castling_rights & WHITE_000) *current_fen++ = 'Q';
+        if (position->castling_rights & BLACK_00) *current_fen++ = 'k';
+        if (position->castling_rights & BLACK_000) *current_fen++ = 'q';
     }
-    *fen_out++ = ' ';
+    *current_fen++ = ' ';
 
     /* En passant. */
-    if (position->en_passant) {
-        int trailing_zeroes = ctz64(position->en_passant);
-        int file = trailing_zeroes & 7; // Fast modulo 8.
-        int rank = trailing_zeroes >> 3; // Fast divide by 8.
-        *fen_out++ = 'a' + (char)file;
-        *fen_out++ = '1' + (char)rank;
+    if (position->en_passant_square) {
+        *current_fen++ = 'a' + (char)file_from_square(position->en_passant_square);
+        *current_fen++ = '1' + (char)rank_from_square(position->en_passant_square);
     } else {
-        *fen_out++ = '-';
+        *current_fen++ = '-';
     }
-    *fen_out++ = ' ';
+    *current_fen++ = ' ';
 
     /* Halfmove clock. */
-    fen_out += sprintf(fen_out, "%d ", position->halfmove_clock);
+    current_fen += sprintf(current_fen, "%d ", position->halfmove_clock);
 
     /* Fullmove counter. */
-    fen_out += sprintf(fen_out, "%d ", position->fullmove_counter);
+    current_fen += sprintf(current_fen, "%d ", position->fullmove_counter);
 
     /* Null terminate. */
-    *fen_out = '\0';
+    *current_fen = '\0';
+
+    if (size_out != NULL)
+        *size_out = (size_t)(current_fen - fen);
+
+    return fen;
 }

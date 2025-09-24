@@ -26,7 +26,7 @@ static Move* white_pawn_pseudo_moves(const Position* position, Move* movelist, B
 
     const Bitboard regular_pawns = position->board[PIECE_WHITE_PAWN] & ~RANK_7_BITBOARD;
     const Bitboard enemies = position->occupancy[COLOR_BLACK] & target;
-    const Bitboard empty_squares = ~position->occupancy[COLOR_BLACK] & target; // For pawn pushes.
+    const Bitboard empty_squares = ~position->total_occupancy & target; // For pawn pushes.
 
     /* Pawn pushes. */
     Bitboard push_once = shift_bitboard(regular_pawns, DIRECTION_NORTH) & empty_squares;

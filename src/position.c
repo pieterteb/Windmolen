@@ -1,7 +1,9 @@
+#include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "bitboard.h"
 #include "position.h"
 #include "types.h"
 #include "util.h"
@@ -9,6 +11,8 @@
 
 
 char* position_to_string(Position* position, size_t* size_out) {
+    assert(position != NULL);
+
     const int piece_to_char[] = {
         [PIECE_WHITE_PAWN] =    'P',   [PIECE_BLACK_PAWN] = 'p',
         [PIECE_WHITE_KNIGHT] =  'N', [PIECE_BLACK_KNIGHT] = 'n',
@@ -17,7 +21,7 @@ char* position_to_string(Position* position, size_t* size_out) {
         [PIECE_WHITE_QUEEN] =   'Q',  [PIECE_BLACK_QUEEN] = 'q',
         [PIECE_WHITE_KING] =    'K',   [PIECE_BLACK_KING] = 'k',
 
-        [PIECE_COUNT] = ' '
+        [PIECE_NONE] = ' '
     };
 
     char* string = malloc(4096 * sizeof(*string));
@@ -25,17 +29,7 @@ char* position_to_string(Position* position, size_t* size_out) {
 
     for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
         for (File file = FILE_A; file <= FILE_H; ++file) {
-            Bitboard mask = coordinates_bitboard(file, rank);
-
-            Piece current_piece = PIECE_COUNT;
-            for (Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece) {
-                if (position->board[piece] & mask) {
-                    current_piece = piece;
-                    break;
-                }
-            }
-            
-            size += (size_t)sprintf(string + size, "| %c ", piece_to_char[current_piece]);
+            size += (size_t)sprintf(string + size, "| %c ", piece_to_char[position->pieces[coordinates_square(file, rank)]]);
         }
 
         size += (size_t)sprintf(string + size, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", rank + 1);

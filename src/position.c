@@ -137,6 +137,20 @@ Position position_from_FEN(const char* fen) {
     while (*fen >= '0' && *fen <= '9') h = h * 10 + (*fen++ - '0');
     position.fullmove_counter = h;
 
+    position.occupancy[COLOR_WHITE] = position.board[PIECE_WHITE_PAWN]
+                                    | position.board[PIECE_WHITE_KNIGHT]
+                                    | position.board[PIECE_WHITE_BISHOP]
+                                    | position.board[PIECE_WHITE_ROOK]
+                                    | position.board[PIECE_WHITE_QUEEN]
+                                    | position.board[PIECE_WHITE_KING];
+    position.occupancy[COLOR_BLACK] = position.board[PIECE_BLACK_PAWN]
+                                    | position.board[PIECE_BLACK_KNIGHT]
+                                    | position.board[PIECE_BLACK_BISHOP]
+                                    | position.board[PIECE_BLACK_ROOK]
+                                    | position.board[PIECE_BLACK_QUEEN]
+                                    | position.board[PIECE_BLACK_KING];
+    position.total_occupancy = position.occupancy[COLOR_WHITE] | position.occupancy[COLOR_BLACK];
+
     return position;
 }
 

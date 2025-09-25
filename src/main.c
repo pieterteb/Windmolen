@@ -17,14 +17,10 @@ static const char square_to_string[64][3] = {
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
 };
 
-int main(int argc, char* argv[]) {
-    for (int i = 1; i < argc; ++i)
-        printf("%s ", argv[0]);
-    printf("\n");
-
+int main(void) {
     initialise_bitboards();
 
-    Position position = position_from_FEN("rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2");
+    Position position = position_from_FEN("r1bqkbnr/ppp3Pp/2n1p3/8/8/2Pp1N1P/PP1P1PP1/RNBQKB1R b KQkq - 0 7");
     
     char* position_string = position_to_string(&position, NULL);
     printf("%s", position_string);

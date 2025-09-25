@@ -25,10 +25,17 @@ static Bitboard sliding_attacks(PieceType piece_type, Square square, Bitboard oc
 static void initialise_magics(PieceType piece_type);
 
 
-static Bitboard step_safe(Square square, Direction step) {
-    Square to = square + (Square)step;
+static Bitboard step_safe(Square from, Direction step) {
+    assert(is_valid_square(from));
 
-    return is_valid_square(to) ? square_bitboard(to) : EMPTY_BITBOARD;
+    Square to = from + (Square)step;
+    if (!is_valid_square(to))
+        return EMPTY_BITBOARD;
+
+    int rank_difference = abs(rank_from_square(to) - rank_from_square(from));
+    int file_difference = abs(file_from_square(to) - file_from_square(from));
+
+    return (rank_difference <= 2 && file_difference <= 2) ? square_bitboard(to) : EMPTY_BITBOARD;
 }
 
 

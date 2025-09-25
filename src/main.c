@@ -20,7 +20,7 @@ static const char square_to_string[64][3] = {
 int main(void) {
     initialise_bitboards();
 
-    Position position = position_from_FEN("r1bqk2r/p2p1ppp/2p5/4p3/2B1n3/2P5/P1P2PPP/R1BQ1RK1 b kq - 0 10");
+    Position position = position_from_FEN("r2qk2r/pb1p1ppp/2p5/4p1B1/2B1nP2/2P5/P1P3PP/R2Q1RK1 b kq - 0 11");
     
     char* position_string = position_to_string(&position, NULL);
     printf("%s", position_string);

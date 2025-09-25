@@ -244,6 +244,40 @@ static Move* rook_pseudo_moves(const struct Position* position, Move* movelist, 
     return (position->side_to_move == COLOR_WHITE) ? white_rook_pseudo_moves(position, movelist, target) : black_rook_pseudo_moves(position, movelist, target);
 }
 
+static Move* white_queen_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Bitboard white_queens = position->board[PIECE_WHITE_QUEEN];
+
+    while (white_queens != EMPTY_BITBOARD) {
+        Square queen_square = (Square)pop_lsb64(&white_queens);
+        movelist = splat_piece_moves(movelist, slider_attacks(PIECE_TYPE_BISHOP, queen_square, position->total_occupancy) & target, queen_square);
+        movelist = splat_piece_moves(movelist, slider_attacks(PIECE_TYPE_ROOK, queen_square, position->total_occupancy) & target, queen_square);
+    }
+
+    return movelist;
+}
+
+static Move* black_queen_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Bitboard black_queens = position->board[PIECE_BLACK_QUEEN];
+
+    while (black_queens != EMPTY_BITBOARD) {
+        Square queen_square = (Square)pop_lsb64(&black_queens);
+        movelist = splat_piece_moves(movelist, slider_attacks(PIECE_TYPE_BISHOP, queen_square, position->total_occupancy) & target, queen_square);
+        movelist = splat_piece_moves(movelist, slider_attacks(PIECE_TYPE_ROOK, queen_square, position->total_occupancy) & target, queen_square);
+    }
+
+    return movelist;
+}
+
+static Move* queen_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    return (position->side_to_move == COLOR_WHITE) ? white_queen_pseudo_moves(position, movelist, target) : black_queen_pseudo_moves(position, movelist, target);
+}
+
 size_t generate_pseudo_moves(const Position* position, Move* movelist) {
     Move* current = movelist;
 
@@ -253,6 +287,7 @@ size_t generate_pseudo_moves(const Position* position, Move* movelist) {
     current = knight_pseudo_moves(position, current, target);
     current = bishop_pseudo_moves(position, current, target);
     current = rook_pseudo_moves(position, current, target);
+    current = queen_pseudo_moves(position, current, target);
 
     return (size_t)(current - movelist);
 }

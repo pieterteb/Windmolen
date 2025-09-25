@@ -21,7 +21,7 @@ Bitboard sliding_attacks(PieceType piece_type, Bitboard square_bitboard, Bitboar
     Direction rook_directions[4] = { DIRECTION_NORTH, DIRECTION_EAST, DIRECTION_SOUTH, DIRECTION_WEST };
     Direction* directions = (piece_type == PIECE_TYPE_BISHOP) ? bishop_directions : rook_directions;
 
-    Bitboard attacks = BITBOARD_EMPTY;
+    Bitboard attacks = EMPTY_BITBOARD;
 
     for (size_t i = 0; i < 4; ++i) {
         Direction direction = directions[i];
@@ -43,7 +43,7 @@ Bitboard find_magic(PieceType piece_type, Square square) {
 
     const Bitboard edges = ((FILE_A_BITBOARD | FILE_H_BITBOARD) & ~file_bitboard(file_from_square(square)))
                          | ((RANK_1_BITBOARD | RANK_8_BITBOARD) & ~rank_bitboard(rank_from_square(square)));
-    const Bitboard mask = sliding_attacks(piece_type, square_bitboard, BITBOARD_EMPTY) & ~edges;
+    const Bitboard mask = sliding_attacks(piece_type, square_bitboard, EMPTY_BITBOARD) & ~edges;
 
     const unsigned shift = 64U - (unsigned)popcount64(mask);
 

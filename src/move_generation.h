@@ -68,7 +68,7 @@ static inline Move* new_promotions(Move* movelist, Square from, Square to) {
 
 
 
-size_t generate_all_pseudo_moves(const Position* position, Move* movelist);
+size_t generate_pseudo_moves(const Position* position, Move* movelist);
 
 
 

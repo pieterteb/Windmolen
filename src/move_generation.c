@@ -115,7 +115,7 @@ static Move* black_pawn_pseudo_moves(const Position* position, Move* movelist, B
     }
 
     /* Promotions. */
-    const Bitboard promotion_pawns = position->board[PIECE_WHITE_PAWN] & RANK_2_BITBOARD;
+    const Bitboard promotion_pawns = position->board[PIECE_BLACK_PAWN] & RANK_2_BITBOARD;
     
     if (promotion_pawns != EMPTY_BITBOARD) {
         attacks_right = shift_bitboard(promotion_pawns, DIRECTION_SOUTHWEST);
@@ -142,10 +142,51 @@ static Move* black_pawn_pseudo_moves(const Position* position, Move* movelist, B
     return movelist;
 }
 
-size_t generate_all_pseudo_moves(const Position* position, Move* movelist) {
+static Move* pawn_pseudo_moves(const Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    return (position->side_to_move == COLOR_WHITE) ? white_pawn_pseudo_moves(position, movelist, target) : black_pawn_pseudo_moves(position, movelist, target);
+}
+
+static Move* white_knight_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Bitboard white_knights = position->board[PIECE_WHITE_KNIGHT];
+    target &= ~position->occupancy[COLOR_WHITE];
+
+    while (white_knights != EMPTY_BITBOARD) {
+        Square knight_square = (Square)pop_lsb64(&white_knights);
+        movelist = splat_piece_moves(movelist, piece_base_attack(PIECE_TYPE_KNIGHT, knight_square) & target, knight_square);
+    }
+
+    return movelist;
+}
+
+static Move* black_knight_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Bitboard black_knights = position->board[PIECE_BLACK_KNIGHT];
+    target &= ~position->occupancy[COLOR_BLACK];
+
+    while (black_knights != EMPTY_BITBOARD) {
+        Square knight_square = (Square)pop_lsb64(&black_knights);
+        movelist = splat_piece_moves(movelist, piece_base_attack(PIECE_TYPE_KNIGHT, knight_square) & target, knight_square);
+    }
+
+    return movelist;
+}
+
+static Move* knight_pseudo_moves(const Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    return (position->side_to_move == COLOR_WHITE) ? white_knight_pseudo_moves(position, movelist, target) : black_knight_pseudo_moves(position, movelist, target);
+}
+
+size_t generate_pseudo_moves(const Position* position, Move* movelist) {
     Move* current = movelist;
 
-    current = white_pawn_pseudo_moves(position, movelist, ~EMPTY_BITBOARD);
+    current = pawn_pseudo_moves(position, current, ~EMPTY_BITBOARD);
+    current = knight_pseudo_moves(position, current, ~EMPTY_BITBOARD);
 
     return (size_t)(current - movelist);
 }

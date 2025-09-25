@@ -79,7 +79,7 @@ enum Piece {
 
     PIECE_NONE = PIECE_COUNT
 };
-static_assert(PIECE_BLACK_PAWN == PIECE_TYPE_BLACK_PAWN);
+static_assert(PIECE_BLACK_PAWN == (enum Piece)PIECE_TYPE_BLACK_PAWN);
 static_assert(PIECE_COUNT == 12);
 
 // Returns whether piece is valid.

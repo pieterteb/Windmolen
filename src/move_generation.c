@@ -152,7 +152,6 @@ static Move* white_knight_pseudo_moves(const struct Position* position, Move* mo
     assert(position != NULL && movelist != NULL);
 
     Bitboard white_knights = position->board[PIECE_WHITE_KNIGHT];
-    target &= ~position->occupancy[COLOR_WHITE];
 
     while (white_knights != EMPTY_BITBOARD) {
         Square knight_square = (Square)pop_lsb64(&white_knights);
@@ -166,7 +165,6 @@ static Move* black_knight_pseudo_moves(const struct Position* position, Move* mo
     assert(position != NULL && movelist != NULL);
 
     Bitboard black_knights = position->board[PIECE_BLACK_KNIGHT];
-    target &= ~position->occupancy[COLOR_BLACK];
 
     while (black_knights != EMPTY_BITBOARD) {
         Square knight_square = (Square)pop_lsb64(&black_knights);
@@ -182,11 +180,46 @@ static Move* knight_pseudo_moves(const Position* position, Move* movelist, Bitbo
     return (position->side_to_move == COLOR_WHITE) ? white_knight_pseudo_moves(position, movelist, target) : black_knight_pseudo_moves(position, movelist, target);
 }
 
+static Move* white_bishop_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Bitboard white_bishops = position->board[PIECE_WHITE_BISHOP];
+    
+    while (white_bishops != EMPTY_BITBOARD) {
+        Square bishop_square = (Square)pop_lsb64(&white_bishops);
+        movelist = splat_piece_moves(movelist, slider_attacks(PIECE_TYPE_BISHOP, bishop_square, position->total_occupancy) & target, bishop_square);
+    }
+
+    return movelist;
+}
+
+static Move* black_bishop_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Bitboard black_bishops = position->board[PIECE_BLACK_BISHOP];
+    
+    while (black_bishops != EMPTY_BITBOARD) {
+        Square bishop_square = (Square)pop_lsb64(&black_bishops);
+        movelist = splat_piece_moves(movelist, slider_attacks(PIECE_TYPE_BISHOP, bishop_square, position->total_occupancy) & target, bishop_square);
+    }
+
+    return movelist;
+}
+
+static Move* bishop_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    return (position->side_to_move == COLOR_WHITE) ? white_bishop_pseudo_moves(position, movelist, target) : black_bishop_pseudo_moves(position, movelist, target);
+}
+
 size_t generate_pseudo_moves(const Position* position, Move* movelist) {
     Move* current = movelist;
 
-    current = pawn_pseudo_moves(position, current, ~EMPTY_BITBOARD);
-    current = knight_pseudo_moves(position, current, ~EMPTY_BITBOARD);
+    Bitboard target = ~position->occupancy[position->side_to_move];
+
+    current = pawn_pseudo_moves(position, current, target);
+    current = knight_pseudo_moves(position, current, target);
+    current = bishop_pseudo_moves(position, current, target);
 
     return (size_t)(current - movelist);
 }

@@ -30,13 +30,14 @@ static inline bool is_valid_color(Color color) {
 
 typedef int8_t PieceType;
 enum PieceType {
-    PIECE_TYPE_WHITE_PAWN,
-    PIECE_TYPE_BLACK_PAWN,
+    PIECE_TYPE_PAWN,
+    PIECE_TYPE_WHITE_PAWN = PIECE_TYPE_PAWN,
     PIECE_TYPE_KNIGHT,
     PIECE_TYPE_BISHOP,
     PIECE_TYPE_ROOK,
     PIECE_TYPE_QUEEN,
     PIECE_TYPE_KING,
+    PIECE_TYPE_BLACK_PAWN,
 
     PIECE_TYPE_COUNT = 7
 };
@@ -68,6 +69,7 @@ enum Piece {
 
     PIECE_NONE = PIECE_COUNT
 };
+static_assert(PIECE_BLACK_PAWN == PIECE_TYPE_BLACK_PAWN);
 static_assert(PIECE_COUNT == 12);
 
 // Returns whether piece is valid.

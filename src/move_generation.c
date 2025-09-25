@@ -212,6 +212,38 @@ static Move* bishop_pseudo_moves(const struct Position* position, Move* movelist
     return (position->side_to_move == COLOR_WHITE) ? white_bishop_pseudo_moves(position, movelist, target) : black_bishop_pseudo_moves(position, movelist, target);
 }
 
+static Move* white_rook_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Bitboard white_rooks = position->board[PIECE_WHITE_ROOK];
+
+    while (white_rooks != EMPTY_BITBOARD) {
+        Square rook_square = (Square)pop_lsb64(&white_rooks);
+        movelist = splat_piece_moves(movelist, slider_attacks(PIECE_TYPE_ROOK, rook_square, position->total_occupancy) & target, rook_square);
+    }
+
+    return movelist;
+}
+
+static Move* black_rook_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Bitboard black_rooks = position->board[PIECE_BLACK_ROOK];
+
+    while (black_rooks != EMPTY_BITBOARD) {
+        Square rook_square = (Square)pop_lsb64(&black_rooks);
+        movelist = splat_piece_moves(movelist, slider_attacks(PIECE_TYPE_ROOK, rook_square, position->total_occupancy) & target, rook_square);
+    }
+
+    return movelist;
+}
+
+static Move* rook_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    return (position->side_to_move == COLOR_WHITE) ? white_rook_pseudo_moves(position, movelist, target) : black_rook_pseudo_moves(position, movelist, target);
+}
+
 size_t generate_pseudo_moves(const Position* position, Move* movelist) {
     Move* current = movelist;
 
@@ -220,6 +252,7 @@ size_t generate_pseudo_moves(const Position* position, Move* movelist) {
     current = pawn_pseudo_moves(position, current, target);
     current = knight_pseudo_moves(position, current, target);
     current = bishop_pseudo_moves(position, current, target);
+    current = rook_pseudo_moves(position, current, target);
 
     return (size_t)(current - movelist);
 }

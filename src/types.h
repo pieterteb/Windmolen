@@ -27,6 +27,11 @@ static inline bool is_valid_color(Color color) {
     return color == COLOR_WHITE || color == COLOR_BLACK;
 }
 
+// Static evaluation version of is_valid_color().
+//
+// Returns whether color is valid.
+#define IS_VALID_COLOR(color) (bool)((color) == COLOR_WHITE || (color) == COLOR_BLACK)
+
 
 typedef int8_t PieceType;
 enum PieceType {
@@ -45,8 +50,13 @@ static_assert(PIECE_TYPE_COUNT == 7);
 
 // Returns whether piece_type is valid.
 static inline bool is_valid_piece_type(PieceType piece_type) {
-    return piece_type >= 0 && piece_type < PIECE_TYPE_COUNT;
+    return piece_type >= PIECE_TYPE_PAWN && piece_type < PIECE_TYPE_COUNT;
 }
+
+// Static evaluation version of is_valid_piece_type().
+//
+// Returns whether piece_type is valid.
+#define IS_VALID_PIECE_TYPE(piece_type) (bool)((piece_type) >= PIECE_TYPE_PAWN && (piece_type) < PIECE_TYPE_COUNT)
 
 
 typedef int8_t Piece;

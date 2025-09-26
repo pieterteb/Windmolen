@@ -70,4 +70,4 @@ static inline int pop_lsb64(uint64_t* x) {
 
 
 
-#endif /* UTIL_H */
+#endif /* #ifndef UTIL_H */

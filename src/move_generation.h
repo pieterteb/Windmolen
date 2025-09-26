@@ -46,6 +46,10 @@ static inline Square move_destination(Move move) {
     return (Square)((move & 0x0fc0) >> 6);
 }
 
+static inline MoveType move_type(Move move) {
+    return (MoveType)(move & (3 << 14));
+}
+
 
 // Move from from to to of type type.
 static inline Move new_move(Square from, Square to, MoveType type) {
@@ -64,6 +68,15 @@ static inline Move* new_promotions(Move* movelist, Square from, Square to) {
     *movelist++ = new_move(from, to, MOVE_TYPE_KNIGHT_PROMOTION);
 
     return movelist;
+}
+
+static inline Move new_castle(CastlingRights castle_type) {
+    assert(castle_type == WHITE_00 || castle_type == WHITE_000 || castle_type == BLACK_00 || castle_type == BLACK_000);
+
+    const Square king_square = (castle_type & WHITE_CASTLING) ? SQUARE_E1 : SQUARE_E8;
+    const Direction castle_step = (castle_type & KING_SIDE) ? 2 * DIRECTION_EAST : 2 * DIRECTION_WEST;
+
+    return new_move(king_square, king_square + castle_step, MOVE_TYPE_CASTLE);
 }
 
 

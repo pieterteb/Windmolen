@@ -13,8 +13,11 @@ typedef struct Position {
     Bitboard occupancy[COLOR_COUNT];
     Bitboard total_occupancy;
     Bitboard checkers[COLOR_COUNT];
+    Bitboard blockers[COLOR_COUNT];
     Piece pieces[SQUARE_COUNT];
     Square en_passant_square;
+
+    Bitboard castling_squares[CASTLING_COUNT];
 
     Color side_to_move;
     CastlingRights castling_rights;

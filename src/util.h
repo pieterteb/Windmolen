@@ -12,7 +12,7 @@ uint64_t rand64();
 uint64_t sparse_rand64();
 
 
-static inline int ctz64(uint64_t x) {
+static inline int lsb64(uint64_t x) {
     assert(x != 0);
 
 #if defined(__GNUC__)
@@ -62,7 +62,7 @@ static inline int popcount64(uint64_t x) {
 static inline int pop_lsb64(uint64_t* x) {
     assert(*x != 0);
 
-    int lsb_index = ctz64(*x);
+    int lsb_index = lsb64(*x);
     *x &= *x - 1; // pop lsb.
 
     return lsb_index;

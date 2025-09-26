@@ -13,6 +13,20 @@
 const char start_position[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 
+static void initialise_position(Position* position) {
+    assert(position != NULL);
+
+    position->castling_squares[WHITE_00] = SQUARE_BITBOARD(SQUARE_F1) | SQUARE_BITBOARD(SQUARE_G1);
+    position->castling_squares[WHITE_000] = SQUARE_BITBOARD(SQUARE_D1) | SQUARE_BITBOARD(SQUARE_C1) | SQUARE_BITBOARD(SQUARE_B1);
+    position->castling_squares[BLACK_00] = SQUARE_BITBOARD(SQUARE_F8) | SQUARE_BITBOARD(SQUARE_G8);
+    position->castling_squares[BLACK_000] = SQUARE_BITBOARD(SQUARE_D8) | SQUARE_BITBOARD(SQUARE_C8) | SQUARE_BITBOARD(SQUARE_B8);
+    position->castling_squares[KING_SIDE] = position->castling_squares[WHITE_00] | position->castling_squares[BLACK_00];
+    position->castling_squares[QUEEN_SIDE] = position->castling_squares[WHITE_000] | position->castling_squares[BLACK_000];
+    position->castling_squares[WHITE_CASTLING] = position->castling_squares[WHITE_00] | position->castling_squares[WHITE_000];
+    position->castling_squares[BLACK_CASTLING] = position->castling_squares[BLACK_00] | position->castling_squares[BLACK_000];
+    position->castling_squares[ANY_CASTLING] = position->castling_squares[WHITE_CASTLING] | position->castling_squares[BLACK_CASTLING];
+}
+
 char* position_to_string(Position* position, size_t* size_out) {
     assert(position != NULL);
 
@@ -64,6 +78,7 @@ Position position_from_FEN(const char* fen) {
     };
 
     Position position = { 0 };
+    initialise_position(&position);
     
     /* Board. */
     File file = FILE_A;

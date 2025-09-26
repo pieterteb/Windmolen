@@ -278,7 +278,49 @@ static Move* queen_pseudo_moves(const struct Position* position, Move* movelist,
     return (position->side_to_move == COLOR_WHITE) ? white_queen_pseudo_moves(position, movelist, target) : black_queen_pseudo_moves(position, movelist, target);
 }
 
+static Move* white_king_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Square king_square = (Square)lsb64(position->board[PIECE_WHITE_KING]);
+
+    movelist = splat_piece_moves(movelist, piece_base_attack(PIECE_TYPE_KING, king_square) & target, king_square);
+
+    if (position->castling_rights != NO_CASTLING) {
+        if ((WHITE_00 & position->castling_rights) && (position->castling_squares[WHITE_00] & position->total_occupancy) == 0)
+            *movelist++ = new_castle(WHITE_00);
+        if ((WHITE_000 & position->castling_rights) && (position->castling_squares[WHITE_000] & position->total_occupancy) == 0)
+            *movelist++ = new_castle(WHITE_000);
+    }
+
+    return movelist;
+}
+
+static Move* black_king_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    Square king_square = (Square)lsb64(position->board[PIECE_BLACK_KING]);
+
+    movelist = splat_piece_moves(movelist, piece_base_attack(PIECE_TYPE_KING, king_square) & target, king_square);
+
+    if (position->castling_rights != NO_CASTLING) {
+        if ((BLACK_00 & position->castling_rights) && (position->castling_squares[BLACK_00] & position->total_occupancy) == 0)
+            *movelist++ = new_castle(BLACK_00);
+        if ((BLACK_000 & position->castling_rights) && (position->castling_squares[BLACK_000] & position->total_occupancy) == 0)
+            *movelist++ = new_castle(BLACK_000);
+    }
+
+    return movelist;
+}
+
+static Move* king_pseudo_moves(const struct Position* position, Move* movelist, Bitboard target) {
+    assert(position != NULL && movelist != NULL);
+
+    return (position->side_to_move == COLOR_WHITE) ? white_king_pseudo_moves(position, movelist, target) : black_king_pseudo_moves(position, movelist, target);
+}
+
 size_t generate_pseudo_moves(const Position* position, Move* movelist) {
+    assert(position != NULL && movelist != NULL);
+
     Move* current = movelist;
 
     Bitboard target = ~position->occupancy[position->side_to_move];
@@ -288,6 +330,7 @@ size_t generate_pseudo_moves(const Position* position, Move* movelist) {
     current = bishop_pseudo_moves(position, current, target);
     current = rook_pseudo_moves(position, current, target);
     current = queen_pseudo_moves(position, current, target);
+    current = king_pseudo_moves(position, current, target);
 
     return (size_t)(current - movelist);
 }

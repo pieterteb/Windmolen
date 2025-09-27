@@ -2,12 +2,15 @@
 #define BITBOARD_H
 
 
+#include <assert.h>
+
 #include "types.h"
 
 
 
 #define BISHOP_ENTRY_COUNT 5248
 #define ROOK_ENTRY_COUNT 102400
+
 
 Bitboard piece_base_attack(PieceType piece_type, Square square);
 
@@ -32,69 +35,32 @@ Bitboard piece_base_attack(PieceType piece_type, Square square);
 #define RANK_8_BITBOARD (RANK_1_BITBOARD << 7 * 8)
 
 
+extern Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT];
+extern Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 
-/* Several macro functions for static evaluation. */
+extern Bitboard diagonals[15]; // Indices: (rank - file) + 7   0-14
+extern Bitboard antidiagonals[15]; // Indices: (rank + file)   0-14
+extern Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 
 
-// Static evaluation version of file_from_square().
-//
-// File of square.
-#define FILE_FROM_SQUARE(square) ((File)((square) & 7))
+static inline Bitboard diagonal_bitboard(int diagonal_index) {
+    assert(diagonal_index >= -7 && diagonal_index <= 7);
 
-// Static evaluation version of rank_from_square().
-//
-// Rank of square.
-#define RANK_FROM_SQUARE(square) ((Rank)((square) >> 3))
+    return diagonals[diagonal_index + 7];
+}
 
-// Static evaluation version of square_bitboard().
-//
-// Bitboard with only the given square set.
-#define SQUARE_BITBOARD(square) ((Bitboard)1 << (square))
+static inline Bitboard antidiagonal_bitboard(int antidiagonal_index) {
+    assert(antidiagonal_index >= 0 && antidiagonal_index <= 14);
 
-// Static evaluation version of file_bitboard().
-//
-// Bitboard with all squares on file set.
-#define FILE_BITBOARD(file) (FILE_A_BITBOARD << (file))
+    return antidiagonals[antidiagonal_index];
+}
 
-// Static evaluation version of rank_bitboard().
-//
-// Bitboard with all squares on rank set.
-#define RANK_BITBOARD(rank) (RANK_1_BITBOARD << ((rank) * 8))
+static inline Bitboard line_bitboard(Square square1, Square square2) {
+    assert(is_valid_square(square1));
+    assert(is_valid_square(square2));
 
-// Static evaluation version of coordinates_bitboard().
-//
-// Bitboard with only the square specified by file and rank set.
-#define COORDINATES_BITBOARD(file, rank) (FILE_BITBOARD(file) & RANK_BITBOARD(rank))
-
-// Static evaluation version of shift_bitboard().
-//
-// Shifts a bitboard in the given direction, masking wrap-around on files A/H.
-// Supports { N, S, E, W, NE, SE, SW, NW, 2N, 2S }.
-// Returns BITBOARD_EMPTY if direction is invalid.
-#define SHIFT_BITBOARD(bitboard, direction) (                                   \
-      (direction) == DIRECTION_NORTH     ? (bitboard) << 8                      \
-    : (direction) == 2 * DIRECTION_NORTH ? (bitboard) << 16                     \
-    : (direction) == DIRECTION_SOUTH     ? (bitboard) >> 8                      \
-    : (direction) == 2 * DIRECTION_SOUTH ? (bitboard) >> 16                     \
-                                                                                \
-    : (direction) == DIRECTION_EAST      ? ((bitboard) & ~FILE_H_BITBOARD) << 1 \
-    : (direction) == DIRECTION_WEST      ? ((bitboard) & ~FILE_A_BITBOARD) >> 1 \
-                                                                                \
-    : (direction) == DIRECTION_NORTHEAST ? ((bitboard) & ~FILE_H_BITBOARD) << 9 \
-    : (direction) == DIRECTION_SOUTHEAST ? ((bitboard) & ~FILE_H_BITBOARD) >> 7 \
-    : (direction) == DIRECTION_SOUTHWEST ? ((bitboard) & ~FILE_A_BITBOARD) >> 9 \
-    : (direction) == DIRECTION_NORTHWEST ? ((bitboard) & ~FILE_A_BITBOARD) << 7 \
-                                         : EMPTY_BITBOARD                       \
-)
-
-// Static evaluation version of pawn_attacks_bitboard().
-//
-// Computes pawn attack squares for a bitboard of pawns of given color.
-#define PAWN_ATTACKS_BITBOARD(bitboard, color) (                                                                             \
-    color == COLOR_WHITE ? SHIFT_BITBOARD((bitboard), DIRECTION_NORTHEAST) | SHIFT_BITBOARD((bitboard), DIRECTION_NORTHWEST) \
-                         : SHIFT_BITBOARD((bitboard), DIRECTION_SOUTHEAST) | SHIFT_BITBOARD((bitboard), DIRECTION_SOUTHWEST) \
-)
-
+    return line_bitboards[square1][square2];
+}
 
 
 // File of square.
@@ -184,9 +150,11 @@ static inline Bitboard pawn_attacks_bitboard(Bitboard bitboard, Color color) {
     assert(is_valid_color(color));
 
     // We use static evaluation here because directions are known beforehand.
-    return (color == COLOR_WHITE) ? SHIFT_BITBOARD(bitboard, DIRECTION_NORTHEAST) | SHIFT_BITBOARD(bitboard, DIRECTION_NORTHWEST)
-                                  : SHIFT_BITBOARD(bitboard, DIRECTION_SOUTHEAST) | SHIFT_BITBOARD(bitboard, DIRECTION_SOUTHWEST);
+    return (color == COLOR_WHITE) ? shift_bitboard(bitboard, DIRECTION_NORTHEAST) | shift_bitboard(bitboard, DIRECTION_NORTHWEST)
+                                  : shift_bitboard(bitboard, DIRECTION_SOUTHEAST) | shift_bitboard(bitboard, DIRECTION_SOUTHWEST);
 }
+
+
 
 
 

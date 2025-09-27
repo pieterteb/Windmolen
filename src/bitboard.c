@@ -8,8 +8,62 @@
 
 
 
-static Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
-static Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
+Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
+Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
+
+Bitboard diagonals[15];  // Indices: (rank - file) + 7   0-14
+Bitboard antidiagonals[15]; // Indices: (rank + file)   0-14
+Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
+
+static inline void initialise_diagonals(void) {
+    Bitboard bitboard = square_bitboard(SQUARE_A1);
+
+    for (Square square = SQUARE_A1; square < SQUARE_COUNT; ++square) {
+        File file = file_from_square(square);
+        Rank rank = rank_from_square(square);
+
+        diagonals[rank - file + 7] |= bitboard;
+        antidiagonals[rank + file] |= bitboard;
+
+        bitboard <<= 1;
+    }
+}
+
+static inline Bitboard compute_line_bitboard(Square square1, Square square2) {
+    assert(is_valid_square(square1) && is_valid_square(square2));
+
+    if (square1 == square2)
+        return square_bitboard(square1);
+
+    File file1 = file_from_square(square1);
+    File file2 = file_from_square(square2);
+
+    if (file1 == file2)
+        return file_bitboard(file1);
+
+    Rank rank1 = rank_from_square(square1);
+    Rank rank2 = rank_from_square(square2);
+
+    if (rank1 == rank2)
+        return rank_bitboard(rank1);
+
+    // Same diagonal.
+    if (rank1 - rank2 == file1 - file2)
+        return diagonal_bitboard(rank1 - file1);
+
+    // Same anti-diagonal.
+    if (rank1 - rank2 == -(file1 - file2))
+        return antidiagonal_bitboard(rank1 + file1);
+
+    // No line exists.
+    return EMPTY_BITBOARD;
+}
+
+static inline void initialise_line_bitboards(void) {
+    for (Square square1 = SQUARE_A1; square1 < SQUARE_COUNT; ++square1)
+        for (Square square2 = SQUARE_A1; square2 < SQUARE_COUNT; ++square2)
+            line_bitboards[square1][square2] = compute_line_bitboard(square1, square2);
+}
 
 Bitboard piece_base_attack(PieceType piece_type, Square square) {
     assert(is_valid_piece_type(piece_type) && is_valid_square(square));
@@ -40,14 +94,17 @@ static Bitboard step_safe(Square from, Direction step) {
 
 
 void initialise_bitboards() {
+    initialise_diagonals();
+    initialise_line_bitboards();
+
     initialise_magics(PIECE_TYPE_BISHOP);
     initialise_magics(PIECE_TYPE_ROOK);
 
     for (Square square = SQUARE_A1; square <= SQUARE_H8; ++square) {
-        Bitboard square_bitboard = SQUARE_BITBOARD(square);
+        Bitboard bitboard = square_bitboard(square);
 
-        piece_base_attack_table[PIECE_WHITE_PAWN][square] = PAWN_ATTACKS_BITBOARD(square_bitboard, COLOR_WHITE);
-        piece_base_attack_table[PIECE_BLACK_PAWN][square] = PAWN_ATTACKS_BITBOARD(square_bitboard, COLOR_BLACK);
+        piece_base_attack_table[PIECE_WHITE_PAWN][square] = pawn_attacks_bitboard(bitboard, COLOR_WHITE);
+        piece_base_attack_table[PIECE_BLACK_PAWN][square] = pawn_attacks_bitboard(bitboard, COLOR_BLACK);
 
         const Direction knight_steps[8] = {
             DIRECTION_NORTH + DIRECTION_NORTHEAST, DIRECTION_EAST  + DIRECTION_NORTHEAST,
@@ -77,8 +134,6 @@ void initialise_bitboards() {
 static Bitboard sliding_attacks(PieceType piece_type, Square square, Bitboard occupancy) {
     assert(is_valid_square(square) && (piece_type == PIECE_TYPE_BISHOP || piece_type == PIECE_TYPE_ROOK));
 
-    Bitboard square_bitboard = SQUARE_BITBOARD(square);
-
     Direction bishop_directions[4] = { DIRECTION_NORTHEAST, DIRECTION_SOUTHEAST, DIRECTION_SOUTHWEST, DIRECTION_NORTHWEST };
     Direction rook_directions[4] = { DIRECTION_NORTH, DIRECTION_EAST, DIRECTION_SOUTH, DIRECTION_WEST };
     Direction* directions = (piece_type == PIECE_TYPE_BISHOP) ? bishop_directions : rook_directions;
@@ -88,7 +143,7 @@ static Bitboard sliding_attacks(PieceType piece_type, Square square, Bitboard oc
     for (size_t i = 0; i < 4; ++i) {
         Direction direction = directions[i];
 
-        for (Bitboard bitboard = SHIFT_BITBOARD(square_bitboard, direction); bitboard; bitboard = SHIFT_BITBOARD(bitboard, direction)) {
+        for (Bitboard bitboard = shift_bitboard(square_bitboard(square), direction); bitboard; bitboard = shift_bitboard(bitboard, direction)) {
             attacks |= bitboard;
             if (bitboard & occupancy) break;
         }

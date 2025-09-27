@@ -232,7 +232,7 @@ char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
         size += (size_t)sprintf(string + size, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", rank + 1);
     }
     size += (size_t)sprintf(string + size, "  a   b   c   d   e   f   g   h\n");
-    size += (size_t)sprintf(string + size, "Hex: %#018" PRIx64 "\n", bitboard);
+    size += (size_t)sprintf(string + size, "Hex: 0x%016" PRIx64 "\n", bitboard);
 
     string = realloc(string, size + 1); // +1 for \0.
 

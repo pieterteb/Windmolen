@@ -94,6 +94,14 @@ static inline Color piece_color(Piece piece) {
     return (Color)(piece > PIECE_WHITE_KING);
 }
 
+static inline Piece get_piece(Color color, PieceType piece_type) {
+    assert(is_valid_color(color));
+    assert(is_valid_piece_type(piece_type));
+    assert(piece_type != PIECE_BLACK_PAWN);
+
+    return (Piece)(piece_type + color * PIECE_BLACK_PAWN);
+}
+
 
 typedef int8_t CastlingRights;
 enum CastlingRights {

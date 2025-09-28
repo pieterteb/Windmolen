@@ -80,8 +80,7 @@ static inline Move new_castle(CastlingRights castle_type) {
 }
 
 
-
-size_t generate_pseudo_moves(const Position* position, Move* movelist);
+size_t generate_legal_moves(const struct Position* position, Move movelist[static 256]);
 
 
 

@@ -20,7 +20,7 @@ static const char square_to_string[64][3] = {
 int main(void) {
     initialise_bitboards();
 
-    Position position = position_from_FEN("r3k2r/pppq1ppp/2n2n2/1B1pp1B1/1b1PP1b1/2N2N2/PPPQ1PPP/2KR3R b kq - 11 8");
+    Position position = position_from_FEN("r3k2r/ppp2pp1/2n2B1p/1B1pp3/1b1PPqb1/2N2N1P/PPPQ1PP1/2KR3R w kq - 1 11");
     
     char* position_string = position_to_string(&position, NULL);
     printf("%s", position_string);
@@ -29,15 +29,15 @@ int main(void) {
     printf("\n");
 
     Move movelist[256];
-    size_t move_count = generate_pseudo_moves(&position, movelist);
+    size_t move_count = generate_legal_moves(&position, movelist);
 
     printf("%zu moves found:\n", move_count);
     for (size_t i = 0; i < move_count; ++i)
         printf("from %s to %s\n", square_to_string[move_source(movelist[i])], square_to_string[move_destination(movelist[i])]);
 
-    // char* bitboard_string = bitboard_to_string(slider_attacks(PIECE_TYPE_ROOK, SQUARE_H8, occupancy), NULL);
-    // printf("%s", bitboard_string);
-    // free(bitboard_string);
+    char* bitboard_string = bitboard_to_string(line_bitboard(SQUARE_A3, SQUARE_C4), NULL);
+    printf("%s", bitboard_string);
+    free(bitboard_string);
 
     return 0;
 }

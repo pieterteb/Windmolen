@@ -285,10 +285,11 @@ static Move* white_king_pseudo_moves(const struct Position* position, Move* move
 
     movelist = splat_piece_moves(movelist, piece_base_attack(PIECE_TYPE_KING, king_square) & target, king_square);
 
-    if (position->castling_rights != NO_CASTLING) {
-        if ((WHITE_00 & position->castling_rights) && (position->castling_squares[WHITE_00] & position->total_occupancy) == 0)
+    // For pseudo-legal castling moves, we check whether there is any piece in the way or if the king is in check.
+    if (position->castling_rights != NO_CASTLING && position->checkers[COLOR_WHITE] == EMPTY_BITBOARD) {
+        if ((WHITE_00 & position->castling_rights) && (position->castling_squares[WHITE_00] & position->total_occupancy) == EMPTY_BITBOARD)
             *movelist++ = new_castle(WHITE_00);
-        if ((WHITE_000 & position->castling_rights) && (position->castling_squares[WHITE_000] & position->total_occupancy) == 0)
+        if ((WHITE_000 & position->castling_rights) && (position->castling_squares[WHITE_000] & position->total_occupancy) == EMPTY_BITBOARD)
             *movelist++ = new_castle(WHITE_000);
     }
 
@@ -302,10 +303,11 @@ static Move* black_king_pseudo_moves(const struct Position* position, Move* move
 
     movelist = splat_piece_moves(movelist, piece_base_attack(PIECE_TYPE_KING, king_square) & target, king_square);
 
-    if (position->castling_rights != NO_CASTLING) {
-        if ((BLACK_00 & position->castling_rights) && (position->castling_squares[BLACK_00] & position->total_occupancy) == 0)
+    // For pseudo-legal castling moves, we check whether there is any piece in the way or if the king is in check.
+    if (position->castling_rights != NO_CASTLING && position->checkers[COLOR_BLACK] == EMPTY_BITBOARD) {
+        if ((BLACK_00 & position->castling_rights) && (position->castling_squares[BLACK_00] & position->total_occupancy) == EMPTY_BITBOARD)
             *movelist++ = new_castle(BLACK_00);
-        if ((BLACK_000 & position->castling_rights) && (position->castling_squares[BLACK_000] & position->total_occupancy) == 0)
+        if ((BLACK_000 & position->castling_rights) && (position->castling_squares[BLACK_000] & position->total_occupancy) == EMPTY_BITBOARD)
             *movelist++ = new_castle(BLACK_000);
     }
 
@@ -318,19 +320,43 @@ static Move* king_pseudo_moves(const struct Position* position, Move* movelist, 
     return (position->side_to_move == COLOR_WHITE) ? white_king_pseudo_moves(position, movelist, target) : black_king_pseudo_moves(position, movelist, target);
 }
 
-size_t generate_pseudo_moves(const Position* position, Move* movelist) {
+static Move* generate_pseudo_legal_moves(const Position* position, Move* movelist) {
     assert(position != NULL && movelist != NULL);
-
-    Move* current = movelist;
 
     Bitboard target = ~position->occupancy[position->side_to_move];
 
-    current = pawn_pseudo_moves(position, current, target);
-    current = knight_pseudo_moves(position, current, target);
-    current = bishop_pseudo_moves(position, current, target);
-    current = rook_pseudo_moves(position, current, target);
-    current = queen_pseudo_moves(position, current, target);
-    current = king_pseudo_moves(position, current, target);
+    movelist = pawn_pseudo_moves(position, movelist, target);
+    movelist = knight_pseudo_moves(position, movelist, target);
+    movelist = bishop_pseudo_moves(position, movelist, target);
+    movelist = rook_pseudo_moves(position, movelist, target);
+    movelist = queen_pseudo_moves(position, movelist, target);
+    movelist = king_pseudo_moves(position, movelist, target);
 
-    return (size_t)(current - movelist);
+    return movelist;
+}
+
+size_t generate_legal_moves(const struct Position* position, Move movelist[static 256]) {
+    assert(position != NULL);
+    assert(movelist != NULL);
+
+    Move* current = movelist;
+    movelist = generate_pseudo_legal_moves(position, movelist);
+
+    Square king_square = (position->side_to_move == COLOR_WHITE) ? (Square)lsb64(position->board[PIECE_WHITE_KING]) : (Square)lsb64(position->board[PIECE_BLACK_KING]);
+
+    size_t size = 0;
+    while (current != movelist) {
+        if (((position->blockers[position->side_to_move] & square_bitboard(move_source(*current))) != EMPTY_BITBOARD
+            && (line_bitboard(move_source(*current), king_square) & square_bitboard(move_destination(*current))) == EMPTY_BITBOARD)
+            || (move_type(*current) == MOVE_TYPE_EN_PASSANT && !is_legal_en_passant(position, *current))
+            || (move_source(*current) == king_square && !is_legal_king_move(position, *current)))
+        {
+            *current = *(--movelist);
+        } else {
+            ++current;
+            ++size;
+        }
+    }
+
+    return size;
 }

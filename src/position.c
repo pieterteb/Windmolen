@@ -1,10 +1,12 @@
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "bitboard.h"
 #include "position.h"
+#include "bitboard.h"
+#include "move_generation.h"
 #include "types.h"
 #include "util.h"
 
@@ -25,6 +27,65 @@ static void initialise_position(Position* position) {
     position->castling_squares[WHITE_CASTLING] = position->castling_squares[WHITE_00] | position->castling_squares[WHITE_000];
     position->castling_squares[BLACK_CASTLING] = position->castling_squares[BLACK_00] | position->castling_squares[BLACK_000];
     position->castling_squares[ANY_CASTLING] = position->castling_squares[WHITE_CASTLING] | position->castling_squares[BLACK_CASTLING];
+}
+
+bool is_legal_en_passant(const struct Position* position, Move move) {
+    assert(position != NULL);
+    assert(move_type(move) == MOVE_TYPE_EN_PASSANT);
+
+    return true;
+}
+
+static Bitboard attackers_of_square(const struct Position* position, Square square, Color color) {
+    assert(position != NULL);
+    assert(is_valid_square(square));
+
+    Bitboard occupancy = position->total_occupancy;
+
+    return ((slider_attacks(PIECE_TYPE_BISHOP, square, occupancy) & get_bishop_queen_occupancy(position, color, square))
+          | (slider_attacks(PIECE_TYPE_ROOK, square, occupancy) & get_rook_queen_occupancy(position, color, square))
+          | (piece_base_attack(PIECE_TYPE_KNIGHT, square) & position->board[get_piece(color, PIECE_TYPE_KNIGHT)])
+          | (piece_base_attack(get_piece(!color, PIECE_TYPE_PAWN), square) & position->board[get_piece(color, PIECE_TYPE_PAWN)])
+          | (piece_base_attack(PIECE_TYPE_KING, square) & position->board[get_piece(color, PIECE_TYPE_KING)]));
+}
+
+bool is_legal_king_move(const struct Position* position, Move move) {
+    assert(position != NULL);
+    assert(move_source(move) == get_king_square(position));
+
+    if (move_type(move) == MOVE_TYPE_CASTLE) {
+        CastlingRights castle_type;
+        switch (move_destination(move)) {
+            case SQUARE_G1:
+                castle_type = WHITE_00;
+                break;
+            case SQUARE_C1:
+                castle_type = WHITE_000;
+                break;
+            case SQUARE_G8:
+                castle_type = BLACK_00;
+                break;
+            case SQUARE_C8:
+                castle_type = BLACK_000;
+                break;
+            default:
+                assert(false);
+                break;
+        }
+
+        // At this point, for castling moves, we have only checked whether there are pieces in the way and whether the king is in check.
+        // We will now check if the king moves over an attacked square.
+        Bitboard castling_squares = position->castling_squares[castle_type];
+        while (castling_squares) {
+            Square square = (Square)pop_lsb64(&castling_squares);
+            if (attackers_of_square(position, square, !position->side_to_move) != EMPTY_BITBOARD)
+                return false;
+        }
+
+        return true;
+    }
+
+    return attackers_of_square(position, move_destination(move), !position->side_to_move) == EMPTY_BITBOARD;
 }
 
 char* position_to_string(Position* position, size_t* size_out) {

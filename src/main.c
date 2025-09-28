@@ -35,7 +35,7 @@ int main(void) {
     for (size_t i = 0; i < move_count; ++i)
         printf("from %s to %s\n", square_to_string[move_source(movelist[i])], square_to_string[move_destination(movelist[i])]);
 
-    char* bitboard_string = bitboard_to_string(line_bitboard(SQUARE_A3, SQUARE_C4), NULL);
+    char* bitboard_string = bitboard_to_string(position.blockers[COLOR_WHITE], NULL);
     printf("%s", bitboard_string);
     free(bitboard_string);
 

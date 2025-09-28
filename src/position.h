@@ -53,8 +53,11 @@ static inline Bitboard get_rook_queen_occupancy(const struct Position* position,
 }
 
 
-bool is_legal_en_passant(const struct Position* position, Move move);
+bool is_legal_pinned_move(const struct Position* position, Move move);
 bool is_legal_king_move(const struct Position* position, Move move);
+
+Bitboard compute_checkers(const struct Position* position, Color color);
+Bitboard compute_blockers(const struct Position* position, Color color);
 
 
 char* position_to_string(Position* position, size_t* size_out);

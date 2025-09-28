@@ -29,17 +29,22 @@ static void initialise_position(Position* position) {
     position->castling_squares[ANY_CASTLING] = position->castling_squares[WHITE_CASTLING] | position->castling_squares[BLACK_CASTLING];
 }
 
-static Bitboard attackers_of_square(const struct Position* position, Square square, Color color) {
+static Bitboard attackers_of_square(const struct Position* position, Color color, Bitboard occupancy, Square square) {
     assert(position != NULL);
     assert(is_valid_square(square));
-
-    Bitboard occupancy = position->total_occupancy;
 
     return ((slider_attacks(PIECE_TYPE_BISHOP, square, occupancy) & get_bishop_queen_occupancy(position, color, square))
           | (slider_attacks(PIECE_TYPE_ROOK, square, occupancy) & get_rook_queen_occupancy(position, color, square))
           | (piece_base_attack(PIECE_TYPE_KNIGHT, square) & position->board[get_piece(color, PIECE_TYPE_KNIGHT)])
           | (piece_base_attack(get_piece(!color, PIECE_TYPE_PAWN), square) & position->board[get_piece(color, PIECE_TYPE_PAWN)])
           | (piece_base_attack(PIECE_TYPE_KING, square) & position->board[get_piece(color, PIECE_TYPE_KING)]));
+}
+
+inline bool is_legal_pinned_move(const struct Position* position, Move move) {
+    assert(position != NULL);
+    assert(move_type(move) == MOVE_TYPE_NORMAL);
+
+    return (line_bitboard(move_source(move), move_destination(move)) & position->board[get_piece(position->side_to_move, PIECE_TYPE_KING)]) != EMPTY_BITBOARD;
 }
 
 bool is_legal_king_move(const struct Position* position, Move move) {
@@ -71,14 +76,44 @@ bool is_legal_king_move(const struct Position* position, Move move) {
         Bitboard castling_squares = position->castling_squares[castle_type];
         while (castling_squares) {
             Square square = (Square)pop_lsb64(&castling_squares);
-            if (attackers_of_square(position, square, !position->side_to_move) != EMPTY_BITBOARD)
+            if (attackers_of_square(position, !position->side_to_move, position->total_occupancy, square) != EMPTY_BITBOARD)
                 return false;
         }
 
         return true;
     }
 
-    return attackers_of_square(position, move_destination(move), !position->side_to_move) == EMPTY_BITBOARD;
+    return attackers_of_square(position, !position->side_to_move, position->total_occupancy, move_destination(move)) == EMPTY_BITBOARD;
+}
+
+inline Bitboard compute_checkers(const struct Position* position, Color color) {
+    assert(position != NULL);
+    assert(is_valid_color(color));
+
+    Square king_square = (Square)lsb64(position->board[get_piece(color, PIECE_TYPE_KING)]);
+
+    return attackers_of_square(position, !color, position->total_occupancy, king_square);
+}
+
+inline Bitboard compute_blockers(const struct Position* position, Color color) {
+    assert(position != NULL);
+    assert(is_valid_color(color));
+
+    Square king_square = (Square)lsb64(position->board[get_piece(color, PIECE_TYPE_KING)]);
+
+    Bitboard potential_pinners = attackers_of_square(position, !color, EMPTY_BITBOARD, king_square);
+
+    Bitboard blockers = EMPTY_BITBOARD;
+
+    while (potential_pinners) {
+        Square pinner_square = (Square)pop_lsb64(&potential_pinners);
+        Bitboard potential_blockers = between_bitboard(pinner_square, king_square) & position->total_occupancy;
+    
+        if (popcount64(potential_blockers) == 1)
+            blockers |= potential_blockers;
+    }
+
+    return blockers;
 }
 
 char* position_to_string(Position* position, size_t* size_out) {
@@ -219,6 +254,11 @@ Position position_from_FEN(const char* fen) {
                                     | position.board[PIECE_BLACK_QUEEN]
                                     | position.board[PIECE_BLACK_KING];
     position.total_occupancy = position.occupancy[COLOR_WHITE] | position.occupancy[COLOR_BLACK];
+
+    position.blockers[COLOR_WHITE] = compute_blockers(&position, COLOR_WHITE);
+    position.blockers[COLOR_BLACK] = compute_blockers(&position, COLOR_BLACK);
+    position.checkers[COLOR_WHITE] = compute_checkers(&position, COLOR_WHITE);
+    position.checkers[COLOR_BLACK] = compute_checkers(&position, COLOR_BLACK);
 
     return position;
 }

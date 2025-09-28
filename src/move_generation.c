@@ -342,12 +342,13 @@ size_t generate_legal_moves(const struct Position* position, Move movelist[stati
     Move* current = movelist;
     movelist = generate_pseudo_legal_moves(position, movelist);
 
+    const Bitboard pinned = position->blockers[position->side_to_move] & position->occupancy[position->side_to_move];
+
     Square king_square = (position->side_to_move == COLOR_WHITE) ? (Square)lsb64(position->board[PIECE_WHITE_KING]) : (Square)lsb64(position->board[PIECE_BLACK_KING]);
 
     size_t size = 0;
     while (current != movelist) {
-        if (((position->blockers[position->side_to_move] & square_bitboard(move_source(*current))) != EMPTY_BITBOARD
-            && (line_bitboard(move_source(*current), king_square) & square_bitboard(move_destination(*current))) == EMPTY_BITBOARD)
+        if (((pinned & square_bitboard(move_source(*current))) != EMPTY_BITBOARD && !is_legal_pinned_move(position, *current))
             || (move_source(*current) == king_square && !is_legal_king_move(position, *current)))
         {
             *current = *(--movelist);

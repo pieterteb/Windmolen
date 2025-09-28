@@ -41,6 +41,7 @@ extern Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 extern Bitboard diagonals[15]; // Indices: (rank - file) + 7   0-14
 extern Bitboard antidiagonals[15]; // Indices: (rank + file)   0-14
 extern Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
+extern Bitboard between_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 
 
 static inline Bitboard diagonal_bitboard(int diagonal_index) {
@@ -60,6 +61,13 @@ static inline Bitboard line_bitboard(Square square1, Square square2) {
     assert(is_valid_square(square2));
 
     return line_bitboards[square1][square2];
+}
+
+static inline Bitboard between_bitboard(Square square1, Square square2) {
+    assert(is_valid_square(square1));
+    assert(is_valid_square(square2));
+
+    return between_bitboards[square1][square2];
 }
 
 

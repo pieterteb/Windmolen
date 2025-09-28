@@ -14,6 +14,7 @@ Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 Bitboard diagonals[15];  // Indices: (rank - file) + 7   0-14
 Bitboard antidiagonals[15]; // Indices: (rank + file)   0-14
 Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
+Bitboard between_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 
 static inline void initialise_diagonals(void) {
     Bitboard bitboard = square_bitboard(SQUARE_A1);
@@ -59,10 +60,40 @@ static inline Bitboard compute_line_bitboard(Square square1, Square square2) {
     return EMPTY_BITBOARD;
 }
 
+static inline Bitboard compute_between_bitboard(Square square1, Square square2) {
+    assert(is_valid_square(square1) && is_valid_square(square2));
+    
+    if (square1 == square2)
+        return EMPTY_BITBOARD;  // No squares strictly between.
+
+    Bitboard line = compute_line_bitboard(square1, square2);
+    Bitboard b1 = square_bitboard(square1);
+    Bitboard b2 = square_bitboard(square2);
+
+    if (b1 > b2) {
+        Bitboard tmp = b1;
+        b1 = b2;
+        b2 = tmp;
+    }
+
+    // Mask for all squares between b1 and b2 (exclusive)
+    Bitboard mask = line & ~(b1 | b2);
+    mask &= ~(b1 - 1);  // remove bits below b1
+    mask &= (b2 - 1);   // remove bits above b2
+
+    return mask;
+}
+
 static inline void initialise_line_bitboards(void) {
     for (Square square1 = SQUARE_A1; square1 < SQUARE_COUNT; ++square1)
         for (Square square2 = SQUARE_A1; square2 < SQUARE_COUNT; ++square2)
             line_bitboards[square1][square2] = compute_line_bitboard(square1, square2);
+}
+
+static inline void initialise_between_bitboards(void) {
+    for (Square square1 = SQUARE_A1; square1 < SQUARE_COUNT; ++square1)
+        for (Square square2 = SQUARE_A1; square2 < SQUARE_COUNT; ++square2)
+            between_bitboards[square1][square2] = compute_between_bitboard(square1, square2);
 }
 
 Bitboard piece_base_attack(PieceType piece_type, Square square) {
@@ -96,6 +127,7 @@ static Bitboard step_safe(Square from, Direction step) {
 void initialise_bitboards() {
     initialise_diagonals();
     initialise_line_bitboards();
+    initialise_between_bitboards();
 
     initialise_magics(PIECE_TYPE_BISHOP);
     initialise_magics(PIECE_TYPE_ROOK);

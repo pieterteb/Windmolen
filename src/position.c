@@ -29,13 +29,6 @@ static void initialise_position(Position* position) {
     position->castling_squares[ANY_CASTLING] = position->castling_squares[WHITE_CASTLING] | position->castling_squares[BLACK_CASTLING];
 }
 
-bool is_legal_en_passant(const struct Position* position, Move move) {
-    assert(position != NULL);
-    assert(move_type(move) == MOVE_TYPE_EN_PASSANT);
-
-    return true;
-}
-
 static Bitboard attackers_of_square(const struct Position* position, Square square, Color color) {
     assert(position != NULL);
     assert(is_valid_square(square));

@@ -348,7 +348,6 @@ size_t generate_legal_moves(const struct Position* position, Move movelist[stati
     while (current != movelist) {
         if (((position->blockers[position->side_to_move] & square_bitboard(move_source(*current))) != EMPTY_BITBOARD
             && (line_bitboard(move_source(*current), king_square) & square_bitboard(move_destination(*current))) == EMPTY_BITBOARD)
-            || (move_type(*current) == MOVE_TYPE_EN_PASSANT && !is_legal_en_passant(position, *current))
             || (move_source(*current) == king_square && !is_legal_king_move(position, *current)))
         {
             *current = *(--movelist);

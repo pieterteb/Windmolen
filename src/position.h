@@ -36,18 +36,16 @@ static inline Square get_king_square(const struct Position* position) {
 }
 
 
-static inline Bitboard get_bishop_queen_occupancy(const struct Position* position, Color color, Square square) {
+static inline Bitboard get_bishop_queen_occupancy(const struct Position* position, Color color) {
     assert(position != NULL);
     assert(is_valid_color(color));
-    assert(is_valid_square(square));
 
     return position->board[get_piece(color, PIECE_TYPE_BISHOP)] | position->board[get_piece(color, PIECE_TYPE_QUEEN)];
 }
 
-static inline Bitboard get_rook_queen_occupancy(const struct Position* position, Color color, Square square) {
+static inline Bitboard get_rook_queen_occupancy(const struct Position* position, Color color) {
     assert(position != NULL);
     assert(is_valid_color(color));
-    assert(is_valid_square(square));
 
     return position->board[get_piece(color, PIECE_TYPE_ROOK)] | position->board[get_piece(color, PIECE_TYPE_QUEEN)];
 }

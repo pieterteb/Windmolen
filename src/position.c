@@ -33,8 +33,8 @@ static Bitboard attackers_of_square(const struct Position* position, Color color
     assert(position != NULL);
     assert(is_valid_square(square));
 
-    return ((slider_attacks(PIECE_TYPE_BISHOP, square, occupancy) & get_bishop_queen_occupancy(position, color, square))
-          | (slider_attacks(PIECE_TYPE_ROOK, square, occupancy) & get_rook_queen_occupancy(position, color, square))
+    return ((slider_attacks(PIECE_TYPE_BISHOP, square, occupancy) & get_bishop_queen_occupancy(position, color))
+          | (slider_attacks(PIECE_TYPE_ROOK, square, occupancy) & get_rook_queen_occupancy(position, color))
           | (piece_base_attack(PIECE_TYPE_KNIGHT, square) & position->board[get_piece(color, PIECE_TYPE_KNIGHT)])
           | (piece_base_attack(get_piece(!color, PIECE_TYPE_PAWN), square) & position->board[get_piece(color, PIECE_TYPE_PAWN)])
           | (piece_base_attack(PIECE_TYPE_KING, square) & position->board[get_piece(color, PIECE_TYPE_KING)]));
@@ -52,7 +52,7 @@ bool is_legal_king_move(const struct Position* position, Move move) {
     assert(move_source(move) == get_king_square(position));
 
     if (move_type(move) == MOVE_TYPE_CASTLE) {
-        CastlingRights castle_type;
+        CastlingRights castle_type = NO_CASTLING;
         switch (move_destination(move)) {
             case SQUARE_G1:
                 castle_type = WHITE_00;

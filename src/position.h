@@ -51,6 +51,8 @@ static inline Bitboard get_rook_queen_occupancy(const struct Position* position,
 }
 
 
+void do_move(struct Position* position, Move move);
+
 bool is_legal_pinned_move(const struct Position* position, Move move);
 bool is_legal_king_move(const struct Position* position, Move move);
 

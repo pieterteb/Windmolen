@@ -3,6 +3,7 @@
 
 #include "bitboard.h"
 #include "move_generation.h"
+#include "perft.h"
 #include "position.h"
 
 
@@ -20,12 +21,16 @@ static const char square_to_string[64][3] = {
 int main(void) {
     initialise_bitboards();
 
-    Position position = position_from_FEN("r3k2r/ppp2pp1/2n2B1p/1B1pp3/1b1PPqb1/2N2N1P/PPPQ1PP1/2KR3R w kq - 1 11");
-    
+    Position position = position_from_FEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
     char* position_string = position_to_string(&position, NULL);
     printf("%s", position_string);
     free(position_string);
 
+    for (size_t i = 1; i <= 5; ++i) {
+        printf("Perft %zu is: %zu\n", i, perft(&position, i));
+    }
+    
     printf("\n");
 
     Move movelist[256];
@@ -33,11 +38,17 @@ int main(void) {
 
     printf("%zu moves found:\n", move_count);
     for (size_t i = 0; i < move_count; ++i)
-        printf("from %s to %s\n", square_to_string[move_source(movelist[i])], square_to_string[move_destination(movelist[i])]);
+        printf("from %s to %s\n", square_to_string[get_move_source(movelist[i])], square_to_string[get_move_destination(movelist[i])]);
 
-    char* bitboard_string = bitboard_to_string(position.blockers[COLOR_WHITE], NULL);
-    printf("%s", bitboard_string);
-    free(bitboard_string);
+    do_move(&position, movelist[0]);
+
+    position_string = position_to_string(&position, NULL);
+    printf("%s", position_string);
+    free(position_string);
+
+    // char* bitboard_string = bitboard_to_string(position.blockers[COLOR_WHITE], NULL);
+    // printf("%s", bitboard_string);
+    // free(bitboard_string);
 
     return 0;
 }

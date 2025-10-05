@@ -38,16 +38,20 @@ enum MoveType {
     MOVE_TYPE_QUEEN_PROMOTION   =   MOVE_TYPE_PROMOTION | (3 << 12),
 };
 
-static inline Square move_source(Move move) {
+static inline Square get_move_source(Move move) {
     return (Square)(move & 0x003f);
 }
 
-static inline Square move_destination(Move move) {
+static inline Square get_move_destination(Move move) {
     return (Square)((move & 0x0fc0) >> 6);
 }
 
-static inline MoveType move_type(Move move) {
+static inline MoveType get_move_type(Move move) {
     return (MoveType)(move & (3 << 14));
+}
+
+static inline PieceType get_promotion_piece(Move move) {
+    return (Square)((move >> 12) & 3);
 }
 
 

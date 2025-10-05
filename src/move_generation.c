@@ -335,9 +335,12 @@ static Move* generate_pseudo_legal_moves(const Position* position, Move* movelis
     return movelist;
 }
 
-size_t generate_legal_moves(const struct Position* position, Move movelist[static 256]) {
+size_t generate_legal_moves(const struct Position* position, Move movelist[static MAX_MOVES]) {
     assert(position != NULL);
     assert(movelist != NULL);
+
+    if (position->fullmove_counter == 100)
+        return 0;
 
     Move* current = movelist;
     movelist = generate_pseudo_legal_moves(position, movelist);
@@ -348,8 +351,8 @@ size_t generate_legal_moves(const struct Position* position, Move movelist[stati
 
     size_t size = 0;
     while (current != movelist) {
-        if (((pinned & square_bitboard(move_source(*current))) != EMPTY_BITBOARD && !is_legal_pinned_move(position, *current))
-            || (move_source(*current) == king_square && !is_legal_king_move(position, *current)))
+        if (((pinned & square_bitboard(get_move_source(*current))) != EMPTY_BITBOARD && !is_legal_pinned_move(position, *current))
+            || (get_move_source(*current) == king_square && !is_legal_king_move(position, *current)))
         {
             *current = *(--movelist);
         } else {

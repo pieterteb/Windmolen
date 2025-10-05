@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "position.h"
 #include "bitboard.h"
@@ -13,6 +14,110 @@
 
 
 const char start_position[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+
+void do_move(struct Position* position, Move move) {
+    assert(position != NULL);
+
+    Square source = get_move_source(move);
+    Square destination = get_move_destination(move);
+    MoveType move_type = get_move_type(move);
+    Piece piece = position->pieces[source];
+    Color side_to_move = position->side_to_move;
+    Color opponent = !side_to_move;
+
+    bool is_capture = position->pieces[destination] != PIECE_NONE || move_type == MOVE_TYPE_EN_PASSANT;
+
+    assert(piece_color(piece) == side_to_move);
+    assert(piece != PIECE_NONE);
+    assert(is_valid_color(side_to_move));
+
+    if (move_type == MOVE_TYPE_EN_PASSANT) {
+        Square deletion_square = destination + (side_to_move == COLOR_WHITE) ? DIRECTION_SOUTH : DIRECTION_NORTH;
+        position->pieces[deletion_square] = PIECE_NONE;
+        position->board[get_piece(opponent, PIECE_TYPE_PAWN)] ^= square_bitboard(deletion_square);
+    }
+
+    position->pieces[source] = PIECE_NONE;
+    position->board[piece] ^= square_bitboard(source);
+
+    if (move_type == MOVE_TYPE_PROMOTION)
+        piece = get_promotion_piece(move);
+
+    position->pieces[destination] = piece;
+    position->board[piece] |= square_bitboard(destination);
+
+    Square rook_source_square;
+    Square rook_destination_square;
+    if (destination > source) {
+        // King side castling.
+        rook_source_square = destination + DIRECTION_EAST;
+        rook_destination_square = destination + DIRECTION_WEST;
+    } else {
+        // Queen side castling.
+        rook_source_square = destination + 2 * DIRECTION_WEST;
+        rook_destination_square = destination + DIRECTION_EAST;
+    }
+    if (piece == get_piece(side_to_move, PIECE_TYPE_KING)) {
+        if (move_type == MOVE_TYPE_CASTLE) {
+            position->pieces[rook_destination_square] = position->pieces[rook_source_square];
+            position->pieces[rook_source_square] = PIECE_NONE;
+            position->board[get_piece(side_to_move, PIECE_TYPE_ROOK)] ^= square_bitboard(rook_source_square) | square_bitboard(rook_destination_square);
+        }
+
+        position->castling_rights ^= (side_to_move == COLOR_WHITE) ? WHITE_CASTLING : BLACK_CASTLING;
+    }
+
+    CastlingRights side_to_move_castling_rights = position->castling_rights & ((side_to_move == COLOR_WHITE) ? WHITE_CASTLING : BLACK_CASTLING);
+    if (piece == get_piece(side_to_move, PIECE_TYPE_ROOK)) {
+        if ((side_to_move_castling_rights & KING_SIDE) != NO_CASTLING && source == ((side_to_move == COLOR_WHITE) ? SQUARE_H1 : SQUARE_H8))
+            position->castling_rights ^= side_to_move_castling_rights & KING_SIDE;
+        else if ((side_to_move_castling_rights & QUEEN_SIDE) != NO_CASTLING && source == ((side_to_move == COLOR_WHITE) ? SQUARE_A1 : SQUARE_A8))
+            position->castling_rights ^= side_to_move_castling_rights & QUEEN_SIDE;
+    }
+
+    bool is_double_pawn_push = piece == get_piece(side_to_move, PIECE_TYPE_PAWN) && abs(destination - source) == 2 * DIRECTION_NORTH;
+    if (is_double_pawn_push)
+        position->en_passant_square = (Square)(source + ((side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH));
+    else
+        position->en_passant_square = SQUARE_NONE;
+
+    if (is_capture || piece == get_piece(side_to_move, PIECE_TYPE_PAWN))
+        position->halfmove_clock = 0;
+    else
+        ++position->halfmove_clock;
+
+    position->side_to_move = opponent;
+
+    if (side_to_move == COLOR_WHITE)
+        ++position->fullmove_counter;
+
+    position->occupancy[COLOR_WHITE] = position->board[PIECE_WHITE_PAWN]
+                                     | position->board[PIECE_WHITE_KNIGHT]
+                                     | position->board[PIECE_WHITE_BISHOP]
+                                     | position->board[PIECE_WHITE_ROOK]
+                                     | position->board[PIECE_WHITE_QUEEN]
+                                     | position->board[PIECE_WHITE_KING];
+    position->occupancy[COLOR_BLACK] = position->board[PIECE_BLACK_PAWN]
+                                     | position->board[PIECE_BLACK_KNIGHT]
+                                     | position->board[PIECE_BLACK_BISHOP]
+                                     | position->board[PIECE_BLACK_ROOK]
+                                     | position->board[PIECE_BLACK_QUEEN]
+                                     | position->board[PIECE_BLACK_KING];
+    position->total_occupancy = position->occupancy[COLOR_WHITE] | position->occupancy[COLOR_BLACK];
+
+    position->blockers[side_to_move] = compute_blockers(position, side_to_move);
+    if (!is_double_pawn_push)
+        position->blockers[opponent] = compute_blockers(position, opponent);
+    position->checkers[side_to_move] = compute_checkers(position, side_to_move);
+}
+
+// Position copy_position(const struct Position* position) {
+//     Position copy;
+//     memcpy(&copy, position, sizeof(struct Position));
+
+//     return copy;
+// }
 
 
 static void initialise_position(Position* position) {
@@ -42,18 +147,18 @@ static Bitboard attackers_of_square(const struct Position* position, Color color
 
 inline bool is_legal_pinned_move(const struct Position* position, Move move) {
     assert(position != NULL);
-    assert(move_type(move) == MOVE_TYPE_NORMAL);
+    assert(get_move_type(move) == MOVE_TYPE_NORMAL);
 
-    return (line_bitboard(move_source(move), move_destination(move)) & position->board[get_piece(position->side_to_move, PIECE_TYPE_KING)]) != EMPTY_BITBOARD;
+    return (line_bitboard(get_move_source(move), get_move_destination(move)) & position->board[get_piece(position->side_to_move, PIECE_TYPE_KING)]) != EMPTY_BITBOARD;
 }
 
 bool is_legal_king_move(const struct Position* position, Move move) {
     assert(position != NULL);
-    assert(move_source(move) == get_king_square(position));
+    assert(get_move_source(move) == get_king_square(position));
 
-    if (move_type(move) == MOVE_TYPE_CASTLE) {
+    if (get_move_type(move) == MOVE_TYPE_CASTLE) {
         CastlingRights castle_type = NO_CASTLING;
-        switch (move_destination(move)) {
+        switch (get_move_destination(move)) {
             case SQUARE_G1:
                 castle_type = WHITE_00;
                 break;
@@ -83,7 +188,7 @@ bool is_legal_king_move(const struct Position* position, Move move) {
         return true;
     }
 
-    return attackers_of_square(position, !position->side_to_move, position->total_occupancy, move_destination(move)) == EMPTY_BITBOARD;
+    return attackers_of_square(position, !position->side_to_move, position->total_occupancy, get_move_destination(move)) == EMPTY_BITBOARD;
 }
 
 inline Bitboard compute_checkers(const struct Position* position, Color color) {

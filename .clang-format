@@ -17,6 +17,7 @@ AllowShortLoopsOnASingleLine: false
 AlwaysBreakBeforeMultilineStrings: false
 AttributeMacros: [__attribute__((unused))]
 BinPackArguments: false
+# BinPackLongBracedList: true # clang-format 21+
 BinPackParameters: OnePerLine
 BitFieldColonSpacing: Both
 BreakAdjacentStringLiterals: false
@@ -27,6 +28,7 @@ BreakBinaryOperations: Never
 BreakFunctionDefinitionParameters: false
 BreakStringLiterals: false
 ColumnLimit: 120
+# EnumTrailingComma: Remove # clang-format 21+
 IncludeBlocks: Regroup
 IncludeCategories:
   # System headers
@@ -50,6 +52,12 @@ KeepEmptyLines:
   AtStartOfFile: false
 LineEnding: LF
 MaxEmptyLinesToKeep: 3
+# clang-format 22+
+# NumericLiteralCase:
+#   ExponentLetter: Upper
+#   HexDigit: Upper
+#   Prefix: Upper
+#   Suffix: Upper
 PointerAlignment: Left
 QualifierAlignment: Custom
 QualifierOrder: [static, inline, const, restrict, type, volatile]
@@ -67,6 +75,7 @@ SpaceBeforeCaseColon: false
 SpaceBeforeParens: ControlStatements
 SpaceBeforeSquareBrackets: false
 SpacesBeforeTrailingComments: 1
+# SpaceInEmptyBraces: Always # clang-format 22+
 SpacesInLineCommentPrefix:
   Minimum: 1
   Maximum: -1

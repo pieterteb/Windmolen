@@ -9,8 +9,8 @@ AlignConsecutiveMacros: AcrossComments
 AlignEscapedNewlines: LeftWithLastLine
 AlignOperands: AlignAfterOperator
 AlignTrailingComments: true
-AllowAllArgumentsOnNextLine: true
-AllowAllParametersOfDeclarationOnNextLine: true
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: false
@@ -31,6 +31,7 @@ BreakBinaryOperations: Never
 BreakFunctionDefinitionParameters: false
 BreakStringLiterals: false
 ColumnLimit: 120
+ContinuationIndentWidth: 0
 # EnumTrailingComma: Remove # clang-format 21+
 IncludeBlocks: Regroup
 IncludeCategories:
@@ -61,6 +62,7 @@ MaxEmptyLinesToKeep: 3
 #   HexDigit: Upper
 #   Prefix: Upper
 #   Suffix: Upper
+PenaltyBreakAssignment: 1000
 PointerAlignment: Left
 QualifierAlignment: Custom
 QualifierOrder: [static, inline, const, restrict, type, volatile]

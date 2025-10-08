@@ -65,7 +65,7 @@ MaxEmptyLinesToKeep: 3
 PenaltyBreakAssignment: 1000
 PointerAlignment: Left
 QualifierAlignment: Custom
-QualifierOrder: [static, inline, const, restrict, type, volatile]
+QualifierOrder: [static, inline, const, type, restrict, volatile]
 ReflowComments: Always
 RemoveBracesLLVM: true
 RemoveEmptyLinesInUnwrappedLines: true

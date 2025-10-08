@@ -3,20 +3,30 @@
 #include <stdlib.h>
 
 #include "bitboard.h"
+
 #include "types.h"
 #include "util.h"
 
 
 
-Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = { 0 };
-Bitboard slider_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
+Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = {EMPTY_BITBOARD};
+static Bitboard slider_piece_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 
-Bitboard diagonals[15];  // Indices: (rank - file) + 7   0-14
+Bitboard diagonals[15];     // Indices: (rank - file) + 7   0-14
 Bitboard antidiagonals[15]; // Indices: (rank + file)   0-14
 Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 Bitboard between_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 
-static inline void initialise_diagonals(void) {
+struct Magic bishop_magic_table[SQUARE_COUNT];
+struct Magic rook_magic_table[SQUARE_COUNT];
+
+
+static void initialize_magics(PieceType piece_type);
+static Bitboard slider_piece_attacks(PieceType piece_type, Square square, Bitboard occupancy);
+static inline unsigned magic_index(const struct Magic* magic, Bitboard occupancy);
+
+
+static inline void initialize_diagonals(void) {
     Bitboard bitboard = square_bitboard(SQUARE_A1);
 
     for (Square square = SQUARE_A1; square < SQUARE_COUNT; ++square) {
@@ -33,28 +43,23 @@ static inline void initialise_diagonals(void) {
 static inline Bitboard compute_line_bitboard(Square square1, Square square2) {
     assert(is_valid_square(square1) && is_valid_square(square2));
 
-    if (square1 == square2)
-        return square_bitboard(square1);
+    if (square1 == square2) return square_bitboard(square1);
 
     File file1 = file_from_square(square1);
     File file2 = file_from_square(square2);
 
-    if (file1 == file2)
-        return file_bitboard(file1);
+    if (file1 == file2) return file_bitboard(file1);
 
     Rank rank1 = rank_from_square(square1);
     Rank rank2 = rank_from_square(square2);
 
-    if (rank1 == rank2)
-        return rank_bitboard(rank1);
+    if (rank1 == rank2) return rank_bitboard(rank1);
 
     // Same diagonal.
-    if (rank1 - rank2 == file1 - file2)
-        return diagonal_bitboard(rank1 - file1);
+    if (rank1 - rank2 == file1 - file2) return diagonal_bitboard(rank1 - file1);
 
     // Same anti-diagonal.
-    if (rank1 - rank2 == -(file1 - file2))
-        return antidiagonal_bitboard(rank1 + file1);
+    if (rank1 - rank2 == -(file1 - file2)) return antidiagonal_bitboard(rank1 + file1);
 
     // No line exists.
     return EMPTY_BITBOARD;
@@ -62,60 +67,45 @@ static inline Bitboard compute_line_bitboard(Square square1, Square square2) {
 
 static inline Bitboard compute_between_bitboard(Square square1, Square square2) {
     assert(is_valid_square(square1) && is_valid_square(square2));
-    
-    if (square1 == square2)
-        return EMPTY_BITBOARD;  // No squares strictly between.
 
-    Bitboard line = compute_line_bitboard(square1, square2);
-    Bitboard b1 = square_bitboard(square1);
-    Bitboard b2 = square_bitboard(square2);
+    if (square1 == square2) return EMPTY_BITBOARD; // No squares strictly between.
 
-    if (b1 > b2) {
-        Bitboard tmp = b1;
-        b1 = b2;
-        b2 = tmp;
+    Bitboard bitboard1 = square_bitboard(square1);
+    Bitboard bitboard2 = square_bitboard(square2);
+
+    Bitboard between = compute_line_bitboard(square1, square2);
+
+    if (between == EMPTY_BITBOARD) return bitboard2;
+
+    if (bitboard1 > bitboard2) {
+        between &= ~(bitboard2 - 1);
+        between &= bitboard1 - 1;
+    } else {
+        between &= ~(bitboard1 | (bitboard1 - 1));
+        between &= bitboard2 | (bitboard2 - 1);
     }
 
-    // Mask for all squares between b1 and b2 (exclusive)
-    Bitboard mask = line & ~(b1 | b2);
-    mask &= ~(b1 - 1);  // remove bits below b1
-    mask &= (b2 - 1);   // remove bits above b2
-
-    return mask;
+    return between;
 }
 
-static inline void initialise_line_bitboards(void) {
+static inline void initialize_line_bitboards(void) {
     for (Square square1 = SQUARE_A1; square1 < SQUARE_COUNT; ++square1)
         for (Square square2 = SQUARE_A1; square2 < SQUARE_COUNT; ++square2)
             line_bitboards[square1][square2] = compute_line_bitboard(square1, square2);
 }
 
-static inline void initialise_between_bitboards(void) {
+static inline void initialize_between_bitboards(void) {
     for (Square square1 = SQUARE_A1; square1 < SQUARE_COUNT; ++square1)
         for (Square square2 = SQUARE_A1; square2 < SQUARE_COUNT; ++square2)
             between_bitboards[square1][square2] = compute_between_bitboard(square1, square2);
 }
-
-Bitboard piece_base_attack(PieceType piece_type, Square square) {
-    assert(is_valid_piece_type(piece_type) && is_valid_square(square));
-
-    return piece_base_attack_table[piece_type][square];
-}
-
-static struct Magic bishop_magic_table[SQUARE_COUNT];
-static struct Magic rook_magic_table[SQUARE_COUNT];
-
-
-static Bitboard sliding_attacks(PieceType piece_type, Square square, Bitboard occupancy);
-static void initialise_magics(PieceType piece_type);
 
 
 static Bitboard step_safe(Square from, Direction step) {
     assert(is_valid_square(from));
 
     Square to = from + (Square)step;
-    if (!is_valid_square(to))
-        return EMPTY_BITBOARD;
+    if (!is_valid_square(to)) return EMPTY_BITBOARD;
 
     int rank_difference = abs(rank_from_square(to) - rank_from_square(from));
     int file_difference = abs(file_from_square(to) - file_from_square(from));
@@ -124,20 +114,21 @@ static Bitboard step_safe(Square from, Direction step) {
 }
 
 
-void initialise_bitboards() {
-    initialise_diagonals();
-    initialise_line_bitboards();
-    initialise_between_bitboards();
+extern void initialize_bitboards() {
+    initialize_diagonals();
+    initialize_line_bitboards();
+    initialize_between_bitboards();
 
-    initialise_magics(PIECE_TYPE_BISHOP);
-    initialise_magics(PIECE_TYPE_ROOK);
+    initialize_magics(PIECE_TYPE_BISHOP);
+    initialize_magics(PIECE_TYPE_ROOK);
 
     for (Square square = SQUARE_A1; square <= SQUARE_H8; ++square) {
         Bitboard bitboard = square_bitboard(square);
 
-        piece_base_attack_table[PIECE_WHITE_PAWN][square] = pawn_attacks_bitboard(bitboard, COLOR_WHITE);
-        piece_base_attack_table[PIECE_BLACK_PAWN][square] = pawn_attacks_bitboard(bitboard, COLOR_BLACK);
+        piece_base_attack_table[PIECE_TYPE_WHITE_PAWN][square] = white_pawn_attacks_bitboard(bitboard);
+        piece_base_attack_table[PIECE_TYPE_BLACK_PAWN][square] = black_pawn_attacks_bitboard(bitboard);
 
+        // clang-format off
         const Direction knight_steps[8] = {
             DIRECTION_NORTH + DIRECTION_NORTHEAST, DIRECTION_EAST  + DIRECTION_NORTHEAST,
             DIRECTION_EAST  + DIRECTION_SOUTHEAST, DIRECTION_SOUTH + DIRECTION_SOUTHEAST,
@@ -150,32 +141,40 @@ void initialise_bitboards() {
             DIRECTION_SOUTH, DIRECTION_SOUTHWEST,
             DIRECTION_WEST,  DIRECTION_NORTHWEST
         };
+        // clang-format on
+
         for (size_t i = 0; i < 8; ++i) {
             piece_base_attack_table[PIECE_TYPE_KNIGHT][square] |= step_safe(square, knight_steps[i]);
-            piece_base_attack_table[PIECE_TYPE_KING][square] |= step_safe(square, king_steps[i]);
+            piece_base_attack_table[PIECE_TYPE_KING][square]   |= step_safe(square, king_steps[i]);
         }
 
-        piece_base_attack_table[PIECE_TYPE_BISHOP][square] = slider_attacks(PIECE_TYPE_BISHOP, square, EMPTY_BITBOARD);
-        piece_base_attack_table[PIECE_TYPE_ROOK][square] = slider_attacks(PIECE_TYPE_ROOK, square, EMPTY_BITBOARD);
+        piece_base_attack_table[PIECE_TYPE_BISHOP][square] = bishop_attacks(square, EMPTY_BITBOARD);
+        piece_base_attack_table[PIECE_TYPE_ROOK][square]   = rook_attacks(square, EMPTY_BITBOARD);
 
-        piece_base_attack_table[PIECE_TYPE_QUEEN][square] = piece_base_attack_table[PIECE_TYPE_BISHOP][square] | piece_base_attack_table[PIECE_TYPE_ROOK][square];
+        piece_base_attack_table[PIECE_TYPE_QUEEN][square] = piece_base_attack_table[PIECE_TYPE_BISHOP][square]
+                                                          | piece_base_attack_table[PIECE_TYPE_ROOK][square];
     }
 }
 
 
-static Bitboard sliding_attacks(PieceType piece_type, Square square, Bitboard occupancy) {
-    assert(is_valid_square(square) && (piece_type == PIECE_TYPE_BISHOP || piece_type == PIECE_TYPE_ROOK));
+static Bitboard slider_piece_attacks(PieceType piece_type, Square square, Bitboard occupancy) {
+    assert(piece_type == PIECE_TYPE_BISHOP || piece_type == PIECE_TYPE_ROOK);
+    assert(is_valid_square(square));
 
-    Direction bishop_directions[4] = { DIRECTION_NORTHEAST, DIRECTION_SOUTHEAST, DIRECTION_SOUTHWEST, DIRECTION_NORTHWEST };
-    Direction rook_directions[4] = { DIRECTION_NORTH, DIRECTION_EAST, DIRECTION_SOUTH, DIRECTION_WEST };
-    Direction* directions = (piece_type == PIECE_TYPE_BISHOP) ? bishop_directions : rook_directions;
+    Direction bishop_directions[4] = {DIRECTION_NORTHEAST,
+                                      DIRECTION_SOUTHEAST,
+                                      DIRECTION_SOUTHWEST,
+                                      DIRECTION_NORTHWEST};
+    Direction rook_directions[4]   = {DIRECTION_NORTH, DIRECTION_EAST, DIRECTION_SOUTH, DIRECTION_WEST};
+    Direction* directions          = (piece_type == PIECE_TYPE_BISHOP) ? bishop_directions : rook_directions;
 
     Bitboard attacks = EMPTY_BITBOARD;
 
     for (size_t i = 0; i < 4; ++i) {
         Direction direction = directions[i];
 
-        for (Bitboard bitboard = shift_bitboard(square_bitboard(square), direction); bitboard; bitboard = shift_bitboard(bitboard, direction)) {
+        for (Bitboard bitboard = shift_bitboard(square_bitboard(square), direction); bitboard != EMPTY_BITBOARD;
+             bitboard          = shift_bitboard(bitboard, direction)) {
             attacks |= bitboard;
             if (bitboard & occupancy) break;
         }
@@ -184,9 +183,10 @@ static Bitboard sliding_attacks(PieceType piece_type, Square square, Bitboard oc
     return attacks;
 }
 
-static void initialise_magics(PieceType piece_type) {
+static void initialize_magics(PieceType piece_type) {
     assert(piece_type == PIECE_TYPE_BISHOP || piece_type == PIECE_TYPE_ROOK);
 
+    // clang-format off
     // Generated by Windmolen/tools/magic_finder/magic_finder with seed: 1758127450.
     const Bitboard bishop_magics[SQUARE_COUNT] = {
         0x0308880481840300, 0x0086860c03020000, 0x8008461404200004, 0x0004040082300001, 0x00c4030801211210, 0x0011050840006004, 0x03040c01080a0040, 0x8154404804212000,
@@ -208,58 +208,45 @@ static void initialise_magics(PieceType piece_type) {
         0x001080a502004200, 0x0008950200a04200, 0x004112024080aa00, 0x0094406012004a00, 0x8003000408025100, 0x0820808200040080, 0x1300024108102400, 0x0001000040820100,
         0x4000210016008042, 0x0002008057006042, 0x0000484091002001, 0x084034883000a101, 0x1403004608004c11, 0x0032000804900922, 0x40220013042800a2, 0x0804240284310046
     };
-    const Bitboard* magics = (piece_type == PIECE_TYPE_BISHOP) ? bishop_magics : rook_magics;
+    // clang-format on
+
+    const Bitboard* magics    = (piece_type == PIECE_TYPE_BISHOP) ? bishop_magics : rook_magics;
     struct Magic* magic_table = (piece_type == PIECE_TYPE_BISHOP) ? bishop_magic_table : rook_magic_table;
 
     for (Square square = SQUARE_A1; square <= SQUARE_H8; ++square) {
-        const Bitboard edges = ((FILE_A_BITBOARD | FILE_H_BITBOARD) & ~file_bitboard(file_from_square(square)))
-                             | ((RANK_1_BITBOARD | RANK_8_BITBOARD) & ~rank_bitboard(rank_from_square(square)));
+        const Bitboard edges = ((file_bitboard(FILE_A) | file_bitboard(FILE_H))
+                                & ~file_bitboard(file_from_square(square)))
+                             | ((rank_bitboard(RANK_1) | rank_bitboard(RANK_8))
+                                & ~rank_bitboard(rank_from_square(square)));
 
         if (square == SQUARE_A1)
-            magic_table[square].attack_table = slider_attack_table + ((piece_type == PIECE_TYPE_BISHOP) ? 0 : BISHOP_ENTRY_COUNT);
+            magic_table[square].attack_table = slider_piece_attack_table
+                                             + ((piece_type == PIECE_TYPE_BISHOP) ? 0 : BISHOP_ENTRY_COUNT);
         else
-            magic_table[square].attack_table = magic_table[square - 1].attack_table + (1ULL << (64U - magic_table[square - 1].shift));
+            magic_table[square].attack_table = magic_table[square - 1].attack_table
+                                             + (1ULL << (64U - magic_table[square - 1].shift));
 
-        magic_table[square].mask = sliding_attacks(piece_type, square, EMPTY_BITBOARD) & ~edges;
-        magic_table[square].shift = 64U - (unsigned)popcount64(magic_table[square].mask);
+        magic_table[square].mask   = slider_piece_attacks(piece_type, square, EMPTY_BITBOARD) & ~edges;
+        magic_table[square].shift  = 64U - (unsigned)popcount64(magic_table[square].mask);
         magic_table[square].factor = magics[square];
 
         Bitboard subset = 0;
         do {
-            size_t index = magic_index(piece_type, square, subset);
-            magic_table[square].attack_table[index] = sliding_attacks(piece_type, square, subset);
-            subset = (subset - magic_table[square].mask) & magic_table[square].mask;
-        } while (subset);
+            size_t index                            = magic_index(magic_table + square, subset);
+            magic_table[square].attack_table[index] = slider_piece_attacks(piece_type, square, subset);
+            subset                                  = (subset - magic_table[square].mask) & magic_table[square].mask;
+        } while (subset != EMPTY_BITBOARD);
     }
-}
-
-#undef BISHOP_ENTRY_COUNT
-#undef ROOK_ENTRY_COUNT
-
-unsigned magic_index(PieceType piece_type, Square square, Bitboard occupancy) {
-    assert((piece_type == PIECE_TYPE_BISHOP || piece_type == PIECE_TYPE_ROOK) && is_valid_square(square));
-
-    const struct Magic* magic_table = (piece_type == PIECE_TYPE_BISHOP) ? bishop_magic_table : rook_magic_table;
-
-    return (unsigned)(((occupancy & magic_table[square].mask) * magic_table[square].factor) >> magic_table[square].shift);
-}
-
-extern Bitboard slider_attacks(PieceType piece_type, Square square, Bitboard occupancy) {
-    assert((piece_type == PIECE_TYPE_BISHOP || piece_type == PIECE_TYPE_ROOK) && is_valid_square(square));
-
-    const struct Magic* magic_table = (piece_type == PIECE_TYPE_BISHOP) ? bishop_magic_table : rook_magic_table;
-
-    return magic_table[square].attack_table[magic_index(piece_type, square, occupancy)];
 }
 
 
 char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
     char* string = malloc(4096 * sizeof(*string));
-    size_t size = (size_t)sprintf(string, "+---+---+---+---+---+---+---+---+\n");
+    size_t size  = (size_t)sprintf(string, "+---+---+---+---+---+---+---+---+\n");
 
     for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
         for (File file = FILE_A; file <= FILE_H; ++file)
-            size += (size_t)sprintf(string + size, (bitboard & coordinates_bitboard(file, rank)) ? "| X " : "|   ");
+            size += (size_t)sprintf(string + size, (bitboard & coordinate_bitboard(file, rank)) ? "| X " : "|   ");
 
         size += (size_t)sprintf(string + size, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", rank + 1);
     }
@@ -268,8 +255,7 @@ char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
 
     string = realloc(string, size + 1); // +1 for \0.
 
-    if (size_out != NULL)
-        *size_out = size;
-    
+    if (size_out != NULL) *size_out = size;
+
     return string;
 }

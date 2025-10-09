@@ -226,7 +226,11 @@ char* position_to_string(const struct Position* position, size_t* size_out) {
     return string;
 }
 
-struct Position position_from_FEN(const char* fen) {
+void position_from_startpos(struct Position* position) {
+    position_from_FEN(position, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+}
+
+const char* position_from_FEN(struct Position* position, const char* fen) {
     assert(fen != NULL);
 
     // clang-format off
@@ -240,7 +244,7 @@ struct Position position_from_FEN(const char* fen) {
     };
     // clang-format on
 
-    struct Position position = {0};
+    *position = (struct Position){0};
 
     /* Board. */
     File file = FILE_A;
@@ -253,106 +257,106 @@ struct Position position_from_FEN(const char* fen) {
         } else if (c >= '1' && c <= '8') {
             Square square = coordinate_square(file, rank);
             for (size_t i = 0; i < (size_t)(c - '0'); ++i)
-                position.piece_on_square[square++] = PIECE_NONE;
+                position->piece_on_square[square++] = PIECE_NONE;
             file += (File)(c - '0');
         } else {
             Piece piece                                              = letter_to_piece[(int)c];
-            position.occupancy_by_piece[piece]                      |= coordinate_bitboard(file, rank);
-            position.piece_on_square[coordinate_square(file, rank)]  = piece;
+            position->occupancy_by_piece[piece]                      |= coordinate_bitboard(file, rank);
+            position->piece_on_square[coordinate_square(file, rank)]  = piece;
 
-            if (piece == PIECE_WHITE_KING) position.king_square[COLOR_WHITE] = coordinate_square(file, rank);
-            if (piece == PIECE_BLACK_KING) position.king_square[COLOR_BLACK] = coordinate_square(file, rank);
+            if (piece == PIECE_WHITE_KING) position->king_square[COLOR_WHITE] = coordinate_square(file, rank);
+            if (piece == PIECE_BLACK_KING) position->king_square[COLOR_BLACK] = coordinate_square(file, rank);
 
             ++file;
         }
     }
-    ++fen; // Skip space.
+    ++fen; // Skip space->
 
-    /* Side to move. */
-    position.side_to_move = (*fen++ == 'w') ? COLOR_WHITE : COLOR_BLACK;
-    ++fen; // Skip space.
+    /* Side to move-> */
+    position->side_to_move = (*fen++ == 'w') ? COLOR_WHITE : COLOR_BLACK;
+    ++fen; // Skip space->
 
-    /* Castling rights. */
+    /* Castling rights-> */
     if (*fen != '-') {
         for (; *fen != ' '; ++fen) {
             switch (*fen) {
                 case 'K':
-                    position.castling_rights |= CASTLE_WHITE_00;
+                    position->castling_rights |= CASTLE_WHITE_00;
                     break;
                 case 'Q':
-                    position.castling_rights |= CASTLE_WHITE_000;
+                    position->castling_rights |= CASTLE_WHITE_000;
                     break;
                 case 'k':
-                    position.castling_rights |= CASTLE_BLACK_00;
+                    position->castling_rights |= CASTLE_BLACK_00;
                     break;
                 case 'q':
-                    position.castling_rights |= CASTLE_BLACK_000;
+                    position->castling_rights |= CASTLE_BLACK_000;
                     break;
             }
         }
     } else {
         ++fen;
     }
-    ++fen; // Skip space.
+    ++fen; // Skip space->
 
-    /* En passant. */
+    /* En passant-> */
     if (*fen != '-') {
         file                       = char_to_file(*fen++);
         rank                       = char_to_rank(*fen++);
-        position.en_passant_square = coordinate_square(file, rank);
+        position->en_passant_square = coordinate_square(file, rank);
     } else {
-        position.en_passant_square = SQUARE_NONE;
+        position->en_passant_square = SQUARE_NONE;
         ++fen;
     }
-    ++fen; // Skip space.
+    ++fen; // Skip space->
 
-    /* Halfmove clock. */
+    /* Halfmove clock-> */
     int h = 0;
     while (*fen >= '0' && *fen <= '9')
         h = h * 10 + (*fen++ - '0');
-    position.halfmove_clock = h;
-    ++fen; // Skip space.
+    position->halfmove_clock = h;
+    ++fen; // Skip space->
 
-    /* Fullmove counter. */
+    /* Fullmove counter-> */
     h = 0;
     while (*fen >= '0' && *fen <= '9')
         h = h * 10 + (*fen++ - '0');
-    position.fullmove_counter = h;
+    position->fullmove_counter = h;
 
-    position.occupancy_by_color[COLOR_WHITE] = position.occupancy_by_piece[PIECE_WHITE_PAWN]
-                                             | position.occupancy_by_piece[PIECE_WHITE_KNIGHT]
-                                             | position.occupancy_by_piece[PIECE_WHITE_BISHOP]
-                                             | position.occupancy_by_piece[PIECE_WHITE_ROOK]
-                                             | position.occupancy_by_piece[PIECE_WHITE_QUEEN]
-                                             | position.occupancy_by_piece[PIECE_WHITE_KING];
-    position.occupancy_by_color[COLOR_BLACK] = position.occupancy_by_piece[PIECE_BLACK_PAWN]
-                                             | position.occupancy_by_piece[PIECE_BLACK_KNIGHT]
-                                             | position.occupancy_by_piece[PIECE_BLACK_BISHOP]
-                                             | position.occupancy_by_piece[PIECE_BLACK_ROOK]
-                                             | position.occupancy_by_piece[PIECE_BLACK_QUEEN]
-                                             | position.occupancy_by_piece[PIECE_BLACK_KING];
+    position->occupancy_by_color[COLOR_WHITE] = position->occupancy_by_piece[PIECE_WHITE_PAWN]
+                                             | position->occupancy_by_piece[PIECE_WHITE_KNIGHT]
+                                             | position->occupancy_by_piece[PIECE_WHITE_BISHOP]
+                                             | position->occupancy_by_piece[PIECE_WHITE_ROOK]
+                                             | position->occupancy_by_piece[PIECE_WHITE_QUEEN]
+                                             | position->occupancy_by_piece[PIECE_WHITE_KING];
+    position->occupancy_by_color[COLOR_BLACK] = position->occupancy_by_piece[PIECE_BLACK_PAWN]
+                                             | position->occupancy_by_piece[PIECE_BLACK_KNIGHT]
+                                             | position->occupancy_by_piece[PIECE_BLACK_BISHOP]
+                                             | position->occupancy_by_piece[PIECE_BLACK_ROOK]
+                                             | position->occupancy_by_piece[PIECE_BLACK_QUEEN]
+                                             | position->occupancy_by_piece[PIECE_BLACK_KING];
 
-    position.occupancy_by_type[PIECE_TYPE_PAWN] = position.occupancy_by_piece[PIECE_WHITE_PAWN]
-                                                | position.occupancy_by_piece[PIECE_BLACK_PAWN];
-    position.occupancy_by_type[PIECE_TYPE_KNIGHT] = position.occupancy_by_piece[PIECE_WHITE_KNIGHT]
-                                                  | position.occupancy_by_piece[PIECE_BLACK_KNIGHT];
-    position.occupancy_by_type[PIECE_TYPE_BISHOP] = position.occupancy_by_piece[PIECE_WHITE_BISHOP]
-                                                  | position.occupancy_by_piece[PIECE_BLACK_BISHOP];
-    position.occupancy_by_type[PIECE_TYPE_ROOK] = position.occupancy_by_piece[PIECE_WHITE_ROOK]
-                                                | position.occupancy_by_piece[PIECE_BLACK_ROOK];
-    position.occupancy_by_type[PIECE_TYPE_QUEEN] = position.occupancy_by_piece[PIECE_WHITE_QUEEN]
-                                                 | position.occupancy_by_piece[PIECE_BLACK_QUEEN];
-    position.occupancy_by_type[PIECE_TYPE_KING] = position.occupancy_by_piece[PIECE_WHITE_KING]
-                                                | position.occupancy_by_piece[PIECE_BLACK_KING];
+    position->occupancy_by_type[PIECE_TYPE_PAWN] = position->occupancy_by_piece[PIECE_WHITE_PAWN]
+                                                | position->occupancy_by_piece[PIECE_BLACK_PAWN];
+    position->occupancy_by_type[PIECE_TYPE_KNIGHT] = position->occupancy_by_piece[PIECE_WHITE_KNIGHT]
+                                                  | position->occupancy_by_piece[PIECE_BLACK_KNIGHT];
+    position->occupancy_by_type[PIECE_TYPE_BISHOP] = position->occupancy_by_piece[PIECE_WHITE_BISHOP]
+                                                  | position->occupancy_by_piece[PIECE_BLACK_BISHOP];
+    position->occupancy_by_type[PIECE_TYPE_ROOK] = position->occupancy_by_piece[PIECE_WHITE_ROOK]
+                                                | position->occupancy_by_piece[PIECE_BLACK_ROOK];
+    position->occupancy_by_type[PIECE_TYPE_QUEEN] = position->occupancy_by_piece[PIECE_WHITE_QUEEN]
+                                                 | position->occupancy_by_piece[PIECE_BLACK_QUEEN];
+    position->occupancy_by_type[PIECE_TYPE_KING] = position->occupancy_by_piece[PIECE_WHITE_KING]
+                                                | position->occupancy_by_piece[PIECE_BLACK_KING];
 
-    position.total_occupancy = position.occupancy_by_color[COLOR_WHITE] | position.occupancy_by_color[COLOR_BLACK];
+    position->total_occupancy = position->occupancy_by_color[COLOR_WHITE] | position->occupancy_by_color[COLOR_BLACK];
 
-    position.blockers[COLOR_WHITE] = compute_blockers(&position, COLOR_WHITE);
-    position.blockers[COLOR_BLACK] = compute_blockers(&position, COLOR_BLACK);
-    position.checkers[COLOR_WHITE] = compute_checkers(&position, COLOR_WHITE);
-    position.checkers[COLOR_BLACK] = compute_checkers(&position, COLOR_BLACK);
+    position->blockers[COLOR_WHITE] = compute_blockers(position, COLOR_WHITE);
+    position->blockers[COLOR_BLACK] = compute_blockers(position, COLOR_BLACK);
+    position->checkers[COLOR_WHITE] = compute_checkers(position, COLOR_WHITE);
+    position->checkers[COLOR_BLACK] = compute_checkers(position, COLOR_BLACK);
 
-    return position;
+    return fen;
 }
 
 char* position_to_FEN(const struct Position* position, size_t* size_out) {

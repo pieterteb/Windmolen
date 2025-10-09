@@ -112,6 +112,7 @@ static inline Move* new_promotions(Move* movelist, Square from, Square to) {
     return movelist;
 }
 
+
 /* Returns a castle move of type `castle_type`. */
 static inline Move new_castle(CastlingRights castle_type) {
     assert(castle_type == CASTLE_WHITE_00 || castle_type == CASTLE_WHITE_000 || castle_type == CASTLE_BLACK_00

@@ -152,7 +152,8 @@ void do_move(struct Position* position, Move move);
 
 
 char* position_to_string(const struct Position* position, size_t* size_out);
-struct Position position_from_FEN(const char* fen);
+void position_from_startpos(struct Position* position);
+const char* position_from_FEN(struct Position*, const char* fen);
 char* position_to_FEN(const struct Position* position, size_t* size_out);
 
 

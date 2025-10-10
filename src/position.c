@@ -260,7 +260,7 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
                 position->piece_on_square[square++] = PIECE_NONE;
             file += (File)(c - '0');
         } else {
-            Piece piece                                              = letter_to_piece[(int)c];
+            Piece piece                                               = letter_to_piece[(int)c];
             position->occupancy_by_piece[piece]                      |= coordinate_bitboard(file, rank);
             position->piece_on_square[coordinate_square(file, rank)]  = piece;
 
@@ -301,8 +301,8 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
 
     /* En passant-> */
     if (*fen != '-') {
-        file                       = char_to_file(*fen++);
-        rank                       = char_to_rank(*fen++);
+        file                        = char_to_file(*fen++);
+        rank                        = char_to_rank(*fen++);
         position->en_passant_square = coordinate_square(file, rank);
     } else {
         position->en_passant_square = SQUARE_NONE;
@@ -324,30 +324,30 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
     position->fullmove_counter = h;
 
     position->occupancy_by_color[COLOR_WHITE] = position->occupancy_by_piece[PIECE_WHITE_PAWN]
-                                             | position->occupancy_by_piece[PIECE_WHITE_KNIGHT]
-                                             | position->occupancy_by_piece[PIECE_WHITE_BISHOP]
-                                             | position->occupancy_by_piece[PIECE_WHITE_ROOK]
-                                             | position->occupancy_by_piece[PIECE_WHITE_QUEEN]
-                                             | position->occupancy_by_piece[PIECE_WHITE_KING];
+                                              | position->occupancy_by_piece[PIECE_WHITE_KNIGHT]
+                                              | position->occupancy_by_piece[PIECE_WHITE_BISHOP]
+                                              | position->occupancy_by_piece[PIECE_WHITE_ROOK]
+                                              | position->occupancy_by_piece[PIECE_WHITE_QUEEN]
+                                              | position->occupancy_by_piece[PIECE_WHITE_KING];
     position->occupancy_by_color[COLOR_BLACK] = position->occupancy_by_piece[PIECE_BLACK_PAWN]
-                                             | position->occupancy_by_piece[PIECE_BLACK_KNIGHT]
-                                             | position->occupancy_by_piece[PIECE_BLACK_BISHOP]
-                                             | position->occupancy_by_piece[PIECE_BLACK_ROOK]
-                                             | position->occupancy_by_piece[PIECE_BLACK_QUEEN]
-                                             | position->occupancy_by_piece[PIECE_BLACK_KING];
+                                              | position->occupancy_by_piece[PIECE_BLACK_KNIGHT]
+                                              | position->occupancy_by_piece[PIECE_BLACK_BISHOP]
+                                              | position->occupancy_by_piece[PIECE_BLACK_ROOK]
+                                              | position->occupancy_by_piece[PIECE_BLACK_QUEEN]
+                                              | position->occupancy_by_piece[PIECE_BLACK_KING];
 
     position->occupancy_by_type[PIECE_TYPE_PAWN] = position->occupancy_by_piece[PIECE_WHITE_PAWN]
-                                                | position->occupancy_by_piece[PIECE_BLACK_PAWN];
+                                                 | position->occupancy_by_piece[PIECE_BLACK_PAWN];
     position->occupancy_by_type[PIECE_TYPE_KNIGHT] = position->occupancy_by_piece[PIECE_WHITE_KNIGHT]
-                                                  | position->occupancy_by_piece[PIECE_BLACK_KNIGHT];
+                                                   | position->occupancy_by_piece[PIECE_BLACK_KNIGHT];
     position->occupancy_by_type[PIECE_TYPE_BISHOP] = position->occupancy_by_piece[PIECE_WHITE_BISHOP]
-                                                  | position->occupancy_by_piece[PIECE_BLACK_BISHOP];
+                                                   | position->occupancy_by_piece[PIECE_BLACK_BISHOP];
     position->occupancy_by_type[PIECE_TYPE_ROOK] = position->occupancy_by_piece[PIECE_WHITE_ROOK]
-                                                | position->occupancy_by_piece[PIECE_BLACK_ROOK];
+                                                 | position->occupancy_by_piece[PIECE_BLACK_ROOK];
     position->occupancy_by_type[PIECE_TYPE_QUEEN] = position->occupancy_by_piece[PIECE_WHITE_QUEEN]
-                                                 | position->occupancy_by_piece[PIECE_BLACK_QUEEN];
+                                                  | position->occupancy_by_piece[PIECE_BLACK_QUEEN];
     position->occupancy_by_type[PIECE_TYPE_KING] = position->occupancy_by_piece[PIECE_WHITE_KING]
-                                                | position->occupancy_by_piece[PIECE_BLACK_KING];
+                                                 | position->occupancy_by_piece[PIECE_BLACK_KING];
 
     position->total_occupancy = position->occupancy_by_color[COLOR_WHITE] | position->occupancy_by_color[COLOR_BLACK];
 

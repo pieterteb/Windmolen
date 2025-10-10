@@ -1,7 +1,4 @@
-#include <stdio.h>
-
 #include "bitboard.h"
-#include "position.h"
 #include "uci.h"
 
 
@@ -29,10 +26,6 @@ int main(void) {
     //     size_t perft_result = perft(&main_position, i);
     //     printf("Perft %zu is: %zu\n", i, perft_result);
     // }
-
-    char* position_string = position_to_string(&main_position, NULL);
-    printf("%s\n", position_string);
-    free(position_string);
     
     return 0;
 }

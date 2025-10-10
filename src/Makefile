@@ -7,7 +7,7 @@ DEBUG   := -g -O0 -fsanitize=address -fstack-protector-all
 RELEASE := -O3 -flto -DNDEBUG -fno-stack-protector -march=native
 
 # Sources, objects, target
-SRC     := main.c bitboard.c move_generation.c position.c uci.c
+SRC     := main.c bitboard.c move_generation.c position.c search.c thread.c uci.c
 OBJ     := $(SRC:.c=.o)
 TARGET  := windmolen
 

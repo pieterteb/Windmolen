@@ -1,5 +1,5 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef WINDMOLEN_UTIL_H_
+#define WINDMOLEN_UTIL_H_
 
 
 #include <assert.h>
@@ -16,7 +16,7 @@ uint64_t sparse_rand64();
 static inline int lsb64(uint64_t x) {
     assert(x != 0);
 
-#if defined(__GNUC__)
+#ifdef __GNUC__
     return __builtin_ctzll(x);
 #elif defined(_MSC_VER)
     unsigned long index;
@@ -37,19 +37,19 @@ static inline int lsb64(uint64_t x) {
     };
     // clang-format on
     return index64[((x & -x) * 0x03f79d71b4cb0a89ULL) >> 58];
-#endif /* defined(__GNUC__) */
+#endif /* #ifdef __GNUC__ */
 }
 
 static inline int popcount64(uint64_t x) {
-#if defined(__GNUC__)
+#ifdef __GNUC__
     return __builtin_popcountll(x);
 #elif defined(_MSC_VER)
     return _mm_popcnt_u64(x);
 #else
     // Fallback.
-    x  *= 0x0002000400080010ULL;
-    x  &= 0x1111111111111111ULL;
-    x  *= 0x1111111111111111ULL;
+    x *= 0x0002000400080010ULL;
+    x &= 0x1111111111111111ULL;
+    x *= 0x1111111111111111ULL;
     x >>= 60;
     return (int)x;
 
@@ -59,14 +59,14 @@ static inline int popcount64(uint64_t x) {
     // x = x + (x >> 8);
     // x = x + (x >> 16);
     // return (int)(x & 0x3F);
-#endif /* defined(__GNUC__) */
+#endif /* #ifdef __GNUC__ */
 }
 
 static inline int pop_lsb64(uint64_t* x) {
     assert(*x != 0);
 
-    int lsb_index  = lsb64(*x);
-    *x            &= *x - 1; // pop lsb.
+    int lsb_index = lsb64(*x);
+    *x &= *x - 1;  // pop lsb.
 
     return lsb_index;
 }
@@ -77,4 +77,4 @@ static inline bool popcount64_greater_than_one(uint64_t x) {
 
 
 
-#endif /* #ifndef UTIL_H */
+#endif /* #ifndef UTIL_H_ */

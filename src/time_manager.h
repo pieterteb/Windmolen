@@ -1,10 +1,6 @@
-#ifndef TIME_MANAGER_H
-#define TIME_MANAGER_H
+#ifndef WINDMOLEN_TIME_MANAGER_H_
+#define WINDMOLEN_TIME_MANAGER_H_
 
 
 
-
-
-
-
-#endif /* #ifndef TIME_MANAGER_H */
+#endif /* #ifndef WINDMOLEN_TIME_MANAGER_H_ */

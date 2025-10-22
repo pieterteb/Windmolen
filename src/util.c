@@ -1,7 +1,7 @@
+#include "util.h"
+
 #include <assert.h>
 #include <stdint.h>
-
-#include "util.h"
 
 
 

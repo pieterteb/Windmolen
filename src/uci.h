@@ -1,5 +1,5 @@
-#ifndef UCI_H
-#define UCI_H
+#ifndef WINDMOLEN_UCI_H_
+#define WINDMOLEN_UCI_H_
 
 
 #include "position.h"
@@ -14,4 +14,4 @@ void uci_loop();
 
 
 
-#endif /* #ifndef UCI_H */
+#endif /* #ifndef WINDMOLEN_UCI_H_ */

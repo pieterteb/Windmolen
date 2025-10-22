@@ -1,5 +1,5 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef WINDMOLEN_TYPES_H_
+#define WINDMOLEN_TYPES_H_
 
 
 #include <assert.h>
@@ -87,7 +87,7 @@ static inline Piece get_piece(Color color, PieceType piece_type) {
     assert(is_valid_piece_type(piece_type));
     assert(piece_type != PIECE_TYPE_BLACK_PAWN);
 
-    return (Piece)(2 * piece_type + color); // Fast version of (piece_type << 1) | color.
+    return (Piece)(2 * piece_type + color);  // Fast version of (piece_type << 1) | color.
 }
 
 /* Returns the piece type of `piece`. */
@@ -219,4 +219,4 @@ enum {
 
 
 
-#endif /* TYPES_H */
+#endif /* #ifndef WINDMOLEN_TYPES_H_ */

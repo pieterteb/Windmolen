@@ -1,5 +1,5 @@
-#ifndef SEARCH_H
-#define SEARCH_H
+#ifndef WINDMOLEN_SEARCH_H_
+#define WINDMOLEN_SEARCH_H_
 
 
 #include <stdatomic.h>
@@ -28,4 +28,4 @@ int start_search(void* search_state_void);
 
 
 
-#endif /* SEARCH_H */
+#endif /* #ifndef WINDMOLEN_SEARCH_H_ */

@@ -1,5 +1,5 @@
-#ifndef POSITION_H
-#define POSITION_H
+#ifndef WINDMOLEN_POSITION_H_
+#define WINDMOLEN_POSITION_H_
 
 
 #include <assert.h>
@@ -18,7 +18,7 @@ typedef uint16_t Move;
 
 struct Position {
     Bitboard occupancy_by_piece[PIECE_COUNT];
-    Bitboard occupancy_by_type[PIECE_TYPE_COUNT - 1]; // We do not differentiate between white and black pawns here.
+    Bitboard occupancy_by_type[PIECE_TYPE_COUNT - 1];  // We do not differentiate between white and black pawns here.
     Bitboard occupancy_by_color[COLOR_COUNT];
     Bitboard total_occupancy;
     Bitboard checkers[COLOR_COUNT];
@@ -158,4 +158,4 @@ char* position_to_FEN(const struct Position* position, size_t* size_out);
 
 
 
-#endif /* POSITION_H */
+#endif /* #ifndef WINDMOLEN_POSITION_H_ */

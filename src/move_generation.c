@@ -1,8 +1,8 @@
+#include "move_generation.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "move_generation.h"
 
 #include "bitboard.h"
 #include "position.h"
@@ -26,8 +26,7 @@ static inline Move* splat_piece_moves(Move* movelist, Bitboard moves, Square fro
     assert(movelist != NULL);
     assert(is_valid_square(from));
 
-    while (moves != EMPTY_BITBOARD)
-        *movelist++ = new_move(from, (Square)pop_lsb64(&moves), MOVE_TYPE_NORMAL);
+    while (moves != EMPTY_BITBOARD) *movelist++ = new_move(from, (Square)pop_lsb64(&moves), MOVE_TYPE_NORMAL);
 
     return movelist;
 }
@@ -39,15 +38,15 @@ static Move* white_pawn_pseudo_legal_moves(const struct Position* position, Move
 
     const Bitboard non_promotion_pawns = position->occupancy_by_piece[PIECE_WHITE_PAWN] & ~rank_bitboard(RANK_7);
     const Bitboard enemies             = position->occupancy_by_color[COLOR_BLACK] & target;
-    Bitboard empty_squares             = ~position->total_occupancy; // For pawn pushes.
+    Bitboard empty_squares             = ~position->total_occupancy;  // For pawn pushes.
 
     /* Pawn pushes. */
-    Bitboard push_once   = shift_bitboard(non_promotion_pawns, DIRECTION_NORTH) & empty_squares;
-    empty_squares       &= target;
-    Bitboard push_twice  = shift_bitboard(push_once & rank_bitboard(RANK_3), DIRECTION_NORTH) & empty_squares;
-    push_once           &= target;
-    movelist             = splat_pawn_moves(movelist, push_once, DIRECTION_NORTH);
-    movelist             = splat_pawn_moves(movelist, push_twice, 2 * DIRECTION_NORTH);
+    Bitboard push_once = shift_bitboard(non_promotion_pawns, DIRECTION_NORTH) & empty_squares;
+    empty_squares &= target;
+    Bitboard push_twice = shift_bitboard(push_once & rank_bitboard(RANK_3), DIRECTION_NORTH) & empty_squares;
+    push_once &= target;
+    movelist = splat_pawn_moves(movelist, push_once, DIRECTION_NORTH);
+    movelist = splat_pawn_moves(movelist, push_twice, 2 * DIRECTION_NORTH);
 
     /* Non-promotion captures. */
     Bitboard attacks_east = shift_bitboard(non_promotion_pawns, DIRECTION_NORTHEAST) & enemies;
@@ -62,8 +61,7 @@ static Move* white_pawn_pseudo_legal_moves(const struct Position* position, Move
                                       & piece_base_attacks(PIECE_TYPE_BLACK_PAWN, position->en_passant_square);
 
         while (en_passant_attackers != EMPTY_BITBOARD)
-            *movelist++ = new_move((Square)pop_lsb64(&en_passant_attackers),
-                                   position->en_passant_square,
+            *movelist++ = new_move((Square)pop_lsb64(&en_passant_attackers), position->en_passant_square,
                                    MOVE_TYPE_EN_PASSANT);
     }
 
@@ -101,15 +99,15 @@ static Move* black_pawn_pseudo_legal_moves(const struct Position* position, Move
 
     const Bitboard non_promotion_pawns = position->occupancy_by_piece[PIECE_BLACK_PAWN] & ~rank_bitboard(RANK_2);
     const Bitboard enemies             = position->occupancy_by_color[COLOR_WHITE] & target;
-    Bitboard empty_squares             = ~position->total_occupancy; // For pawn pushes.
+    Bitboard empty_squares             = ~position->total_occupancy;  // For pawn pushes.
 
     /* Pawn pushes. */
-    Bitboard push_once   = shift_bitboard(non_promotion_pawns, DIRECTION_SOUTH) & empty_squares;
-    empty_squares       &= target;
-    Bitboard push_twice  = shift_bitboard(push_once & rank_bitboard(RANK_6), DIRECTION_SOUTH) & empty_squares;
-    push_once           &= target;
-    movelist             = splat_pawn_moves(movelist, push_once, DIRECTION_SOUTH);
-    movelist             = splat_pawn_moves(movelist, push_twice, 2 * DIRECTION_SOUTH);
+    Bitboard push_once = shift_bitboard(non_promotion_pawns, DIRECTION_SOUTH) & empty_squares;
+    empty_squares &= target;
+    Bitboard push_twice = shift_bitboard(push_once & rank_bitboard(RANK_6), DIRECTION_SOUTH) & empty_squares;
+    push_once &= target;
+    movelist = splat_pawn_moves(movelist, push_once, DIRECTION_SOUTH);
+    movelist = splat_pawn_moves(movelist, push_twice, 2 * DIRECTION_SOUTH);
 
     /* Non-promotion captures. */
     Bitboard attacks_east = shift_bitboard(non_promotion_pawns, DIRECTION_SOUTHEAST) & enemies;
@@ -124,8 +122,7 @@ static Move* black_pawn_pseudo_legal_moves(const struct Position* position, Move
                                       & piece_base_attacks(PIECE_TYPE_WHITE_PAWN, position->en_passant_square);
 
         while (en_passant_attackers != EMPTY_BITBOARD)
-            *movelist++ = new_move((Square)pop_lsb64(&en_passant_attackers),
-                                   position->en_passant_square,
+            *movelist++ = new_move((Square)pop_lsb64(&en_passant_attackers), position->en_passant_square,
                                    MOVE_TYPE_EN_PASSANT);
     }
 
@@ -165,8 +162,7 @@ static Move* white_knight_pseudo_legal_moves(const struct Position* position, Mo
 
     while (white_knights != EMPTY_BITBOARD) {
         Square knight_square = (Square)pop_lsb64(&white_knights);
-        movelist             = splat_piece_moves(movelist,
-                                     piece_base_attacks(PIECE_TYPE_KNIGHT, knight_square) & target,
+        movelist = splat_piece_moves(movelist, piece_base_attacks(PIECE_TYPE_KNIGHT, knight_square) & target,
                                      knight_square);
     }
 
@@ -181,8 +177,7 @@ static Move* black_knight_pseudo_legal_moves(const struct Position* position, Mo
 
     while (black_knights != EMPTY_BITBOARD) {
         Square knight_square = (Square)pop_lsb64(&black_knights);
-        movelist             = splat_piece_moves(movelist,
-                                     piece_base_attacks(PIECE_TYPE_KNIGHT, knight_square) & target,
+        movelist = splat_piece_moves(movelist, piece_base_attacks(PIECE_TYPE_KNIGHT, knight_square) & target,
                                      knight_square);
     }
 
@@ -197,8 +192,7 @@ static Move* white_bishop_pseudo_legal_moves(const struct Position* position, Mo
 
     while (white_bishops != EMPTY_BITBOARD) {
         Square bishop_square = (Square)pop_lsb64(&white_bishops);
-        movelist             = splat_piece_moves(movelist,
-                                     bishop_attacks(bishop_square, position->total_occupancy) & target,
+        movelist = splat_piece_moves(movelist, bishop_attacks(bishop_square, position->total_occupancy) & target,
                                      bishop_square);
     }
 
@@ -213,8 +207,7 @@ static Move* black_bishop_pseudo_legal_moves(const struct Position* position, Mo
 
     while (black_bishops != EMPTY_BITBOARD) {
         Square bishop_square = (Square)pop_lsb64(&black_bishops);
-        movelist             = splat_piece_moves(movelist,
-                                     bishop_attacks(bishop_square, position->total_occupancy) & target,
+        movelist = splat_piece_moves(movelist, bishop_attacks(bishop_square, position->total_occupancy) & target,
                                      bishop_square);
     }
 
@@ -229,9 +222,8 @@ static Move* white_rook_pseudo_legal_moves(const struct Position* position, Move
 
     while (white_rooks != EMPTY_BITBOARD) {
         Square rook_square = (Square)pop_lsb64(&white_rooks);
-        movelist           = splat_piece_moves(movelist,
-                                     rook_attacks(rook_square, position->total_occupancy) & target,
-                                     rook_square);
+        movelist           = splat_piece_moves(movelist, rook_attacks(rook_square, position->total_occupancy) & target,
+                                               rook_square);
     }
 
     return movelist;
@@ -245,9 +237,8 @@ static Move* black_rook_pseudo_legal_moves(const struct Position* position, Move
 
     while (black_rooks != EMPTY_BITBOARD) {
         Square rook_square = (Square)pop_lsb64(&black_rooks);
-        movelist           = splat_piece_moves(movelist,
-                                     rook_attacks(rook_square, position->total_occupancy) & target,
-                                     rook_square);
+        movelist           = splat_piece_moves(movelist, rook_attacks(rook_square, position->total_occupancy) & target,
+                                               rook_square);
     }
 
     return movelist;
@@ -262,10 +253,10 @@ static Move* white_queen_pseudo_legal_moves(const struct Position* position, Mov
     while (white_queens != EMPTY_BITBOARD) {
         Square queen_square = (Square)pop_lsb64(&white_queens);
         movelist            = splat_piece_moves(movelist,
-                                     (bishop_attacks(queen_square, position->total_occupancy)
+                                                (bishop_attacks(queen_square, position->total_occupancy)
                                       | rook_attacks(queen_square, position->total_occupancy))
-                                     & target,
-                                     queen_square);
+                                                & target,
+                                                queen_square);
     }
 
     return movelist;
@@ -280,10 +271,10 @@ static Move* black_queen_pseudo_legal_moves(const struct Position* position, Mov
     while (black_queens != EMPTY_BITBOARD) {
         Square queen_square = (Square)pop_lsb64(&black_queens);
         movelist            = splat_piece_moves(movelist,
-                                     (bishop_attacks(queen_square, position->total_occupancy)
+                                                (bishop_attacks(queen_square, position->total_occupancy)
                                       | rook_attacks(queen_square, position->total_occupancy))
-                                     & target,
-                                     queen_square);
+                                                & target,
+                                                queen_square);
     }
 
     return movelist;
@@ -447,11 +438,9 @@ static bool is_legal_king_move(const struct Position* position, Move move) {
         return true;
     }
 
-    return square_is_attacked(position,
-                              !position->side_to_move,
-                              move_destination(move),
-                              position->total_occupancy
-                              ^ piece_occupancy(position, position->side_to_move, PIECE_TYPE_KING))
+    return square_is_attacked(
+           position, !position->side_to_move, move_destination(move),
+           position->total_occupancy ^ piece_occupancy(position, position->side_to_move, PIECE_TYPE_KING))
         == EMPTY_BITBOARD;
 }
 
@@ -480,10 +469,9 @@ static bool is_legal_en_passant(struct Position* position, Move move) {
                                         : shift_bitboard(destination_bitboard, DIRECTION_NORTH);
 
     position->occupancy_by_color[!position->side_to_move] ^= captured_bitboard;
-    const Bitboard attackers                               = attackers_of_square(position,
-                                                   king_square(position, position->side_to_move),
-                                                   (position->total_occupancy | destination_bitboard) ^ source_bitboard
-                                                   ^ captured_bitboard)
+    const Bitboard attackers = attackers_of_square(
+                               position, king_square(position, position->side_to_move),
+                               (position->total_occupancy | destination_bitboard) ^ source_bitboard ^ captured_bitboard)
                              & piece_occupancy_by_color(position, !position->side_to_move);
     position->occupancy_by_color[!position->side_to_move] |= captured_bitboard;
 

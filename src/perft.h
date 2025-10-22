@@ -1,5 +1,5 @@
-#ifndef PERFT_H
-#define PERFT_H
+#ifndef WINDMOLEN_PERFT_H_
+#define WINDMOLEN_PERFT_H_
 
 
 #include <stddef.h>
@@ -22,8 +22,8 @@ __attribute__((unused)) static size_t perft(struct Position* position, size_t de
     for (size_t i = 0; i < move_count; ++i) {
         struct Position copy = *position;
         do_move(position, movelist[i]);
-        nodes     += perft(position, depth - 1);
-        *position  = copy;
+        nodes += perft(position, depth - 1);
+        *position = copy;
     }
 
     return nodes;
@@ -43,8 +43,8 @@ enum {
     PERFT_COUNT
 };
 
-__attribute__((unused)) static size_t
-extended_perft(struct Position* position, size_t depth, size_t extended_info[PERFT_COUNT]) {
+__attribute__((unused)) static size_t extended_perft(struct Position* position, size_t depth,
+                                                     size_t extended_info[PERFT_COUNT]) {
     Move movelist[MAX_MOVES];
     size_t move_count = generate_legal_moves(position, movelist);
 
@@ -95,4 +95,4 @@ extended_perft(struct Position* position, size_t depth, size_t extended_info[PER
 
 
 
-#endif /* #ifndef PERFT_H */
+#endif /* #ifndef WINDMOLEN_PERFT_H_ */

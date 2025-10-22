@@ -1,5 +1,5 @@
-#ifndef MOVE_GENERATION_H
-#define MOVE_GENERATION_H
+#ifndef WINDMOLEN_MOVE_GENERATION_H_
+#define WINDMOLEN_MOVE_GENERATION_H_
 
 
 #include <assert.h>
@@ -133,4 +133,4 @@ void print_move(FILE* stream, Move move);
 
 
 
-#endif /* #ifndef MOVE_GENERATION_H */
+#endif /* #ifndef WINDMOLEN_MOVE_GENERATION_H_ */

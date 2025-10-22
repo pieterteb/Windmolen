@@ -26,6 +26,6 @@ int main(void) {
     //     size_t perft_result = perft(&main_position, i);
     //     printf("Perft %zu is: %zu\n", i, perft_result);
     // }
-    
+
     return 0;
 }

@@ -1,9 +1,9 @@
+#include "uci.h"
+
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "uci.h"
 
 #include "move_generation.h"
 #include "position.h"
@@ -40,12 +40,10 @@ static const char* next_token(const char* token_string, char token[MAX_TOKEN_LEN
         return NULL;
     }
 
-    while (isblank(*token_string))
-        ++token_string;
+    while (isblank(*token_string)) ++token_string;
     const char* token_start = token_string;
 
-    while (!isblank(*token_string) && *token_string != '\0')
-        ++token_string;
+    while (!isblank(*token_string) && *token_string != '\0') ++token_string;
     size_t token_length = (size_t)(token_string - token_start);
 
     memcpy(token, token_start, token_length);
@@ -73,7 +71,9 @@ static Move parse_move(const char* move_string) {
 
 
 static void uci_id() {
-    puts("id name Windmolen\n" "id author Pieter te Brake");
+    puts(
+    "id name Windmolen\n"
+    "id author Pieter te Brake");
 }
 
 static void uci_options() {
@@ -156,7 +156,7 @@ void uci_loop() {
         if (line[0] == '\0') continue;
 
         char command[MAX_TOKEN_LENGTH] = {0};
-        const char* token_string = line;
+        const char* token_string       = line;
 
         do {
             token_string = next_token(token_string, command);

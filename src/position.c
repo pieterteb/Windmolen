@@ -1,3 +1,5 @@
+#include "position.h"
+
 #include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -5,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "position.h"
+#include <sys/types.h>
 
 #include "bitboard.h"
 #include "move_generation.h"
@@ -64,7 +66,7 @@ void do_move(struct Position* position, Move move) {
     assert(popcount64(piece_occupancy(position, position->side_to_move, PIECE_TYPE_KING)) == 1);
 
     position->occupancy_by_piece[piece] ^= square_bitboard(source);
-    position->piece_on_square[source]    = PIECE_NONE;
+    position->piece_on_square[source] = PIECE_NONE;
 
     if (type == MOVE_TYPE_PROMOTION) piece = get_piece(side_to_move, promotion_to_piece_type(move));
 
@@ -72,10 +74,10 @@ void do_move(struct Position* position, Move move) {
 
     if (is_capture) {
         if (type == MOVE_TYPE_EN_PASSANT) {
-            Square deletion_square                                              = (Square)(destination
+            Square deletion_square = (Square)(destination
                                               + ((side_to_move == COLOR_WHITE) ? DIRECTION_SOUTH : DIRECTION_NORTH));
             position->occupancy_by_piece[get_piece(opponent, PIECE_TYPE_PAWN)] ^= square_bitboard(deletion_square);
-            position->piece_on_square[deletion_square]                          = PIECE_NONE;
+            position->piece_on_square[deletion_square] = PIECE_NONE;
         } else {
             Piece captured_piece = piece_on_square(position, destination);
 
@@ -206,20 +208,20 @@ char* position_to_string(const struct Position* position, size_t* size_out) {
 
     for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
         for (File file = FILE_A; file <= FILE_H; ++file) {
-            size += (size_t)sprintf(string + size,
-                                    "| %c ",
+            size += (size_t)sprintf(string + size, "| %c ",
                                     piece_to_char[piece_on_square(position, coordinate_square(file, rank))]);
         }
 
         size += (size_t)sprintf(string + size, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", rank + 1);
     }
-    size += (size_t)sprintf(string + size, "  a   b   c   d   e   f   g   h\n");
-
-    char* fen  = position_to_FEN(position, NULL);
-    size      += (size_t)sprintf(string + size, "FEN: %s\n", fen);
+    char* fen = position_to_FEN(position, NULL);
+    size += (size_t)sprintf(string + size,
+                            "  a   b   c   d   e   f   g   h\n"
+                            "FEN: %s\n",
+                            fen);
     free(fen);
 
-    string = realloc(string, size + 1); // +1 for \0.
+    string = realloc(string, size + 1);  // +1 for \0.
 
     if (size_out != NULL) *size_out = size;
 
@@ -256,13 +258,12 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
             --rank;
         } else if (c >= '1' && c <= '8') {
             Square square = coordinate_square(file, rank);
-            for (size_t i = 0; i < (size_t)(c - '0'); ++i)
-                position->piece_on_square[square++] = PIECE_NONE;
+            for (size_t i = 0; i < (size_t)(c - '0'); ++i) position->piece_on_square[square++] = PIECE_NONE;
             file += (File)(c - '0');
         } else {
-            Piece piece                                               = letter_to_piece[(int)c];
-            position->occupancy_by_piece[piece]                      |= coordinate_bitboard(file, rank);
-            position->piece_on_square[coordinate_square(file, rank)]  = piece;
+            Piece piece = letter_to_piece[(int)c];
+            position->occupancy_by_piece[piece] |= coordinate_bitboard(file, rank);
+            position->piece_on_square[coordinate_square(file, rank)] = piece;
 
             if (piece == PIECE_WHITE_KING) position->king_square[COLOR_WHITE] = coordinate_square(file, rank);
             if (piece == PIECE_BLACK_KING) position->king_square[COLOR_BLACK] = coordinate_square(file, rank);
@@ -270,11 +271,11 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
             ++file;
         }
     }
-    ++fen; // Skip space->
+    ++fen;  // Skip space->
 
     /* Side to move-> */
     position->side_to_move = (*fen++ == 'w') ? COLOR_WHITE : COLOR_BLACK;
-    ++fen; // Skip space->
+    ++fen;  // Skip space->
 
     /* Castling rights-> */
     if (*fen != '-') {
@@ -297,7 +298,7 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
     } else {
         ++fen;
     }
-    ++fen; // Skip space->
+    ++fen;  // Skip space->
 
     /* En passant-> */
     if (*fen != '-') {
@@ -308,19 +309,17 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
         position->en_passant_square = SQUARE_NONE;
         ++fen;
     }
-    ++fen; // Skip space->
+    ++fen;  // Skip space->
 
     /* Halfmove clock-> */
     int h = 0;
-    while (*fen >= '0' && *fen <= '9')
-        h = h * 10 + (*fen++ - '0');
+    while (*fen >= '0' && *fen <= '9') h = h * 10 + (*fen++ - '0');
     position->halfmove_clock = h;
-    ++fen; // Skip space->
+    ++fen;  // Skip space->
 
     /* Fullmove counter-> */
     h = 0;
-    while (*fen >= '0' && *fen <= '9')
-        h = h * 10 + (*fen++ - '0');
+    while (*fen >= '0' && *fen <= '9') h = h * 10 + (*fen++ - '0');
     position->fullmove_counter = h;
 
     position->occupancy_by_color[COLOR_WHITE] = position->occupancy_by_piece[PIECE_WHITE_PAWN]

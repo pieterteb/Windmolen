@@ -1,8 +1,8 @@
+#include "bitboard.h"
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "bitboard.h"
 
 #include "types.h"
 #include "util.h"
@@ -12,8 +12,8 @@
 Bitboard piece_base_attack_table[PIECE_TYPE_COUNT][SQUARE_COUNT] = {EMPTY_BITBOARD};
 static Bitboard slider_piece_attack_table[BISHOP_ENTRY_COUNT + ROOK_ENTRY_COUNT];
 
-Bitboard diagonals[15];     // Indices: (rank - file) + 7   0-14
-Bitboard antidiagonals[15]; // Indices: (rank + file)   0-14
+Bitboard diagonals[15];      // Indices: (rank - file) + 7   0-14
+Bitboard antidiagonals[15];  // Indices: (rank + file)   0-14
 Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 Bitboard between_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 
@@ -68,7 +68,7 @@ static inline Bitboard compute_line_bitboard(Square square1, Square square2) {
 static inline Bitboard compute_between_bitboard(Square square1, Square square2) {
     assert(is_valid_square(square1) && is_valid_square(square2));
 
-    if (square1 == square2) return EMPTY_BITBOARD; // No squares strictly between.
+    if (square1 == square2) return EMPTY_BITBOARD;  // No squares strictly between.
 
     Bitboard bitboard1 = square_bitboard(square1);
     Bitboard bitboard2 = square_bitboard(square2);
@@ -145,7 +145,7 @@ extern void initialize_bitboards() {
 
         for (size_t i = 0; i < 8; ++i) {
             piece_base_attack_table[PIECE_TYPE_KNIGHT][square] |= step_safe(square, knight_steps[i]);
-            piece_base_attack_table[PIECE_TYPE_KING][square]   |= step_safe(square, king_steps[i]);
+            piece_base_attack_table[PIECE_TYPE_KING][square] |= step_safe(square, king_steps[i]);
         }
 
         piece_base_attack_table[PIECE_TYPE_BISHOP][square] = bishop_attacks(square, EMPTY_BITBOARD);
@@ -161,9 +161,7 @@ static Bitboard slider_piece_attacks(PieceType piece_type, Square square, Bitboa
     assert(piece_type == PIECE_TYPE_BISHOP || piece_type == PIECE_TYPE_ROOK);
     assert(is_valid_square(square));
 
-    Direction bishop_directions[4] = {DIRECTION_NORTHEAST,
-                                      DIRECTION_SOUTHEAST,
-                                      DIRECTION_SOUTHWEST,
+    Direction bishop_directions[4] = {DIRECTION_NORTHEAST, DIRECTION_SOUTHEAST, DIRECTION_SOUTHWEST,
                                       DIRECTION_NORTHWEST};
     Direction rook_directions[4]   = {DIRECTION_NORTH, DIRECTION_EAST, DIRECTION_SOUTH, DIRECTION_WEST};
     Direction* directions          = (piece_type == PIECE_TYPE_BISHOP) ? bishop_directions : rook_directions;
@@ -250,10 +248,12 @@ char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
 
         size += (size_t)sprintf(string + size, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", rank + 1);
     }
-    size += (size_t)sprintf(string + size, "  a   b   c   d   e   f   g   h\n");
-    size += (size_t)sprintf(string + size, "Hex: 0x%016" PRIx64 "\n", bitboard);
+    size += (size_t)sprintf(string + size,
+                            "  a   b   c   d   e   f   g   h\n"
+                            "Hex: 0x%016" PRIx64 "\n",
+                            bitboard);
 
-    string = realloc(string, size + 1); // +1 for \0.
+    string = realloc(string, size + 1);  // +1 for \0.
 
     if (size_out != NULL) *size_out = size;
 

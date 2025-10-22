@@ -1,5 +1,5 @@
-#ifndef BITBOARD_H
-#define BITBOARD_H
+#ifndef WINDMOLEN_BITBOARD_H_
+#define WINDMOLEN_BITBOARD_H_
 
 
 #include <assert.h>
@@ -41,8 +41,8 @@ static const Bitboard rank_bitboards[RANK_COUNT] = {
 };
 // clang-format on
 
-extern Bitboard diagonals[15];     // Indices: (rank - file) + 7   0-14
-extern Bitboard antidiagonals[15]; // Indices: (rank + file)   0-14
+extern Bitboard diagonals[15];      // Indices: (rank - file) + 7   0-14
+extern Bitboard antidiagonals[15];  // Indices: (rank + file)   0-14
 extern Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 extern Bitboard between_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 
@@ -95,14 +95,14 @@ static inline Bitboard between_bitboard(Square square1, Square square2) {
 static inline File file_from_square(Square square) {
     assert(is_valid_square(square));
 
-    return (File)(square & 7); // Fast modulo 8.
+    return (File)(square & 7);  // Fast modulo 8.
 }
 
 /* Returns the rank that `square` lies on. */
 static inline Rank rank_from_square(Square square) {
     assert(is_valid_square(square));
 
-    return (Rank)(square >> 3); // Fast division by 8.
+    return (Rank)(square >> 3);  // Fast division by 8.
 }
 
 /* Returns a bitboard of `square`. */
@@ -238,4 +238,4 @@ char* bitboard_to_string(Bitboard bitboard, size_t* size_out);
 
 
 
-#endif /* BITBOARD_H */
+#endif /* #ifndef WINDMOLEN_BITBOARD_H_ */

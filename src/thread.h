@@ -1,5 +1,5 @@
-#ifndef THREAD_H
-#define THREAD_H
+#ifndef WINDMOLEN_THREAD_H_
+#define WINDMOLEN_THREAD_H_
 
 
 #include <threads.h>
@@ -13,4 +13,4 @@ Move stop_search_thread(struct SearchState* search_state);
 
 
 
-#endif /* #ifndef THREAD_H */
+#endif /* #ifndef WINDMOLEN_THREAD_H_ */

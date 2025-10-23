@@ -84,10 +84,12 @@ static void handle_position(const char* argument_string) {
     char argument[MAX_TOKEN_LENGTH];
     argument_string = next_token(argument_string, argument);
 
-    if (strcmp(argument, "fen") == 0)
+    if (strcmp(argument, "fen") == 0) {
+        while (isspace(*argument_string)) ++argument_string;  // Move pointer to fen string.
         argument_string = position_from_FEN(&main_position, argument_string);
-    else if (strcmp(argument, "startpos") == 0)
+    } else if (strcmp(argument, "startpos") == 0) {
         position_from_startpos(&main_position);
+    }
 
     argument_string = next_token(argument_string, argument);
 

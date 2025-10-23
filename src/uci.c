@@ -59,12 +59,12 @@ static Move parse_move(const char* move_string) {
     static const MoveType char_to_promotion[] = {['n'] = MOVE_TYPE_KNIGHT_PROMOTION,
                                                  ['b'] = MOVE_TYPE_BISHOP_PROMOTION,
                                                  ['r'] = MOVE_TYPE_ROOK_PROMOTION,
-                                                 ['q'] = MOVE_TYPE_ROOK_PROMOTION};
+                                                 ['q'] = MOVE_TYPE_QUEEN_PROMOTION};
 
     Square source      = coordinate_square(char_to_file(move_string[0]), char_to_rank(move_string[1]));
     Square destination = coordinate_square(char_to_file(move_string[2]), char_to_rank(move_string[3]));
     MoveType move_type = (MoveType)((move_string[4] == '\0') ? MOVE_TYPE_NORMAL
-                                                             : char_to_promotion[(int)move_string[5]]);
+                                                             : char_to_promotion[(int)move_string[4]]);
 
     return new_move(source, destination, move_type);
 }

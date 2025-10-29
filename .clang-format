@@ -6,7 +6,8 @@ AlignOperands: AlignAfterOperator
 AllowShortBlocksOnASingleLine: Empty
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
 # BinPackLongBracedList: true # clang-format 21+
 BreakBeforeBinaryOperators: NonAssignment
 ColumnLimit: 120
@@ -29,7 +30,6 @@ PenaltyBreakAssignment: 1000
 QualifierAlignment: Custom
 QualifierOrder: [static, inline, const, type, restrict, volatile]
 ReflowComments: Always
-RemoveBracesLLVM: true
 RemoveEmptyLinesInUnwrappedLines: true
 RemoveParentheses: MultipleParentheses
 RemoveSemicolon: true

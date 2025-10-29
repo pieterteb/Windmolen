@@ -26,7 +26,8 @@ static inline Move* splat_piece_moves(Move* movelist, Bitboard moves, Square fro
     assert(movelist != NULL);
     assert(is_valid_square(from));
 
-    while (moves != EMPTY_BITBOARD) *movelist++ = new_move(from, (Square)pop_lsb64(&moves), MOVE_TYPE_NORMAL);
+    while (moves != EMPTY_BITBOARD)
+        *movelist++ = new_move(from, (Square)pop_lsb64(&moves), MOVE_TYPE_NORMAL);
 
     return movelist;
 }
@@ -382,7 +383,8 @@ size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_
     assert(position != NULL);
     assert(movelist != NULL);
 
-    if (position->fullmove_counter == 100) return 0;
+    if (position->fullmove_counter == 100)
+        return 0;
 
     Move* current = movelist;
     movelist      = (position->side_to_move == COLOR_WHITE) ? generate_white_pseudo_legal_moves(position, movelist)
@@ -432,7 +434,8 @@ static bool is_legal_king_move(const struct Position* position, Move move) {
         while (squares_to_traverse != EMPTY_BITBOARD) {
             Square square = (Square)pop_lsb64(&squares_to_traverse);
 
-            if (square_is_attacked(position, !position->side_to_move, square, position->total_occupancy)) return false;
+            if (square_is_attacked(position, !position->side_to_move, square, position->total_occupancy))
+                return false;
         }
 
         return true;
@@ -476,27 +479,4 @@ static bool is_legal_en_passant(struct Position* position, Move move) {
     position->occupancy_by_color[!position->side_to_move] |= captured_bitboard;
 
     return attackers == EMPTY_BITBOARD;
-}
-
-
-void print_move(FILE* stream, Move move) {
-    assert(stream != NULL);
-    assert(is_valid_move(move));
-
-    // clang-format off
-    static const char square_to_string[SQUARE_COUNT][3] = {
-        "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-        "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-        "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-        "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-        "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-        "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-        "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-        "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
-    };
-    // clang-format on
-
-    fprintf(stream, "%s%s", square_to_string[move_source(move)], square_to_string[move_destination(move)]);
-
-    if (move_type(move) == MOVE_TYPE_PROMOTION) fputc(promotion_to_char(move), stream);
 }

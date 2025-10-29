@@ -2,15 +2,24 @@
 #define WINDMOLEN_UCI_H_
 
 
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "engine.h"
+#include "move_generation.h"
 #include "position.h"
 
 
 
-extern struct Position main_position;
-
-
 /* Run the main uci loop. */
-void uci_loop();
+void uci_loop(struct Engine* engine);
+
+
+void uci_best_move(Move best_move);
+
+
+void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, Move move_stack[MAX_SEARCH_DEPTH],
+                   size_t move_stack_size);
 
 
 

@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <sys/types.h>
-
 #include "bitboard.h"
 #include "move_generation.h"
 #include "types.h"
@@ -40,7 +38,8 @@ static inline Bitboard compute_blockers(const struct Position* position, Color c
         Bitboard potential_blockers = between_bitboard(pinner_square, king)
                                     & (position->total_occupancy ^ square_bitboard(king));
 
-        if (!popcount64_greater_than_one(potential_blockers)) blockers |= potential_blockers;
+        if (!popcount64_greater_than_one(potential_blockers))
+            blockers |= potential_blockers;
     }
 
     return blockers;
@@ -68,7 +67,8 @@ void do_move(struct Position* position, Move move) {
     position->occupancy_by_piece[piece] ^= square_bitboard(source);
     position->piece_on_square[source] = PIECE_NONE;
 
-    if (type == MOVE_TYPE_PROMOTION) piece = get_piece(side_to_move, promotion_to_piece_type(move));
+    if (type == MOVE_TYPE_PROMOTION)
+        piece = get_piece(side_to_move, promotion_to_piece_type(move));
 
     position->occupancy_by_piece[piece] |= square_bitboard(destination);
 
@@ -168,13 +168,18 @@ void do_move(struct Position* position, Move move) {
 
     position->total_occupancy = position->occupancy_by_color[COLOR_WHITE] | position->occupancy_by_color[COLOR_BLACK];
 
-    if (position->piece_on_square[SQUARE_A1] != PIECE_WHITE_ROOK) position->castling_rights &= ~CASTLE_WHITE_000;
-    if (position->piece_on_square[SQUARE_H1] != PIECE_WHITE_ROOK) position->castling_rights &= ~CASTLE_WHITE_00;
-    if (position->piece_on_square[SQUARE_A8] != PIECE_BLACK_ROOK) position->castling_rights &= ~CASTLE_BLACK_000;
-    if (position->piece_on_square[SQUARE_H8] != PIECE_BLACK_ROOK) position->castling_rights &= ~CASTLE_BLACK_00;
+    if (position->piece_on_square[SQUARE_A1] != PIECE_WHITE_ROOK)
+        position->castling_rights &= ~CASTLE_WHITE_000;
+    if (position->piece_on_square[SQUARE_H1] != PIECE_WHITE_ROOK)
+        position->castling_rights &= ~CASTLE_WHITE_00;
+    if (position->piece_on_square[SQUARE_A8] != PIECE_BLACK_ROOK)
+        position->castling_rights &= ~CASTLE_BLACK_000;
+    if (position->piece_on_square[SQUARE_H8] != PIECE_BLACK_ROOK)
+        position->castling_rights &= ~CASTLE_BLACK_00;
 
     position->side_to_move = opponent;
-    if (side_to_move == COLOR_BLACK) ++position->fullmove_counter;
+    if (side_to_move == COLOR_BLACK)
+        ++position->fullmove_counter;
 
     position->checkers[opponent]     = compute_checkers(position, opponent);
     position->blockers[side_to_move] = compute_blockers(position, side_to_move);
@@ -223,7 +228,8 @@ char* position_to_string(const struct Position* position, size_t* size_out) {
 
     string = realloc(string, size + 1);  // +1 for \0.
 
-    if (size_out != NULL) *size_out = size;
+    if (size_out != NULL)
+        *size_out = size;
 
     return string;
 }
@@ -258,15 +264,18 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
             --rank;
         } else if (c >= '1' && c <= '8') {
             Square square = coordinate_square(file, rank);
-            for (size_t i = 0; i < (size_t)(c - '0'); ++i) position->piece_on_square[square++] = PIECE_NONE;
+            for (size_t i = 0; i < (size_t)(c - '0'); ++i)
+                position->piece_on_square[square++] = PIECE_NONE;
             file += (File)(c - '0');
         } else {
             Piece piece = letter_to_piece[(int)c];
             position->occupancy_by_piece[piece] |= coordinate_bitboard(file, rank);
             position->piece_on_square[coordinate_square(file, rank)] = piece;
 
-            if (piece == PIECE_WHITE_KING) position->king_square[COLOR_WHITE] = coordinate_square(file, rank);
-            if (piece == PIECE_BLACK_KING) position->king_square[COLOR_BLACK] = coordinate_square(file, rank);
+            if (piece == PIECE_WHITE_KING)
+                position->king_square[COLOR_WHITE] = coordinate_square(file, rank);
+            if (piece == PIECE_BLACK_KING)
+                position->king_square[COLOR_BLACK] = coordinate_square(file, rank);
 
             ++file;
         }
@@ -313,13 +322,15 @@ const char* position_from_FEN(struct Position* position, const char* fen) {
 
     /* Halfmove clock-> */
     int h = 0;
-    while (*fen >= '0' && *fen <= '9') h = h * 10 + (*fen++ - '0');
+    while (*fen >= '0' && *fen <= '9')
+        h = h * 10 + (*fen++ - '0');
     position->halfmove_clock = h;
     ++fen;  // Skip space->
 
     /* Fullmove counter-> */
     h = 0;
-    while (*fen >= '0' && *fen <= '9') h = h * 10 + (*fen++ - '0');
+    while (*fen >= '0' && *fen <= '9')
+        h = h * 10 + (*fen++ - '0');
     position->fullmove_counter = h;
 
     position->occupancy_by_color[COLOR_WHITE] = position->occupancy_by_piece[PIECE_WHITE_PAWN]
@@ -393,8 +404,10 @@ char* position_to_FEN(const struct Position* position, size_t* size_out) {
             }
         }
 
-        if (empty != 0) *current_fen++ = '0' + (char)empty;
-        if (rank != RANK_1) *current_fen++ = '/';
+        if (empty != 0)
+            *current_fen++ = '0' + (char)empty;
+        if (rank != RANK_1)
+            *current_fen++ = '/';
     }
     *current_fen++ = ' ';
 
@@ -406,10 +419,14 @@ char* position_to_FEN(const struct Position* position, size_t* size_out) {
     if (position->castling_rights == CASTLE_NONE) {
         *current_fen++ = '-';
     } else {
-        if (position->castling_rights & CASTLE_WHITE_00) *current_fen++ = 'K';
-        if (position->castling_rights & CASTLE_WHITE_000) *current_fen++ = 'Q';
-        if (position->castling_rights & CASTLE_BLACK_00) *current_fen++ = 'k';
-        if (position->castling_rights & CASTLE_BLACK_000) *current_fen++ = 'q';
+        if (position->castling_rights & CASTLE_WHITE_00)
+            *current_fen++ = 'K';
+        if (position->castling_rights & CASTLE_WHITE_000)
+            *current_fen++ = 'Q';
+        if (position->castling_rights & CASTLE_BLACK_00)
+            *current_fen++ = 'k';
+        if (position->castling_rights & CASTLE_BLACK_000)
+            *current_fen++ = 'q';
     }
     *current_fen++ = ' ';
 
@@ -431,7 +448,8 @@ char* position_to_FEN(const struct Position* position, size_t* size_out) {
     /* Null terminate. */
     *current_fen = '\0';
 
-    if (size_out != NULL) *size_out = (size_t)(current_fen - fen);
+    if (size_out != NULL)
+        *size_out = (size_t)(current_fen - fen);
 
     return fen;
 }

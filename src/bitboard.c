@@ -43,23 +43,28 @@ static inline void initialize_diagonals(void) {
 static inline Bitboard compute_line_bitboard(Square square1, Square square2) {
     assert(is_valid_square(square1) && is_valid_square(square2));
 
-    if (square1 == square2) return square_bitboard(square1);
+    if (square1 == square2)
+        return square_bitboard(square1);
 
     File file1 = file_from_square(square1);
     File file2 = file_from_square(square2);
 
-    if (file1 == file2) return file_bitboard(file1);
+    if (file1 == file2)
+        return file_bitboard(file1);
 
     Rank rank1 = rank_from_square(square1);
     Rank rank2 = rank_from_square(square2);
 
-    if (rank1 == rank2) return rank_bitboard(rank1);
+    if (rank1 == rank2)
+        return rank_bitboard(rank1);
 
     // Same diagonal.
-    if (rank1 - rank2 == file1 - file2) return diagonal_bitboard(rank1 - file1);
+    if (rank1 - rank2 == file1 - file2)
+        return diagonal_bitboard(rank1 - file1);
 
     // Same anti-diagonal.
-    if (rank1 - rank2 == -(file1 - file2)) return antidiagonal_bitboard(rank1 + file1);
+    if (rank1 - rank2 == -(file1 - file2))
+        return antidiagonal_bitboard(rank1 + file1);
 
     // No line exists.
     return EMPTY_BITBOARD;
@@ -68,14 +73,16 @@ static inline Bitboard compute_line_bitboard(Square square1, Square square2) {
 static inline Bitboard compute_between_bitboard(Square square1, Square square2) {
     assert(is_valid_square(square1) && is_valid_square(square2));
 
-    if (square1 == square2) return EMPTY_BITBOARD;  // No squares strictly between.
+    if (square1 == square2)
+        return EMPTY_BITBOARD;  // No squares strictly between.
 
     Bitboard bitboard1 = square_bitboard(square1);
     Bitboard bitboard2 = square_bitboard(square2);
 
     Bitboard between = compute_line_bitboard(square1, square2);
 
-    if (between == EMPTY_BITBOARD) return bitboard2;
+    if (between == EMPTY_BITBOARD)
+        return bitboard2;
 
     if (bitboard1 > bitboard2) {
         between &= ~(bitboard2 - 1);
@@ -105,7 +112,8 @@ static Bitboard step_safe(Square from, Direction step) {
     assert(is_valid_square(from));
 
     Square to = from + (Square)step;
-    if (!is_valid_square(to)) return EMPTY_BITBOARD;
+    if (!is_valid_square(to))
+        return EMPTY_BITBOARD;
 
     int rank_difference = abs(rank_from_square(to) - rank_from_square(from));
     int file_difference = abs(file_from_square(to) - file_from_square(from));
@@ -174,7 +182,8 @@ static Bitboard slider_piece_attacks(PieceType piece_type, Square square, Bitboa
         for (Bitboard bitboard = shift_bitboard(square_bitboard(square), direction); bitboard != EMPTY_BITBOARD;
              bitboard          = shift_bitboard(bitboard, direction)) {
             attacks |= bitboard;
-            if (bitboard & occupancy) break;
+            if (bitboard & occupancy)
+                break;
         }
     }
 
@@ -255,7 +264,8 @@ char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
 
     string = realloc(string, size + 1);  // +1 for \0.
 
-    if (size_out != NULL) *size_out = size;
+    if (size_out != NULL)
+        *size_out = size;
 
     return string;
 }

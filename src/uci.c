@@ -2,57 +2,26 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "engine.h"
 #include "move_generation.h"
+#include "perft.h"
 #include "position.h"
-#include "search.h"
-#include "thread.h"
 #include "types.h"
 
 
 
-#define LINE_BUFFER_SIZE 4096
-#define MAX_TOKEN_LENGTH 1024
+#define LINE_BUFFER_SIZE 65536
 
 
-struct Position main_position;
-struct SearchState main_search_state;
+const char delimeters[] = " \t";
 
 
-
-static void trim_newline(char* string) {
-    assert(string != NULL);
-
-    size_t length = strlen(string);
-
-    if (length != 0) string[length - 1] = '\0';
-}
-
-/* Returns pointer to first character after the found token or `NULL` if no token was found. The found token
- * gets copied to `token`. If no token was found, `token` is an empty string. */
-static const char* next_token(const char* token_string, char token[MAX_TOKEN_LENGTH]) {
-    assert(token != NULL);
-
-    if (token_string == NULL) {
-        token[0] = '\0';
-        return NULL;
-    }
-
-    while (isblank(*token_string)) ++token_string;
-    const char* token_start = token_string;
-
-    while (!isblank(*token_string) && *token_string != '\0') ++token_string;
-    size_t token_length = (size_t)(token_string - token_start);
-
-    memcpy(token, token_start, token_length);
-    token[token_length] = '\0';
-
-    return (token_length == 0) ? NULL : token_string;
-}
-
-static Move parse_move(const char* move_string) {
+static Move parse_move(char* move_string) {
     assert(move_string != NULL);
     assert(move_string[4] == '\0' || move_string[5] == '\0');
 
@@ -69,76 +38,156 @@ static Move parse_move(const char* move_string) {
     return new_move(source, destination, move_type);
 }
 
+static void print_move(FILE* stream, Move move) {
+    assert(stream != NULL);
+    assert(is_valid_move(move));
+
+    // clang-format off
+    static const char square_to_string[SQUARE_COUNT][3] = {
+        "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+        "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+        "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+        "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+        "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+        "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+        "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+        "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
+    };
+    // clang-format on
+
+    fprintf(stream, "%s%s", square_to_string[move_source(move)], square_to_string[move_destination(move)]);
+
+    if (move_type(move) == MOVE_TYPE_PROMOTION)
+        fputc(promotion_to_char(move), stream);
+}
+
 
 static void uci_id() {
     puts(
     "id name Windmolen\n"
-    "id author Pieter te Brake");
+    "id author Pieter te Brake\n");
 }
 
 static void uci_options() {
-    // puts("");
+    puts(
+    "option name Hash type spin default 1 min 1 max 1\n"
+    "option name Threads type spin default 1 min 1 max 1");
 }
 
-static void handle_position(const char* argument_string) {
-    char argument[MAX_TOKEN_LENGTH];
-    argument_string = next_token(argument_string, argument);
+void uci_best_move(Move best_move) {
+    assert(is_valid_move(best_move));
+
+    printf("bestmove ");
+    print_move(stdout, best_move);
+    putc('\n', stdout);
+    fflush(stdout);
+}
+
+static void handle_position(struct Engine* engine) {
+    assert(engine != NULL);
+
+    // strtok() has already been 'initialized' in the main UCI loop.
+    char* argument = strtok(NULL, delimeters);
 
     if (strcmp(argument, "fen") == 0) {
-        while (isspace(*argument_string)) ++argument_string;  // Move pointer to fen string.
-        argument_string = position_from_FEN(&main_position, argument_string);
+        char* fen_string = argument + strlen(argument) + 1;  // Move to first character after terminator.
+        while (isspace(*fen_string))
+            ++fen_string;  // Move pointer to start of fen string.
+        position_from_FEN(&engine->position, fen_string);
     } else if (strcmp(argument, "startpos") == 0) {
-        position_from_startpos(&main_position);
+        position_from_startpos(&engine->position);
     }
 
-    argument_string = next_token(argument_string, argument);
+    argument = strtok(NULL, delimeters);
+    if (argument == NULL)
+        return;
 
     if (strcmp(argument, "moves") == 0) {
-        argument_string = next_token(argument_string, argument);
-
-        while (argument_string != NULL) {
-            Move move = parse_move(argument);
-            do_move(&main_position, move);
-
-            argument_string = next_token(argument_string, argument);
+        argument = strtok(NULL, delimeters);
+        while (argument != NULL) {
+            do_move(&engine->position, parse_move(argument));
+            argument = strtok(NULL, delimeters);
         }
     }
 }
 
-static void handle_go(const char* argument_string) {
-    assert(argument_string != NULL);
+static void handle_go(struct Engine* engine) {
+    assert(engine != NULL);
 
-    // Supported go commands:
-    //
-    // searchmoves
-    // infinite
+    struct SearchArguments* search_arguments = &engine->search_arguments;
 
-    char argument[MAX_TOKEN_LENGTH];
-    argument_string = next_token(argument_string, argument);
+    // strtok() has already been 'initialized' in the main UCI loop.
+    char* argument = strtok(NULL, delimeters);
 
-    main_search_state.move_count = 0;
-
-    while (argument_string != NULL) {
+    while (argument != NULL) {
         if (strcmp(argument, "searchmoves") == 0) {
-            argument_string = next_token(argument_string, argument);
+            argument = strtok(NULL, delimeters);
 
-            while (argument_string != NULL) {
-                main_search_state.movelist[main_search_state.move_count++] = parse_move(argument);
-                print_move(stdout, main_search_state.movelist[main_search_state.move_count - 1]);
+            while (argument != NULL) {
+                search_arguments->search_moves[search_arguments->search_move_count] = parse_move(argument);
+                ++search_arguments->search_move_count;
 
-                argument_string = next_token(argument_string, argument);
+                argument = strtok(NULL, delimeters);
             }
+        } else if (strcmp(argument, "ponder") == 0) {
+            search_arguments->ponder = true;
+        } else if (strcmp(argument, "wtime") == 0) {
+            argument                     = strtok(NULL, delimeters);
+            search_arguments->white_time = (uint64_t)strtoull(argument, NULL, 10);
+        } else if (strcmp(argument, "btime") == 0) {
+            argument                     = strtok(NULL, delimeters);
+            search_arguments->black_time = (uint64_t)strtoull(argument, NULL, 10);
+        } else if (strcmp(argument, "winc") == 0) {
+            argument                          = strtok(NULL, delimeters);
+            search_arguments->white_increment = (uint64_t)strtoull(argument, NULL, 10);
+        } else if (strcmp(argument, "binc") == 0) {
+            argument                          = strtok(NULL, delimeters);
+            search_arguments->black_increment = (uint64_t)strtoull(argument, NULL, 10);
+        } else if (strcmp(argument, "movestogo") == 0) {
+            argument                      = strtok(NULL, delimeters);
+            search_arguments->moves_to_go = (size_t)strtoull(argument, NULL, 10);
+        } else if (strcmp(argument, "depth") == 0) {
+            argument                    = strtok(NULL, delimeters);
+            search_arguments->max_depth = (size_t)strtoull(argument, NULL, 10);
+        } else if (strcmp(argument, "nodes") == 0) {
+            argument                    = strtok(NULL, delimeters);
+            search_arguments->max_nodes = (size_t)strtoull(argument, NULL, 10);
+        } else if (strcmp(argument, "mate") == 0) {
+            argument                    = strtok(NULL, delimeters);
+            search_arguments->mate_in_x = (size_t)strtoull(argument, NULL, 10);
+        } else if (strcmp(argument, "movetime") == 0) {
+            argument                    = strtok(NULL, delimeters);
+            search_arguments->move_time = (uint64_t)strtoull(argument, NULL, 10);
         } else if (strcmp(argument, "infinite") == 0) {
+            search_arguments->infinite  = true;
+            search_arguments->max_depth = MAX_SEARCH_DEPTH;
+        } else if (strcmp(argument, "perft") == 0) {
+            argument = strtok(NULL, delimeters);
+            if (strcmp(argument, "div") == 0) {
+                argument = strtok(NULL, delimeters);
+                // size_t depth = (size_t)strtoull(argument, NULL, 10);
+            } else if (strcmp(argument, "ext") == 0) {
+                argument     = strtok(NULL, delimeters);
+                size_t depth = (size_t)strtoull(argument, NULL, 10);
+                size_t extended_info[PERFT_COUNT];
+                extended_perft(&engine->position, depth, extended_info);
+            } else {
+                size_t depth = (size_t)strtoull(argument, NULL, 10);
+                size_t nodes = perft(&engine->position, depth);
+                printf("Nodes: %zu\n", nodes);
+                fflush(stdout);
+            }
+
+            return;
         }
 
-        argument_string = next_token(argument_string, argument);
+        argument = strtok(NULL, delimeters);
     }
 
-    start_search_thread(&main_search_state);
+    start_search(engine);
 }
 
-
-void uci_loop() {
+void uci_loop(struct Engine* engine) {
     // Minimum command support:
     //
     // uci
@@ -148,28 +197,16 @@ void uci_loop() {
     // stop
     // quit
 
-    const size_t supported_command_count     = 6;
-    static const char* supported_commands[6] = {"uci", "isready", "position", "go", "stop", "quit"};
-
     char line[LINE_BUFFER_SIZE];
+    char* command = NULL;
 
-    while (fgets(line, LINE_BUFFER_SIZE, stdin) != NULL) {
-        trim_newline(line);
-        if (line[0] == '\0') continue;
+    while (true) {
+        if (command == NULL) {
+            fgets(line, LINE_BUFFER_SIZE, stdin);
+            line[strcspn(line, "\n")] = '\0';
 
-        char command[MAX_TOKEN_LENGTH] = {0};
-        const char* token_string       = line;
-
-        do {
-            token_string = next_token(token_string, command);
-
-            /* Check whether this is a known command. */
-            for (size_t i = 0; i < supported_command_count; ++i)
-                if (strcmp(command, supported_commands[i]) == 0) goto found_command;
-        } while (token_string != NULL);
-
-found_command:
-        if (token_string == NULL) continue;
+            command = strtok(line, delimeters);
+        }
 
         if (strcmp(command, "uci") == 0) {
             uci_id();
@@ -178,34 +215,34 @@ found_command:
             puts("uciok");
             fflush(stdout);
         } else if (strcmp(command, "isready") == 0) {
+            initialize_engine(engine);
+            construct_thread_pool(&engine->thread_pool, 1);
+
             puts("readyok");
             fflush(stdout);
         } else if (strcmp(command, "position") == 0) {
-            handle_position(token_string);
+            handle_position(engine);
         } else if (strcmp(command, "go") == 0) {
-            handle_go(token_string);
+            handle_go(engine);
         } else if (strcmp(command, "stop") == 0) {
-            if (main_search_state.is_searching) {
-                Move best_move = stop_search_thread(&main_search_state);
-                printf("bestmove ");
-                print_move(stdout, best_move);
-                putc('\n', stdout);
-                fflush(stdout);
-
-                do_move(&main_position, best_move);
-            }
+            stop_search(engine);
         } else if (strcmp(command, "quit") == 0) {
-            if (main_search_state.is_searching) {
-                Move best_move = stop_search_thread(&main_search_state);
-                printf("bestmove ");
-                print_move(stdout, best_move);
-                putc('\n', stdout);
-                fflush(stdout);
-
-                do_move(&main_position, best_move);
-            }
-
+            quit_engine(engine);
             break;
         }
+
+        command = strtok(NULL, delimeters);
     }
+}
+
+
+void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, Move move_stack[MAX_SEARCH_DEPTH],
+                   size_t move_stack_size) {
+    printf("info depth %zu seldepth %zu multipv %zu score cp %d nodes %zu pv ", depth, depth, multipv, score, nodes);
+    for (size_t i = 0; i < move_stack_size; ++i) {
+        print_move(stdout, move_stack[i]);
+        putc(' ', stdout);
+    }
+    putc('\n', stdout);
+    fflush(stdout);
 }

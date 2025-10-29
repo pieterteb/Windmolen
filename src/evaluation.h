@@ -3,20 +3,21 @@
 
 
 #include <limits.h>
+#include <stddef.h>
 
 #include "position.h"
-#include "search.h"
 
 
 
-#define DRAWN_VALUE 0
-#define MATE_VALUE  (SHRT_MAX / 2)
+#define DRAWN_SCORE 0
+#define MATE_SCORE  (SHRT_MAX / 2)
+#define MAX_SCORE   SHRT_MAX
 
 
-typedef int Value;
+typedef int Score;
 
 
-Value evaluate_position(struct Position* position, const struct SearchState* search_state);
+Score evaluate_position(struct Position* position, size_t move_count, size_t current_search_depth);
 
 
 

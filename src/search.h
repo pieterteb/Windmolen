@@ -5,26 +5,42 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <threads.h>
 
+#include "evaluation.h"
 #include "move_generation.h"
 #include "position.h"
+#include "threads.h"
 
 
 
-struct SearchState {
-    thrd_t thread;
-    atomic_bool stop_search_requested;
-    Move best_move;
-    bool search_completed;
-    bool is_searching;
+#define MAX_SEARCH_DEPTH MAX_MOVES
 
-    Move movelist[MAX_MOVES];
-    size_t move_count;
+
+struct Searcher {
+    struct Position root_position;
+    Move root_moves[MAX_MOVES];
+    size_t root_move_count;
+    size_t max_search_depth;
+
+    Move move_stack[MAX_SEARCH_DEPTH];
+    size_t move_stack_count;
+
+    _Atomic(Move) best_move;
+    _Atomic(Score) best_score;
+    atomic_uint_fast64_t nodes_searched;
+
+    struct ThreadPool* thread_pool;
+    size_t thread_index;
 };
 
+static inline bool is_main_thread(const struct Searcher* searcher) {
+    assert(searcher != NULL);
 
-int start_search(void* search_state_void);
+    return searcher->thread_index == 0;
+}
+
+
+void start_searcher(struct Searcher* searcher);
 
 
 

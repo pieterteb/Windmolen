@@ -28,6 +28,9 @@
 typedef uint16_t Move;
 
 
+#define NULL_MOVE ((Move)0)
+
+
 typedef Move MoveType;
 enum {
     MOVE_TYPE_NORMAL     = 0 << 12,
@@ -127,9 +130,6 @@ static inline Move new_castle(CastlingRights castle_type) {
 
 /* Generates all legal moves in `position` to `movelist` and returns the number of legal moves found. */
 size_t generate_legal_moves(struct Position* position, Move movelist[256]);
-
-/* Prints `move` to `stdout`. */
-void print_move(FILE* stream, Move move);
 
 
 

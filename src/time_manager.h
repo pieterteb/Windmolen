@@ -3,4 +3,8 @@
 
 
 
+#include <time.h>
+
+
+
 #endif /* #ifndef WINDMOLEN_TIME_MANAGER_H_ */

@@ -59,6 +59,9 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
 
     Score max_score = -MAX_SCORE;
     for (size_t i = 0; i < move_count; ++i) {
+        if (atomic_load(&searcher->thread_pool->stop_search))
+            return max_score;
+
         struct Position new_position = *position;
         do_move(&new_position, movelist[i]);
 
@@ -69,9 +72,6 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
             if (depth == searcher->max_search_depth)
                 atomic_store(best_move, movelist[i]);
         }
-
-        if (atomic_load(&searcher->thread_pool->stop_search))
-            return max_score;
     }
 
     return max_score;

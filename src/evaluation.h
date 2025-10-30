@@ -9,15 +9,15 @@
 
 
 
-#define DRAWN_SCORE 0
-#define MATE_SCORE  (SHRT_MAX / 2)
-#define MAX_SCORE   SHRT_MAX
+#define DRAWN_SCORE ((Score)0)
+#define MATE_SCORE  ((Score)(SHRT_MAX / 2))
+#define MAX_SCORE   ((Score)SHRT_MAX)
 
 
 typedef int Score;
 
 
-Score evaluate_position(struct Position* position, size_t move_count, size_t current_search_depth);
+Score evaluate_position(struct Position* position);
 
 
 

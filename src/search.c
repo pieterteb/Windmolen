@@ -24,44 +24,54 @@ static void stop_if_time_exceeded(struct Searcher* searcher) {
         atomic_store(&searcher->thread_pool->stop_search, true);
 }
 
-static Score negamax(struct Searcher* searcher, size_t depth, Move movelist[MAX_MOVES], size_t move_count) {
+static Score negamax(struct Searcher* searcher, struct Position* position, size_t depth, _Atomic(Move)* best_move) {
     assert(searcher != NULL);
+    assert(position != NULL);
 
     ++searcher->nodes_searched;
 
     if (depth == 0) {
-        Score score = evaluate_position(&searcher->root_position, move_count, searcher->max_search_depth);
-        return (searcher->root_position.side_to_move == COLOR_WHITE) ? score : -score;
+        Score score = evaluate_position(position);
+        return (position->side_to_move == COLOR_WHITE) ? score : -score;
     }
 
     if (is_main_thread(searcher) && !searcher->thread_pool->search_arguments->infinite)
         stop_if_time_exceeded(searcher);
 
+    Move movelist[MAX_MOVES];
+    size_t move_count;
+    if (depth == searcher->max_search_depth) {
+        memcpy(movelist, searcher->root_moves, searcher->root_move_count * sizeof(Move));
+        move_count = searcher->root_move_count;
+    } else {
+        move_count = generate_legal_moves(position, movelist);
+    }
+
+    if (move_count == 0) {
+        Score score;
+        if (position->checkers[position->side_to_move] != 0) {
+            score = -MATE_SCORE + (Score)(searcher->max_search_depth - depth);
+        } else {
+            score = DRAWN_SCORE + (Score)(searcher->max_search_depth - depth);
+        }
+        return score;
+    }
+
     Score max_score = -MAX_SCORE;
-    if (depth == searcher->max_search_depth)
-        max_score = searcher->best_score;
-
-    Move new_movelist[MAX_MOVES];
     for (size_t i = 0; i < move_count; ++i) {
-        struct Position copy = searcher->root_position;
-        do_move(&searcher->root_position, movelist[i]);
+        struct Position new_position = *position;
+        do_move(&new_position, movelist[i]);
 
-        size_t new_move_count = generate_legal_moves(&searcher->root_position, new_movelist);
-
-        Score score = -negamax(searcher, depth - 1, new_movelist, new_move_count);
+        Score score = -negamax(searcher, &new_position, depth - 1, best_move);
         if (score > max_score) {
             max_score = score;
 
-            if (depth == searcher->max_search_depth) {
-                searcher->best_score = max_score;
-                searcher->best_move  = movelist[i];
-            }
+            if (depth == searcher->max_search_depth)
+                atomic_store(best_move, movelist[i]);
         }
 
-        searcher->root_position = copy;
-
         if (atomic_load(&searcher->thread_pool->stop_search))
-            return MAX_SCORE;
+            return max_score;
     }
 
     return max_score;
@@ -75,9 +85,10 @@ static void iterative_deepening(struct Searcher* searcher) {
     for (size_t depth = 1; depth <= max_depth; ++depth) {
         searcher->max_search_depth = depth;
 
-        negamax(searcher, depth, searcher->root_moves, searcher->root_move_count);
+        atomic_store(&searcher->best_score, negamax(searcher, &searcher->root_position, depth, &searcher->best_move));
 
-        uci_long_info(depth, 1, searcher->best_score, searcher->nodes_searched, searcher->best_move);
+        uci_long_info(depth, 1, atomic_load(&searcher->best_score), atomic_load(&searcher->nodes_searched),
+                      atomic_load(&searcher->best_move));
 
         if (atomic_load(&searcher->thread_pool->stop_search))
             break;

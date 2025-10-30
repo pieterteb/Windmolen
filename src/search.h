@@ -10,6 +10,7 @@
 #include "move_generation.h"
 #include "position.h"
 #include "threads.h"
+#include "types.h"
 
 
 

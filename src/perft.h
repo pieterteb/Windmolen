@@ -2,14 +2,20 @@
 #define WINDMOLEN_PERFT_H_
 
 
+#include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "move_generation.h"
 #include "position.h"
+#include "uci.h"
 
 
 
 static size_t perft(struct Position* position, size_t depth) {
+    assert(position != NULL);
+    assert(depth >= 0);
+
     if (depth == 0)
         return 1;
 
@@ -25,6 +31,29 @@ static size_t perft(struct Position* position, size_t depth) {
         do_move(position, movelist[i]);
         nodes += perft(position, depth - 1);
         *position = copy;
+    }
+
+    return nodes;
+}
+
+static size_t divide(struct Position* position, size_t depth) {
+    assert(position != NULL);
+    assert(depth > 0);
+
+    Move movelist[MAX_MOVES];
+    size_t move_count = generate_legal_moves(position, movelist);
+
+    size_t nodes = 0;
+    size_t move_nodes;
+    for (size_t i = 0; i < move_count; ++i) {
+        struct Position copy = *position;
+        do_move(position, movelist[i]);
+        move_nodes = perft(position, depth - 1);
+        nodes += move_nodes;
+        *position = copy;
+
+        print_move(stdout, movelist[i]);
+        printf(": %zu\n", move_nodes);
     }
 
     return nodes;

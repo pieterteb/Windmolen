@@ -39,7 +39,7 @@ static Move parse_move(char* move_string) {
     return new_move(source, destination, move_type);
 }
 
-static void print_move(FILE* stream, Move move) {
+void print_move(FILE* stream, Move move) {
     assert(stream != NULL);
     assert(is_valid_move(move));
 
@@ -170,20 +170,24 @@ static void handle_go(struct Engine* engine) {
             search_arguments->max_depth = MAX_SEARCH_DEPTH;
         } else if (strcmp(argument, "perft") == 0) {
             argument = strtok(NULL, delimeters);
-            if (strcmp(argument, "div") == 0) {
-                argument = strtok(NULL, delimeters);
-                // size_t depth = (size_t)strtoull(argument, NULL, 10);
-            } else if (strcmp(argument, "ext") == 0) {
+            if (strcmp(argument, "ext") == 0) {
                 argument     = strtok(NULL, delimeters);
                 size_t depth = (size_t)strtoull(argument, NULL, 10);
                 size_t extended_info[PERFT_COUNT];
                 extended_perft(&engine->position, depth, extended_info);
             } else {
-                size_t depth = (size_t)strtoull(argument, NULL, 10);
-                size_t nodes = perft(&engine->position, depth);
-                printf("Nodes: %zu\n", nodes);
+                size_t nodes = perft(&engine->position, (size_t)strtoull(argument, NULL, 10));
+                printf("\nNodes searched: %zu\n\n", nodes);
                 fflush(stdout);
             }
+
+            return;
+        } else if (strcmp(argument, "divide") == 0) {
+            putc('\n', stdout);
+            argument = strtok(NULL, delimeters);
+            size_t nodes_searched = divide(&engine->position, (size_t)strtoull(argument, NULL, 10));
+            printf("\nNodes searched: %zu\n\n", nodes_searched);
+            fflush(stdout);
 
             return;
         }

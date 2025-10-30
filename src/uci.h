@@ -12,6 +12,8 @@
 
 
 /* Run the main uci loop. */
+void print_move(FILE* stream, Move move);
+
 void uci_loop(struct Engine* engine);
 
 

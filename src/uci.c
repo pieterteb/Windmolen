@@ -184,7 +184,7 @@ static void handle_go(struct Engine* engine) {
             return;
         } else if (strcmp(argument, "divide") == 0) {
             putc('\n', stdout);
-            argument = strtok(NULL, delimeters);
+            argument              = strtok(NULL, delimeters);
             size_t nodes_searched = divide(&engine->position, (size_t)strtoull(argument, NULL, 10));
             printf("\nNodes searched: %zu\n\n", nodes_searched);
             fflush(stdout);

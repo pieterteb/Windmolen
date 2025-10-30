@@ -1,7 +1,7 @@
 #include "time_manager.h"
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "types.h"
 

@@ -72,7 +72,8 @@ static void uci_id() {
 static void uci_options() {
     puts(
     "option name Hash type spin default 1 min 1 max 1\n"
-    "option name Threads type spin default 1 min 1 max 1");
+    "option name Threads type spin default 1 min 1 max 1\n"
+    "option name MultiPV type spin default 1 min 1 max 1");
 }
 
 void uci_best_move(Move best_move) {
@@ -90,16 +91,17 @@ static void handle_position(struct Engine* engine) {
     // strtok() has already been 'initialized' in the main UCI loop.
     char* argument = strtok(NULL, delimeters);
 
+    const char* fen_string_end = NULL;
     if (strcmp(argument, "fen") == 0) {
         char* fen_string = argument + strlen(argument) + 1;  // Move to first character after terminator.
         while (isspace(*fen_string))
             ++fen_string;  // Move pointer to start of fen string.
-        position_from_FEN(&engine->position, fen_string);
+        fen_string_end = position_from_FEN(&engine->position, fen_string);
     } else if (strcmp(argument, "startpos") == 0) {
         position_from_startpos(&engine->position);
     }
 
-    argument = strtok(NULL, delimeters);
+    argument = strtok((char*)fen_string_end, delimeters);
     if (argument == NULL)
         return;
 
@@ -118,7 +120,7 @@ static void handle_go(struct Engine* engine) {
     struct SearchArguments* search_arguments = &engine->search_arguments;
     struct TimeManager* time_manager         = &engine->thread_pool.time_manager;
 
-    *search_arguments = (struct SearchArguments){0};
+    *search_arguments           = (struct SearchArguments){0};
     search_arguments->max_depth = MAX_SEARCH_DEPTH;
 
     // strtok() has already been 'initialized' in the main UCI loop.
@@ -242,7 +244,7 @@ void uci_loop(struct Engine* engine) {
 
 
 void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, Move best_move) {
-    printf("info depth %zu seldepth %zu multipv %zu score cp %d nodes %zu pv ", depth, depth, multipv, score, nodes);
+    printf("info multipv %zu depth %zu seldepth %zu score cp %d nodes %zu pv ", multipv, depth, depth, score, nodes);
     print_move(stdout, best_move);
     putc(' ', stdout);
     putc('\n', stdout);

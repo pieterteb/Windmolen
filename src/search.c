@@ -11,12 +11,20 @@
 #include "move_generation.h"
 #include "position.h"
 #include "thread.h"
+#include "time_manager.h"
 #include "uci.h"
 
 
 
-static Score negamax(struct Searcher* searcher, size_t depth, Move movelist[MAX_MOVES], size_t move_count,
-                     Move movestack[MAX_SEARCH_DEPTH], size_t movestack_index) {
+static void stop_if_time_exceeded(struct Searcher* searcher) {
+    assert(searcher != NULL);
+    assert(is_main_thread(searcher));
+
+    if (get_time_us() >= searcher->thread_pool->time_manager.cutoff_time)
+        atomic_store(&searcher->thread_pool->stop_search, true);
+}
+
+static Score negamax(struct Searcher* searcher, size_t depth, Move movelist[MAX_MOVES], size_t move_count) {
     assert(searcher != NULL);
 
     ++searcher->nodes_searched;
@@ -26,6 +34,9 @@ static Score negamax(struct Searcher* searcher, size_t depth, Move movelist[MAX_
         return (searcher->root_position.side_to_move == COLOR_WHITE) ? score : -score;
     }
 
+    if (is_main_thread(searcher) && !searcher->thread_pool->search_arguments->infinite)
+        stop_if_time_exceeded(searcher);
+
     Score max_score = -MAX_SCORE;
     if (depth == searcher->max_search_depth)
         max_score = searcher->best_score;
@@ -34,25 +45,20 @@ static Score negamax(struct Searcher* searcher, size_t depth, Move movelist[MAX_
     for (size_t i = 0; i < move_count; ++i) {
         struct Position copy = searcher->root_position;
         do_move(&searcher->root_position, movelist[i]);
-        movestack[movestack_index++] = movelist[i];
 
         size_t new_move_count = generate_legal_moves(&searcher->root_position, new_movelist);
 
-        Score score = -negamax(searcher, depth - 1, new_movelist, new_move_count, movestack, movestack_index);
+        Score score = -negamax(searcher, depth - 1, new_movelist, new_move_count);
         if (score > max_score) {
             max_score = score;
 
             if (depth == searcher->max_search_depth) {
                 searcher->best_score = max_score;
                 searcher->best_move  = movelist[i];
-
-                memcpy(searcher->move_stack, movestack, searcher->max_search_depth * sizeof(Move));
-                searcher->move_stack_count = searcher->max_search_depth;
             }
         }
 
         searcher->root_position = copy;
-        --movestack_index;
 
         if (atomic_load(&searcher->thread_pool->stop_search))
             return MAX_SCORE;
@@ -69,10 +75,9 @@ static void iterative_deepening(struct Searcher* searcher) {
     for (size_t depth = 1; depth <= max_depth; ++depth) {
         searcher->max_search_depth = depth;
 
-        negamax(searcher, depth, searcher->root_moves, searcher->root_move_count, searcher->move_stack, 0);
+        negamax(searcher, depth, searcher->root_moves, searcher->root_move_count);
 
-        uci_long_info(depth, 1, searcher->best_score, searcher->nodes_searched, searcher->move_stack,
-                      searcher->move_stack_count);
+        uci_long_info(depth, 1, searcher->best_score, searcher->nodes_searched, searcher->best_move);
 
         if (atomic_load(&searcher->thread_pool->stop_search))
             break;

@@ -11,6 +11,7 @@
 #include "move_generation.h"
 #include "perft.h"
 #include "position.h"
+#include "time_manager.h"
 #include "types.h"
 
 
@@ -115,6 +116,10 @@ static void handle_go(struct Engine* engine) {
     assert(engine != NULL);
 
     struct SearchArguments* search_arguments = &engine->search_arguments;
+    struct TimeManager* time_manager         = &engine->thread_pool.time_manager;
+
+    *search_arguments = (struct SearchArguments){0};
+    search_arguments->max_depth = MAX_SEARCH_DEPTH;
 
     // strtok() has already been 'initialized' in the main UCI loop.
     char* argument = strtok(NULL, delimeters);
@@ -132,17 +137,17 @@ static void handle_go(struct Engine* engine) {
         } else if (strcmp(argument, "ponder") == 0) {
             search_arguments->ponder = true;
         } else if (strcmp(argument, "wtime") == 0) {
-            argument                     = strtok(NULL, delimeters);
-            search_arguments->white_time = (uint64_t)strtoull(argument, NULL, 10);
+            argument                 = strtok(NULL, delimeters);
+            time_manager->white_time = (uint64_t)strtoull(argument, NULL, 10) * 1000;
         } else if (strcmp(argument, "btime") == 0) {
-            argument                     = strtok(NULL, delimeters);
-            search_arguments->black_time = (uint64_t)strtoull(argument, NULL, 10);
+            argument                 = strtok(NULL, delimeters);
+            time_manager->black_time = (uint64_t)strtoull(argument, NULL, 10) * 1000;
         } else if (strcmp(argument, "winc") == 0) {
-            argument                          = strtok(NULL, delimeters);
-            search_arguments->white_increment = (uint64_t)strtoull(argument, NULL, 10);
+            argument                      = strtok(NULL, delimeters);
+            time_manager->white_increment = (uint64_t)strtoull(argument, NULL, 10) * 1000;
         } else if (strcmp(argument, "binc") == 0) {
-            argument                          = strtok(NULL, delimeters);
-            search_arguments->black_increment = (uint64_t)strtoull(argument, NULL, 10);
+            argument                      = strtok(NULL, delimeters);
+            time_manager->black_increment = (uint64_t)strtoull(argument, NULL, 10) * 1000;
         } else if (strcmp(argument, "movestogo") == 0) {
             argument                      = strtok(NULL, delimeters);
             search_arguments->moves_to_go = (size_t)strtoull(argument, NULL, 10);
@@ -236,13 +241,10 @@ void uci_loop(struct Engine* engine) {
 }
 
 
-void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, Move move_stack[MAX_SEARCH_DEPTH],
-                   size_t move_stack_size) {
+void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, Move best_move) {
     printf("info depth %zu seldepth %zu multipv %zu score cp %d nodes %zu pv ", depth, depth, multipv, score, nodes);
-    for (size_t i = 0; i < move_stack_size; ++i) {
-        print_move(stdout, move_stack[i]);
-        putc(' ', stdout);
-    }
+    print_move(stdout, best_move);
+    putc(' ', stdout);
     putc('\n', stdout);
     fflush(stdout);
 }

@@ -18,8 +18,7 @@ void uci_loop(struct Engine* engine);
 void uci_best_move(Move best_move);
 
 
-void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, Move move_stack[MAX_SEARCH_DEPTH],
-                   size_t move_stack_size);
+void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, Move best_move);
 
 
 

@@ -16,10 +16,7 @@ struct SearchArguments {
     Move search_moves[MAX_MOVES];
     size_t search_move_count;
     bool ponder;
-    uint64_t white_time;
-    uint64_t black_time;
-    uint64_t white_increment;
-    uint64_t black_increment;
+
     size_t moves_to_go;
     size_t max_depth;  // In plies.
     size_t max_nodes;

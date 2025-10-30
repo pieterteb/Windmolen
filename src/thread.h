@@ -11,6 +11,7 @@
 #include "evaluation.h"
 #include "move_generation.h"
 #include "search.h"
+#include "time_manager.h"
 
 
 
@@ -33,6 +34,7 @@ struct ThreadPool {
     size_t thread_count;
     struct Thread threads[MAX_THREADS];
 
+    struct TimeManager time_manager;
     struct SearchArguments* search_arguments;
 
     atomic_bool stop_search;

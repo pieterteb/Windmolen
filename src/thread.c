@@ -7,8 +7,10 @@
 #include <string.h>
 #include <threads.h>
 
+#include "engine.h"
 #include "move_generation.h"
 #include "search.h"
+#include "time_manager.h"
 
 
 
@@ -128,6 +130,8 @@ void start_searching(struct ThreadPool* thread_pool, struct Position* root_posit
     wait_until_finished_searching(thread_pool);
 
     thread_pool->stop_search = false;
+    if (!thread_pool->search_arguments->infinite)
+        set_time_manager(&thread_pool->time_manager, root_position->side_to_move);
 
     Move root_moves[MAX_MOVES];
     size_t root_move_count = generate_legal_moves(root_position, root_moves);

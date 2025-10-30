@@ -10,6 +10,9 @@
 
 
 static size_t perft(struct Position* position, size_t depth) {
+    if (depth == 0)
+        return 1;
+
     Move movelist[MAX_MOVES];
     size_t move_count = generate_legal_moves(position, movelist);
 

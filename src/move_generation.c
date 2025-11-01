@@ -37,9 +37,10 @@ static Move* white_pawn_pseudo_legal_moves(const struct Position* position, Move
     assert(position != NULL);
     assert(movelist != NULL);
 
-    const Bitboard non_promotion_pawns = position->occupancy_by_piece[PIECE_WHITE_PAWN] & ~rank_bitboard(RANK_7);
-    const Bitboard enemies             = position->occupancy_by_color[COLOR_BLACK] & target;
-    Bitboard empty_squares             = ~position->total_occupancy;  // For pawn pushes.
+    const Bitboard non_promotion_pawns = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN)
+                                       & ~rank_bitboard(RANK_7);
+    const Bitboard enemies = piece_occupancy_by_color(position, COLOR_BLACK) & target;
+    Bitboard empty_squares = ~position->total_occupancy;  // For pawn pushes.
 
     /* Pawn pushes. */
     Bitboard push_once = shift_bitboard(non_promotion_pawns, DIRECTION_NORTH) & empty_squares;
@@ -67,7 +68,7 @@ static Move* white_pawn_pseudo_legal_moves(const struct Position* position, Move
     }
 
     /* Promotions. */
-    const Bitboard promotion_pawns = position->occupancy_by_piece[PIECE_WHITE_PAWN] & rank_bitboard(RANK_7);
+    const Bitboard promotion_pawns = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN) & rank_bitboard(RANK_7);
 
     if (promotion_pawns != EMPTY_BITBOARD) {
         push_once    = shift_bitboard(promotion_pawns, DIRECTION_NORTH) & empty_squares;
@@ -98,9 +99,10 @@ static Move* black_pawn_pseudo_legal_moves(const struct Position* position, Move
     assert(position != NULL);
     assert(movelist != NULL);
 
-    const Bitboard non_promotion_pawns = position->occupancy_by_piece[PIECE_BLACK_PAWN] & ~rank_bitboard(RANK_2);
-    const Bitboard enemies             = position->occupancy_by_color[COLOR_WHITE] & target;
-    Bitboard empty_squares             = ~position->total_occupancy;  // For pawn pushes.
+    const Bitboard non_promotion_pawns = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_PAWN)
+                                       & ~rank_bitboard(RANK_2);
+    const Bitboard enemies = position->occupancy_by_color[COLOR_WHITE] & target;
+    Bitboard empty_squares = ~position->total_occupancy;  // For pawn pushes.
 
     /* Pawn pushes. */
     Bitboard push_once = shift_bitboard(non_promotion_pawns, DIRECTION_SOUTH) & empty_squares;
@@ -128,7 +130,7 @@ static Move* black_pawn_pseudo_legal_moves(const struct Position* position, Move
     }
 
     /* Promotions. */
-    const Bitboard promotion_pawns = position->occupancy_by_piece[PIECE_BLACK_PAWN] & rank_bitboard(RANK_2);
+    const Bitboard promotion_pawns = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_PAWN) & rank_bitboard(RANK_2);
 
     if (promotion_pawns != EMPTY_BITBOARD) {
         push_once    = shift_bitboard(promotion_pawns, DIRECTION_SOUTH) & empty_squares;
@@ -159,7 +161,7 @@ static Move* white_knight_pseudo_legal_moves(const struct Position* position, Mo
     assert(position != NULL);
     assert(movelist != NULL);
 
-    Bitboard white_knights = position->occupancy_by_piece[PIECE_WHITE_KNIGHT];
+    Bitboard white_knights = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_KNIGHT);
 
     while (white_knights != EMPTY_BITBOARD) {
         Square knight_square = (Square)pop_lsb64(&white_knights);
@@ -174,7 +176,7 @@ static Move* black_knight_pseudo_legal_moves(const struct Position* position, Mo
     assert(position != NULL);
     assert(movelist != NULL);
 
-    Bitboard black_knights = position->occupancy_by_piece[PIECE_BLACK_KNIGHT];
+    Bitboard black_knights = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_KNIGHT);
 
     while (black_knights != EMPTY_BITBOARD) {
         Square knight_square = (Square)pop_lsb64(&black_knights);
@@ -189,7 +191,7 @@ static Move* white_bishop_pseudo_legal_moves(const struct Position* position, Mo
     assert(position != NULL);
     assert(movelist != NULL);
 
-    Bitboard white_bishops = position->occupancy_by_piece[PIECE_WHITE_BISHOP];
+    Bitboard white_bishops = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_BISHOP);
 
     while (white_bishops != EMPTY_BITBOARD) {
         Square bishop_square = (Square)pop_lsb64(&white_bishops);
@@ -204,7 +206,7 @@ static Move* black_bishop_pseudo_legal_moves(const struct Position* position, Mo
     assert(position != NULL);
     assert(movelist != NULL);
 
-    Bitboard black_bishops = position->occupancy_by_piece[PIECE_BLACK_BISHOP];
+    Bitboard black_bishops = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_BISHOP);
 
     while (black_bishops != EMPTY_BITBOARD) {
         Square bishop_square = (Square)pop_lsb64(&black_bishops);
@@ -219,7 +221,7 @@ static Move* white_rook_pseudo_legal_moves(const struct Position* position, Move
     assert(position != NULL);
     assert(movelist != NULL);
 
-    Bitboard white_rooks = position->occupancy_by_piece[PIECE_WHITE_ROOK];
+    Bitboard white_rooks = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_ROOK);
 
     while (white_rooks != EMPTY_BITBOARD) {
         Square rook_square = (Square)pop_lsb64(&white_rooks);
@@ -234,7 +236,7 @@ static Move* black_rook_pseudo_legal_moves(const struct Position* position, Move
     assert(position != NULL);
     assert(movelist != NULL);
 
-    Bitboard black_rooks = position->occupancy_by_piece[PIECE_BLACK_ROOK];
+    Bitboard black_rooks = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_ROOK);
 
     while (black_rooks != EMPTY_BITBOARD) {
         Square rook_square = (Square)pop_lsb64(&black_rooks);
@@ -249,7 +251,7 @@ static Move* white_queen_pseudo_legal_moves(const struct Position* position, Mov
     assert(position != NULL);
     assert(movelist != NULL);
 
-    Bitboard white_queens = position->occupancy_by_piece[PIECE_WHITE_QUEEN];
+    Bitboard white_queens = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_QUEEN);
 
     while (white_queens != EMPTY_BITBOARD) {
         Square queen_square = (Square)pop_lsb64(&white_queens);
@@ -267,7 +269,7 @@ static Move* black_queen_pseudo_legal_moves(const struct Position* position, Mov
     assert(position != NULL);
     assert(movelist != NULL);
 
-    Bitboard black_queens = position->occupancy_by_piece[PIECE_BLACK_QUEEN];
+    Bitboard black_queens = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_QUEEN);
 
     while (black_queens != EMPTY_BITBOARD) {
         Square queen_square = (Square)pop_lsb64(&black_queens);

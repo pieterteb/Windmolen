@@ -25,6 +25,12 @@ static inline bool is_valid_color(Color color) {
     return color == COLOR_WHITE || color == COLOR_BLACK;
 }
 
+static inline Color opposite_color(Color color) {
+    assert(is_valid_color(color));
+
+    return color ^ 1;
+}
+
 
 typedef int8_t PieceType;
 enum {
@@ -74,15 +80,8 @@ static inline bool is_valid_piece(Piece piece) {
     return piece >= PIECE_WHITE_PAWN && piece < PIECE_COUNT;
 }
 
-/* Returns the color of `piece`. */
-static inline Color piece_color(Piece piece) {
-    assert(is_valid_piece(piece));
-
-    return (Color)(piece & COLOR_BLACK);
-}
-
 /* Returns piece of type `piece_type` and with color `color`. */
-static inline Piece get_piece(Color color, PieceType piece_type) {
+static inline Piece create_piece(Color color, PieceType piece_type) {
     assert(is_valid_color(color));
     assert(is_valid_piece_type(piece_type));
     assert(piece_type != PIECE_TYPE_BLACK_PAWN);
@@ -90,15 +89,22 @@ static inline Piece get_piece(Color color, PieceType piece_type) {
     return (Piece)(2 * piece_type + color);  // Fast version of (piece_type << 1) | color.
 }
 
+/* Returns the color of `piece`. */
+static inline Color color_of_piece(Piece piece) {
+    assert(is_valid_piece(piece));
+
+    return (Color)(piece & COLOR_BLACK);
+}
+
 /* Returns the piece type of `piece`. */
-static inline PieceType get_piece_type(Piece piece) {
+static inline PieceType type_of_piece(Piece piece) {
     assert(is_valid_piece(piece));
 
     return (PieceType)(piece >> 1);
 }
 
 /* Returns pawn type of `color`. */
-static inline PieceType get_pawn_type(Color color) {
+static inline PieceType type_of_pawn(Color color) {
     assert(is_valid_color(color));
 
     return PIECE_TYPE_WHITE_PAWN + color * PIECE_TYPE_BLACK_PAWN;

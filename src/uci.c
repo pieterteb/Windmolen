@@ -31,8 +31,8 @@ static Move parse_move(char* move_string) {
                                                  ['r'] = MOVE_TYPE_ROOK_PROMOTION,
                                                  ['q'] = MOVE_TYPE_QUEEN_PROMOTION};
 
-    Square source      = coordinate_square(char_to_file(move_string[0]), char_to_rank(move_string[1]));
-    Square destination = coordinate_square(char_to_file(move_string[2]), char_to_rank(move_string[3]));
+    Square source      = square_from_coordinates(char_to_file(move_string[0]), char_to_rank(move_string[1]));
+    Square destination = square_from_coordinates(char_to_file(move_string[2]), char_to_rank(move_string[3]));
     MoveType move_type = (MoveType)((move_string[4] == '\0') ? MOVE_TYPE_NORMAL
                                                              : char_to_promotion[(int)move_string[4]]);
 
@@ -96,9 +96,11 @@ static void handle_position(struct Engine* engine) {
         char* fen_string = argument + strlen(argument) + 1;  // Move to first character after terminator.
         while (isspace(*fen_string))
             ++fen_string;  // Move pointer to start of fen string.
-        fen_string_end = position_from_FEN(&engine->position, fen_string);
+        fen_string_end = setup_position_from_fen(&engine->position, fen_string);
     } else if (strcmp(argument, "startpos") == 0) {
-        position_from_startpos(&engine->position);
+        setup_start_position(&engine->position);
+    } else if (strcmp(argument, "kiwipete") == 0) {
+        setup_kiwipete_position(&engine->position);
     }
 
     argument = strtok((char*)fen_string_end, delimeters);
@@ -188,6 +190,10 @@ static void handle_go(struct Engine* engine) {
             size_t nodes_searched = divide(&engine->position, (size_t)strtoull(argument, NULL, 10));
             printf("\nNodes searched: %zu\n\n", nodes_searched);
             fflush(stdout);
+
+            return;
+        } else if (strcmp(argument, "printpos") == 0) {
+            print_position(stdout, &engine->position);
 
             return;
         }

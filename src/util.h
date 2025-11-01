@@ -5,7 +5,11 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
+
+
+#define IS_SAME_TYPE(T1, T2) _Generic(((T1*)NULL), T2*: true, default: false)
 
 
 void seed_rand64(uint64_t seed);

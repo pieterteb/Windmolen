@@ -14,7 +14,6 @@
 
 static size_t perft(struct Position* position, size_t depth) {
     assert(position != NULL);
-    assert(depth >= 0);
 
     if (depth == 0)
         return 1;

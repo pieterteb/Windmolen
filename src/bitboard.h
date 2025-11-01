@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "types.h"
 
@@ -144,14 +145,14 @@ static inline Bitboard rank_bitboard_from_square(Square square) {
 }
 
 /* Returns a bitboard of the square described by `file` and `rank`. */
-static inline Bitboard coordinate_bitboard(File file, Rank rank) {
+static inline Bitboard bitboard_from_coordinates(File file, Rank rank) {
     assert(is_valid_file(file) && is_valid_rank(rank));
 
     return file_bitboard(file) & rank_bitboard(rank);
 }
 
 /* Returns the square described by `file` and `rank`. */
-static inline Square coordinate_square(File file, Rank rank) {
+static inline Square square_from_coordinates(File file, Rank rank) {
     assert(is_valid_file(file) && is_valid_rank(rank));
 
     // Should compile to a single LEA instruction on modern CPUs.
@@ -233,8 +234,7 @@ static inline Bitboard rook_attacks(Square square, Bitboard occupancy) {
 extern void initialize_bitboards();
 
 
-/* Returns a chessboard representation of `bitboard`. `size_out` can be ignored by passing `NULL`. */
-char* bitboard_to_string(Bitboard bitboard, size_t* size_out);
+void print_bitboard(FILE* stream, Bitboard bitboard);
 
 
 

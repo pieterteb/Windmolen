@@ -83,7 +83,7 @@ static inline char promotion_to_char(Move move) {
 }
 
 /* Returns the piece type that corresponds to the promotion type of `move`. */
-static inline PieceType promotion_to_piece_type(Move move) {
+static inline PieceType promotion_piece_type(Move move) {
     assert(is_valid_move(move));
     assert(move_type(move) == MOVE_TYPE_PROMOTION);
 

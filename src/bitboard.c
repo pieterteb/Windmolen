@@ -247,25 +247,22 @@ static void initialize_magics(PieceType piece_type) {
 }
 
 
-char* bitboard_to_string(Bitboard bitboard, size_t* size_out) {
-    char* string = malloc(4096 * sizeof(*string));
-    size_t size  = (size_t)sprintf(string, "+---+---+---+---+---+---+---+---+\n");
+void print_bitboard(FILE* stream, Bitboard bitboard) {
+    assert(stream != NULL);
+
+    fputs("+---+---+---+---+---+---+---+---+\n", stream);
 
     for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
         for (File file = FILE_A; file <= FILE_H; ++file)
-            size += (size_t)sprintf(string + size, (bitboard & coordinate_bitboard(file, rank)) ? "| X " : "|   ");
+            fputs((bitboard & bitboard_from_coordinates(file, rank)) ? "| X " : "|   ", stream);
 
-        size += (size_t)sprintf(string + size, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", rank + 1);
+        static_assert(IS_SAME_TYPE(Rank, int8_t), "Wrong format specifier used.");
+        fprintf(stream, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", (Rank)(rank + 1));
     }
-    size += (size_t)sprintf(string + size,
-                            "  a   b   c   d   e   f   g   h\n"
-                            "Hex: 0x%016" PRIx64 "\n",
-                            bitboard);
 
-    string = realloc(string, size + 1);  // +1 for \0.
-
-    if (size_out != NULL)
-        *size_out = size;
-
-    return string;
+    static_assert(IS_SAME_TYPE(Bitboard, uint64_t), "Wrong format specifier used.");
+    fprintf(stream,
+            "  a   b   c   d   e   f   g   h\n"
+            "Hex: 0x%016" PRIx64 "\n",
+            bitboard);
 }

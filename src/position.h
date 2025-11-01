@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -17,48 +18,23 @@ typedef uint16_t Move;
 
 
 struct Position {
-    Bitboard occupancy_by_piece[PIECE_COUNT];
     Bitboard occupancy_by_type[PIECE_TYPE_COUNT - 1];  // We do not differentiate between white and black pawns here.
     Bitboard occupancy_by_color[COLOR_COUNT];
     Bitboard total_occupancy;
     Bitboard checkers[COLOR_COUNT];
     Bitboard blockers[COLOR_COUNT];
-    Piece piece_on_square[SQUARE_COUNT];
     Square king_square[COLOR_COUNT];
     Square en_passant_square;
 
     CastlingRights castling_rights;
     Color side_to_move;
 
-    int halfmove_clock;
-    int fullmove_counter;
+    size_t halfmove_clock;
+    size_t fullmove_counter;
+
+    Piece piece_on_square[SQUARE_COUNT];
 };
 
-/* Returns the square of the king of `color` in `position`. */
-static inline Square king_square(const struct Position* position, Color color) {
-    assert(position != NULL);
-    assert(is_valid_color(color));
-    assert(popcount64(position->occupancy_by_piece[get_piece(color, PIECE_TYPE_KING)]) == 1);
-
-    return position->king_square[color];
-}
-
-/* Returns a bitboard of the occupancy of the piece of `piece_type` and `color` in `position`. */
-static inline Bitboard piece_occupancy(const struct Position* position, Color color, PieceType piece_type) {
-    assert(position != NULL);
-    assert(is_valid_color(color));
-    assert(is_valid_piece_type(piece_type));
-
-    return position->occupancy_by_piece[get_piece(color, piece_type)];
-}
-
-/* Returns a bitboard of the occupancy of `piece` in `position`. */
-static inline Bitboard piece_occupancy_by_piece(const struct Position* position, Piece piece) {
-    assert(position != NULL);
-    assert(is_valid_piece(piece));
-
-    return position->occupancy_by_piece[piece];
-}
 
 /*  Returns a bitboard of the occupancy of the pieces of `piece_type` in `position`. */
 static inline Bitboard piece_occupancy_by_type(const struct Position* position, PieceType piece_type) {
@@ -76,6 +52,16 @@ static inline Bitboard piece_occupancy_by_color(const struct Position* position,
 
     return position->occupancy_by_color[color];
 }
+
+/* Returns a bitboard of the occupancy of the piece of `piece_type` and `color` in `position`. */
+static inline Bitboard piece_occupancy(const struct Position* position, Color color, PieceType piece_type) {
+    assert(position != NULL);
+    assert(is_valid_color(color));
+    assert(is_valid_piece_type(piece_type));
+
+    return piece_occupancy_by_type(position, piece_type) & piece_occupancy_by_color(position, color);
+}
+
 
 /* Returns a bitboard of the occupancy of bishops and queens of `color` in `position`. */
 static inline Bitboard bishop_queen_occupancy(const struct Position* position, Color color) {
@@ -116,6 +102,73 @@ static inline Piece piece_on_square(const struct Position* position, Square squa
 }
 
 
+/* Returns the square of the king of `color` in `position`. */
+static inline Square king_square(const struct Position* position, Color color) {
+    assert(position != NULL);
+    assert(is_valid_color(color));
+    assert(popcount64(piece_occupancy_by_type(position, PIECE_TYPE_KING)) == 2);
+
+    return position->king_square[color];
+}
+
+
+static inline void place_piece(struct Position* position, Piece piece, Square square) {
+    assert(position != NULL);
+    assert(is_valid_piece(piece));
+    assert(is_valid_square(square));
+
+    Bitboard bitboard = square_bitboard(square);
+    position->occupancy_by_type[type_of_piece(piece)] |= bitboard;
+    position->occupancy_by_color[color_of_piece(piece)] |= bitboard;
+    position->piece_on_square[square] = piece;
+}
+
+static inline void place_piece_type(struct Position* position, Color color, PieceType piece_type, Square square) {
+    assert(position != NULL);
+    assert(is_valid_color(color));
+    assert(is_valid_piece_type(piece_type));
+    assert(is_valid_square(square));
+
+    Bitboard bitboard = square_bitboard(square);
+    position->occupancy_by_type[piece_type] |= bitboard;
+    position->occupancy_by_color[color] |= bitboard;
+    position->piece_on_square[square] = create_piece(color, piece_type);
+}
+
+static inline void remove_piece(struct Position* position, Piece piece, Square square) {
+    assert(position != NULL);
+    assert(is_valid_piece(piece));
+    assert(is_valid_square(square));
+
+    Bitboard bitboard = square_bitboard(square);
+    
+    assert((piece_occupancy_by_type(position, type_of_piece(piece)) & bitboard) != 0);
+    assert((piece_occupancy_by_color(position, color_of_piece(piece)) & bitboard) != 0);
+    assert(piece_on_square(position, square) == piece);
+
+    position->occupancy_by_type[type_of_piece(piece)] ^= bitboard;
+    position->occupancy_by_color[color_of_piece(piece)] ^= bitboard;
+    position->piece_on_square[square] = PIECE_NONE;
+}
+
+static inline void remove_piece_type(struct Position* position, Color color, PieceType piece_type, Square square) {
+    assert(position != NULL);
+    assert(is_valid_color(color));
+    assert(is_valid_piece_type(piece_type));
+    assert(is_valid_square(square));
+
+    Bitboard bitboard = square_bitboard(square);
+    
+    assert((piece_occupancy_by_type(position, piece_type) & bitboard) != 0);
+    assert((piece_occupancy_by_color(position, color) & bitboard) != 0);
+    assert(piece_on_square(position, square) == create_piece(color, piece_type));
+
+    position->occupancy_by_type[piece_type] ^= bitboard;
+    position->occupancy_by_color[color] ^= bitboard;
+    position->piece_on_square[square] = PIECE_NONE;
+}
+
+
 /* Returns whether `square` is attacked by pieces of `color` with `occupancy` in `position`. */
 static inline bool square_is_attacked(const struct Position* position, Color color, Square square, Bitboard occupancy) {
     assert(position != NULL);
@@ -128,7 +181,7 @@ static inline bool square_is_attacked(const struct Position* position, Color col
             && (rook_attacks(square, occupancy) & rook_queen_occupancy(position, color)) != EMPTY_BITBOARD)
         || ((piece_base_attacks(PIECE_TYPE_KNIGHT, square) & piece_occupancy(position, color, PIECE_TYPE_KNIGHT))
             != EMPTY_BITBOARD)
-        || ((piece_base_attacks(get_pawn_type(!color), square) & piece_occupancy(position, color, PIECE_TYPE_PAWN))
+        || ((piece_base_attacks(type_of_pawn(!color), square) & piece_occupancy(position, color, PIECE_TYPE_PAWN))
             != EMPTY_BITBOARD)
         || ((piece_base_attacks(PIECE_TYPE_KING, square) & piece_occupancy(position, color, PIECE_TYPE_KING))
             != EMPTY_BITBOARD);
@@ -142,8 +195,8 @@ static inline Bitboard attackers_of_square(const struct Position* position, Squa
     return ((bishop_attacks(square, occupancy) & bishop_queen_occupancy_by_type(position))
             | (rook_attacks(square, occupancy) & rook_queen_occupancy_by_type(position))
             | (piece_base_attacks(PIECE_TYPE_KNIGHT, square) & piece_occupancy_by_type(position, PIECE_TYPE_KNIGHT))
-            | (piece_base_attacks(PIECE_TYPE_WHITE_PAWN, square) & piece_occupancy_by_piece(position, PIECE_BLACK_PAWN))
-            | (piece_base_attacks(PIECE_TYPE_BLACK_PAWN, square) & piece_occupancy_by_piece(position, PIECE_WHITE_PAWN))
+            | (piece_base_attacks(PIECE_TYPE_WHITE_PAWN, square) & piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_PAWN))
+            | (piece_base_attacks(PIECE_TYPE_BLACK_PAWN, square) & piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN))
             | (piece_base_attacks(PIECE_TYPE_KING, square) & piece_occupancy_by_type(position, PIECE_TYPE_KING)));
 }
 
@@ -151,10 +204,12 @@ static inline Bitboard attackers_of_square(const struct Position* position, Squa
 void do_move(struct Position* position, Move move);
 
 
-char* position_to_string(const struct Position* position, size_t* size_out);
-void position_from_startpos(struct Position* position);
-const char* position_from_FEN(struct Position*, const char* fen);
-char* position_to_FEN(const struct Position* position, size_t* size_out);
+void setup_start_position(struct Position* position);
+void setup_kiwipete_position(struct Position* position);
+char* setup_position_from_fen(struct Position* position, const char* fen);
+
+void print_fen(FILE* stream, const struct Position* position);
+void print_position(FILE* stream, const struct Position* position);
 
 
 

@@ -141,7 +141,7 @@ static inline void remove_piece(struct Position* position, Piece piece, Square s
     assert(is_valid_square(square));
 
     Bitboard bitboard = square_bitboard(square);
-    
+
     assert((piece_occupancy_by_type(position, type_of_piece(piece)) & bitboard) != 0);
     assert((piece_occupancy_by_color(position, color_of_piece(piece)) & bitboard) != 0);
     assert(piece_on_square(position, square) == piece);
@@ -158,7 +158,7 @@ static inline void remove_piece_type(struct Position* position, Color color, Pie
     assert(is_valid_square(square));
 
     Bitboard bitboard = square_bitboard(square);
-    
+
     assert((piece_occupancy_by_type(position, piece_type) & bitboard) != 0);
     assert((piece_occupancy_by_color(position, color) & bitboard) != 0);
     assert(piece_on_square(position, square) == create_piece(color, piece_type));
@@ -192,12 +192,13 @@ static inline Bitboard attackers_of_square(const struct Position* position, Squa
     assert(position != NULL);
     assert(is_valid_square(square));
 
-    return ((bishop_attacks(square, occupancy) & bishop_queen_occupancy_by_type(position))
-            | (rook_attacks(square, occupancy) & rook_queen_occupancy_by_type(position))
-            | (piece_base_attacks(PIECE_TYPE_KNIGHT, square) & piece_occupancy_by_type(position, PIECE_TYPE_KNIGHT))
-            | (piece_base_attacks(PIECE_TYPE_WHITE_PAWN, square) & piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_PAWN))
-            | (piece_base_attacks(PIECE_TYPE_BLACK_PAWN, square) & piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN))
-            | (piece_base_attacks(PIECE_TYPE_KING, square) & piece_occupancy_by_type(position, PIECE_TYPE_KING)));
+    return (
+    (bishop_attacks(square, occupancy) & bishop_queen_occupancy_by_type(position))
+    | (rook_attacks(square, occupancy) & rook_queen_occupancy_by_type(position))
+    | (piece_base_attacks(PIECE_TYPE_KNIGHT, square) & piece_occupancy_by_type(position, PIECE_TYPE_KNIGHT))
+    | (piece_base_attacks(PIECE_TYPE_WHITE_PAWN, square) & piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_PAWN))
+    | (piece_base_attacks(PIECE_TYPE_BLACK_PAWN, square) & piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN))
+    | (piece_base_attacks(PIECE_TYPE_KING, square) & piece_occupancy_by_type(position, PIECE_TYPE_KING)));
 }
 
 

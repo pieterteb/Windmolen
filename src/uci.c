@@ -41,7 +41,7 @@ static Move parse_move(struct Position* position, const char* move_string) {
         move_type = MOVE_TYPE_CASTLE;
     } else if (destination == position->en_passant_square) {
         move_type = MOVE_TYPE_EN_PASSANT;
-    } else if (move_string[4] == '\0') {
+    } else if (move_string[4] != '\0') {
         move_type = char_to_promotion[(int)move_string[4]];
     }
 

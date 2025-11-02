@@ -7,8 +7,7 @@
 int main(void) {
     initialize_bitboards();
 
-    struct Engine engine = {0};
-
+    struct Engine engine;
     uci_loop(&engine);
 
     // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

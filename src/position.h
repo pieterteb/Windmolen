@@ -207,7 +207,7 @@ void do_move(struct Position* position, Move move);
 
 void setup_start_position(struct Position* position);
 void setup_kiwipete_position(struct Position* position);
-char* setup_position_from_fen(struct Position* position, const char* fen);
+const char* setup_position_from_fen(struct Position* position, const char* fen);
 
 void print_fen(FILE* stream, const struct Position* position);
 void print_position(FILE* stream, const struct Position* position);

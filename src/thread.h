@@ -10,12 +10,10 @@
 
 #include "evaluation.h"
 #include "move_generation.h"
+#include "options.h"
 #include "search.h"
 #include "time_manager.h"
 
-
-
-#define MAX_THREADS 1
 
 
 struct Thread {
@@ -32,9 +30,9 @@ struct Thread {
 
 struct ThreadPool {
     size_t thread_count;
-    struct Thread threads[MAX_THREADS];
+    struct Thread threads[MAX_THREAD_COUNT];
 
-    struct TimeManager time_manager;
+    struct TimeManager* time_manager;
     struct SearchArguments* search_arguments;
 
     atomic_bool stop_search;

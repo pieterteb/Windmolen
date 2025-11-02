@@ -49,6 +49,7 @@ static inline Bitboard compute_blockers(const struct Position* position, Color c
     return blockers;
 }
 
+
 void do_move(struct Position* position, Move move) {
     assert(position != NULL);
     assert(is_valid_move(move));
@@ -183,7 +184,7 @@ void setup_kiwipete_position(struct Position* position) {
     setup_position_from_fen(position, kiwipete_fen);
 }
 
-char* setup_position_from_fen(struct Position* position, const char* fen) {
+const char* setup_position_from_fen(struct Position* position, const char* fen) {
     assert(position != NULL);
     assert(fen != NULL);
 
@@ -286,7 +287,7 @@ char* setup_position_from_fen(struct Position* position, const char* fen) {
     position->checkers[COLOR_WHITE] = compute_checkers(position, COLOR_WHITE);
     position->checkers[COLOR_BLACK] = compute_checkers(position, COLOR_BLACK);
 
-    return (char*)fen;
+    return fen;
 }
 
 
@@ -339,13 +340,14 @@ void print_fen(FILE* stream, const struct Position* position) {
         fputs("- ", stream);
     } else {
         if (position->castling_rights & CASTLE_WHITE_00)
-            fputs("K ", stream);
+            fputs("K", stream);
         if (position->castling_rights & CASTLE_WHITE_000)
-            fputs("Q ", stream);
+            fputs("Q", stream);
         if (position->castling_rights & CASTLE_BLACK_00)
-            fputs("k ", stream);
+            fputs("k", stream);
         if (position->castling_rights & CASTLE_BLACK_000)
-            fputs("q ", stream);
+            fputs("q", stream);
+        fputc(' ', stream);
     }
 
     // Print en passant square.

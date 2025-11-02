@@ -20,11 +20,28 @@ static void stop_if_time_exceeded(struct Searcher* searcher) {
     assert(searcher != NULL);
     assert(is_main_thread(searcher));
 
-    if (get_time_us() >= searcher->thread_pool->time_manager.cutoff_time)
+    if (get_time_us() >= searcher->thread_pool->time_manager->cutoff_time) {
         atomic_store(&searcher->thread_pool->stop_search, true);
+        searcher->search_aborted = true;
+    }
 }
 
-static Score negamax(struct Searcher* searcher, struct Position* position, size_t depth, _Atomic(Move)* best_move) {
+static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool) {
+    assert(thread_pool != NULL);
+
+    const struct Searcher* best_searcher = &thread_pool->threads[0].searcher;
+    const struct Searcher* searcher;
+    for (size_t i = 1; i < thread_pool->thread_count; ++i) {
+        searcher = &thread_pool->threads[i].searcher;
+        if (atomic_load(&best_searcher->best_score) < atomic_load(&searcher->best_score))
+            best_searcher = searcher;
+    }
+
+    return best_searcher;
+}
+
+
+static Score negamax(struct Searcher* searcher, struct Position* position, size_t depth, Move* best_move) {
     assert(searcher != NULL);
     assert(position != NULL);
 
@@ -59,8 +76,10 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
 
     Score max_score = -MAX_SCORE;
     for (size_t i = 0; i < move_count; ++i) {
-        if (atomic_load(&searcher->thread_pool->stop_search))
+        if (atomic_load(&searcher->thread_pool->stop_search)) {
+            searcher->search_aborted = true;
             return max_score;
+        }
 
         struct Position new_position = *position;
         do_move(&new_position, movelist[i]);
@@ -70,7 +89,7 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
             max_score = score;
 
             if (depth == searcher->max_search_depth)
-                atomic_store(best_move, movelist[i]);
+                *best_move = movelist[i];
         }
     }
 
@@ -85,29 +104,26 @@ static void iterative_deepening(struct Searcher* searcher) {
     for (size_t depth = 1; depth <= max_depth; ++depth) {
         searcher->max_search_depth = depth;
 
-        atomic_store(&searcher->best_score, negamax(searcher, &searcher->root_position, depth, &searcher->best_move));
+        Move best_move;
+        Score best_score = negamax(searcher, &searcher->root_position, depth, &best_move);
+        if (!searcher->search_aborted) {
+            searcher->best_score = best_score;
+            searcher->best_move  = best_move;
+        }
 
-        uci_long_info(depth, 1, atomic_load(&searcher->best_score), atomic_load(&searcher->nodes_searched),
-                      atomic_load(&searcher->best_move));
+        if (is_main_thread(searcher) && !searcher->search_aborted) {
+            uci_long_info(depth, 1, atomic_load(&searcher->best_score), atomic_load(&searcher->nodes_searched),
+                          atomic_load(&searcher->best_move));
+
+            if (searcher->nodes_searched > searcher->thread_pool->search_arguments->max_nodes)
+                atomic_store(&searcher->thread_pool->stop_search, true);
+        }
 
         if (atomic_load(&searcher->thread_pool->stop_search))
             break;
     }
 }
 
-static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool) {
-    assert(thread_pool != NULL);
-
-    const struct Searcher* best_searcher = &thread_pool->threads[0].searcher;
-    const struct Searcher* searcher;
-    for (size_t i = 1; i < thread_pool->thread_count; ++i) {
-        searcher = &thread_pool->threads[i].searcher;
-        if (atomic_load(&best_searcher->best_score) < atomic_load(&searcher->best_score))
-            best_searcher = searcher;
-    }
-
-    return best_searcher;
-}
 
 void start_searcher(struct Searcher* searcher) {
     assert(searcher != NULL);

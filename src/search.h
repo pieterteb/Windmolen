@@ -23,8 +23,8 @@ struct Searcher {
     size_t root_move_count;
     size_t max_search_depth;
 
-    Move move_stack[MAX_SEARCH_DEPTH];
-    size_t move_stack_count;
+    Move principal_variation[MAX_SEARCH_DEPTH];
+    size_t principal_variation_length;
 
     _Atomic(Move) best_move;
     _Atomic(Score) best_score;
@@ -32,6 +32,8 @@ struct Searcher {
 
     struct ThreadPool* thread_pool;
     size_t thread_index;
+
+    bool search_aborted;
 };
 
 static inline bool is_main_thread(const struct Searcher* searcher) {

@@ -101,7 +101,7 @@ TOTAL_ELAPSED_MS=$((TOTAL_ELAPSED / 1000000))  # Convert to milliseconds
 
 echo
 if [ "$passed" = "$total" ]; then
-    echo -e "Passed ${GREEN}$passed${NC}/$total (${TOTAL_ELAPSED} ms)"
+    echo -e "Passed ${GREEN}$passed${NC}/$total (${TOTAL_ELAPSED_MS} ms)"
 else
-    echo -e "Passed ${RED}$passed${NC}/$total (${TOTAL_ELAPSED} ms)"
+    echo -e "Passed ${RED}$passed${NC}/$total (${TOTAL_ELAPSED_MS} ms)"
 fi

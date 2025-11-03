@@ -4,11 +4,11 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'  # Reset color
 
-echo "This test uses perftsuite.epd obtained from http://www.rocechess.ch/perft.html supplemented with some deeper perft values and more positions."
+echo "This test uses standard.epd obtained from https://github.com/AndyGrant/Ethereal/blob/master/src/perft/standard.epd."
 echo "Testing perft for windmolen..."
 
 ENGINE="../src/windmolen"
-EPD_FILE="perftsuite.epd"
+EPD_FILE="standard.epd"
 
 total=0
 passed=0

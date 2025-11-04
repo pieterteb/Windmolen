@@ -25,8 +25,8 @@ struct Searcher {
     Move principal_variation[MAX_SEARCH_DEPTH];
     size_t principal_variation_length;
 
-    _Atomic(Move) best_move;
-    _Atomic(Score) best_score;
+    Move best_move;
+    Score best_score;
     atomic_uint_fast64_t nodes_searched;
 
     struct ThreadPool* thread_pool;

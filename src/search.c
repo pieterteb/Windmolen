@@ -31,7 +31,7 @@ static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool
     const struct Searcher* searcher;
     for (size_t i = 1; i < thread_pool->thread_count; ++i) {
         searcher = &thread_pool->threads[i].searcher;
-        if (atomic_load(&best_searcher->best_score) < atomic_load(&searcher->best_score))
+        if (&best_searcher->best_score < &searcher->best_score)
             best_searcher = searcher;
     }
 

@@ -11,7 +11,6 @@
 
 #define DRAWN_SCORE ((Score)0)
 #define MATE_SCORE  ((Score)(SHRT_MAX / 2))
-#define MAX_SCORE   ((Score)SHRT_MAX)
 
 
 typedef int Score;

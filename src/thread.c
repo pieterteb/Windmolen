@@ -157,7 +157,7 @@ void start_searching(struct ThreadPool* thread_pool, struct Position* root_posit
         thread->searcher.principal_variation_length = 0;
 
         thread->searcher.best_move      = root_moves[0];
-        thread->searcher.best_score     = -MAX_SCORE;
+        thread->searcher.best_score     = -MATE_SCORE;
         thread->searcher.nodes_searched = 0;
 
         thread->searcher.thread_pool  = thread_pool;

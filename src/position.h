@@ -111,6 +111,12 @@ static inline Square king_square(const struct Position* position, Color color) {
     return position->king_square[color];
 }
 
+static inline bool in_check(const struct Position* position) {
+    assert(position != NULL);
+
+    return position->checkers[position->side_to_move] != 0;
+}
+
 
 static inline void place_piece(struct Position* position, Piece piece, Square square) {
     assert(position != NULL);

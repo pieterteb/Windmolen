@@ -152,8 +152,7 @@ void start_searching(struct ThreadPool* thread_pool, struct Position* root_posit
 
         thread->searcher.root_position = *root_position;
         memcpy(thread->searcher.root_moves, root_moves, root_move_count * sizeof(*thread->searcher.root_moves));
-        thread->searcher.root_move_count  = root_move_count;
-        thread->searcher.max_search_depth = thread_pool->search_arguments->max_depth;
+        thread->searcher.root_move_count = root_move_count;
 
         thread->searcher.principal_variation_length = 0;
 

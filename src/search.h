@@ -21,7 +21,6 @@ struct Searcher {
     struct Position root_position;
     Move root_moves[MAX_MOVES];
     size_t root_move_count;
-    size_t max_search_depth;
 
     Move principal_variation[MAX_SEARCH_DEPTH];
     size_t principal_variation_length;

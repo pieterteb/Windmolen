@@ -16,14 +16,12 @@
 
 
 
-static void stop_if_time_exceeded(struct Searcher* searcher) {
+static inline void stop_if_time_exceeded(struct Searcher* searcher) {
     assert(searcher != NULL);
     assert(is_main_thread(searcher));
 
-    if (get_time_us() >= searcher->thread_pool->time_manager->cutoff_time) {
+    if (get_time_us() >= searcher->thread_pool->time_manager->cutoff_time)
         atomic_store(&searcher->thread_pool->stop_search, true);
-        searcher->search_aborted = true;
-    }
 }
 
 static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool) {
@@ -41,7 +39,7 @@ static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool
 }
 
 
-static Score negamax(struct Searcher* searcher, struct Position* position, size_t depth, Move* best_move) {
+static Score negamax(struct Searcher* searcher, struct Position* position, size_t depth, size_t ply) {
     assert(searcher != NULL);
     assert(position != NULL);
 
@@ -56,44 +54,53 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
         stop_if_time_exceeded(searcher);
 
     Move movelist[MAX_MOVES];
-    size_t move_count;
-    if (depth == searcher->max_search_depth) {
-        memcpy(movelist, searcher->root_moves, searcher->root_move_count * sizeof(Move));
-        move_count = searcher->root_move_count;
-    } else {
-        move_count = generate_legal_moves(position, movelist);
-    }
+    size_t move_count = generate_legal_moves(position, movelist);
 
-    if (move_count == 0) {
-        Score score;
-        if (position->checkers[position->side_to_move] != 0) {
-            score = -MATE_SCORE + (Score)(searcher->max_search_depth - depth);
-        } else {
-            score = DRAWN_SCORE + (Score)(searcher->max_search_depth - depth);
-        }
-        return score;
-    }
+    // Check if it is a stalemate position. If move_count == 0 but it is not check, it is mate which will be handled
+    // automatically after this if statement.
+    if (move_count == 0 && !in_check(position))
+        return DRAWN_SCORE;
 
-    Score max_score = -MAX_SCORE;
+    Score best_score = -MATE_SCORE + (Score)ply;
     for (size_t i = 0; i < move_count; ++i) {
-        if (atomic_load(&searcher->thread_pool->stop_search)) {
-            searcher->search_aborted = true;
-            return max_score;
-        }
-
         struct Position new_position = *position;
         do_move(&new_position, movelist[i]);
 
-        Score score = -negamax(searcher, &new_position, depth - 1, best_move);
-        if (score > max_score) {
-            max_score = score;
+        Score score = -negamax(searcher, &new_position, depth - 1, ply + 1);
+        best_score  = (score > best_score) ? score : best_score;
 
-            if (depth == searcher->max_search_depth)
-                *best_move = movelist[i];
+        if (atomic_load(&searcher->thread_pool->stop_search)) {
+            searcher->search_aborted = true;
+            break;
         }
     }
 
-    return max_score;
+    return best_score;
+}
+
+static Score root_search(struct Searcher* searcher, size_t depth, Move* best_move) {
+    assert(searcher != NULL);
+    assert(best_move != NULL);
+    assert(depth > 0);
+
+    ++searcher->nodes_searched;
+
+    Score best_score = -MATE_SCORE;
+    for (size_t i = 0; i < searcher->root_move_count; ++i) {
+        struct Position new_position = searcher->root_position;
+        do_move(&new_position, searcher->root_moves[i]);
+
+        Score score = -negamax(searcher, &new_position, depth - 1, 1);
+        if (score > best_score /* && !searcher->search_aborted */) {
+            best_score = score;
+            *best_move = searcher->root_moves[i];
+        }
+
+        if (atomic_load(&searcher->thread_pool->stop_search))
+            break;
+    }
+
+    return best_score;
 }
 
 static void iterative_deepening(struct Searcher* searcher) {
@@ -102,18 +109,15 @@ static void iterative_deepening(struct Searcher* searcher) {
     size_t max_depth = searcher->thread_pool->search_arguments->max_depth;
 
     for (size_t depth = 1; depth <= max_depth; ++depth) {
-        searcher->max_search_depth = depth;
-
-        Move best_move;
-        Score best_score = negamax(searcher, &searcher->root_position, depth, &best_move);
+        Move best_move = searcher->root_moves[0];
+        Score best_score = root_search(searcher, depth, &best_move);
         if (!searcher->search_aborted) {
             searcher->best_score = best_score;
             searcher->best_move  = best_move;
         }
 
         if (is_main_thread(searcher) && !searcher->search_aborted) {
-            uci_long_info(depth, 1, atomic_load(&searcher->best_score), atomic_load(&searcher->nodes_searched),
-                          atomic_load(&searcher->best_move));
+            uci_long_info(depth, 1, searcher->best_score, searcher->nodes_searched, searcher->best_move);
 
             if (searcher->nodes_searched > searcher->thread_pool->search_arguments->max_nodes)
                 atomic_store(&searcher->thread_pool->stop_search, true);

@@ -78,9 +78,9 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
     return best_score;
 }
 
-static Score root_search(struct Searcher* searcher, size_t depth, Move* best_move) {
+static Score root_search(struct Searcher* searcher, size_t depth, size_t* best_move_index) {
     assert(searcher != NULL);
-    assert(best_move != NULL);
+    assert(best_move_index != NULL);
     assert(depth > 0);
 
     ++searcher->nodes_searched;
@@ -91,9 +91,9 @@ static Score root_search(struct Searcher* searcher, size_t depth, Move* best_mov
         do_move(&new_position, searcher->root_moves[i]);
 
         Score score = -negamax(searcher, &new_position, depth - 1, 1);
-        if (score > best_score /* && !searcher->search_aborted */) {
-            best_score = score;
-            *best_move = searcher->root_moves[i];
+        if (score > best_score && !searcher->search_aborted) {
+            best_score       = score;
+            *best_move_index = i;
         }
 
         if (atomic_load(&searcher->thread_pool->stop_search))
@@ -109,14 +109,21 @@ static void iterative_deepening(struct Searcher* searcher) {
     size_t max_depth = searcher->thread_pool->search_arguments->max_depth;
 
     for (size_t depth = 1; depth <= max_depth; ++depth) {
-        Move best_move = searcher->root_moves[0];
-        Score best_score = root_search(searcher, depth, &best_move);
-        if (!searcher->search_aborted) {
+        size_t best_move_index = SIZE_MAX;
+        Score best_score       = root_search(searcher, depth, &best_move_index);
+
+        // If at least one move has been completely searched, we update the current best move. Else, the search result
+        // can not be trusted.
+        if (best_move_index != SIZE_MAX) {
             searcher->best_score = best_score;
-            searcher->best_move  = best_move;
+            searcher->best_move  = searcher->root_moves[best_move_index];
+
+            // Make sure the new best move is checked first in the next iteration.
+            searcher->root_moves[best_move_index] = searcher->root_moves[0];
+            searcher->root_moves[0]               = searcher->best_move;
         }
 
-        if (is_main_thread(searcher) && !searcher->search_aborted) {
+        if (is_main_thread(searcher)) {
             uci_long_info(depth, 1, searcher->best_score, searcher->nodes_searched, searcher->best_move);
 
             if (searcher->nodes_searched > searcher->thread_pool->search_arguments->max_nodes)

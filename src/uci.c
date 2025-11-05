@@ -295,8 +295,12 @@ void uci_loop(struct Engine* engine) {
 }
 
 
-void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, Move best_move) {
-    printf("info multipv %zu depth %zu seldepth %zu score cp %d nodes %zu pv ", multipv, depth, depth, score, nodes);
+void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, uint64_t time, Move best_move) {
+    uint64_t time_ms = time / 1000;
+    size_t nps       = (time == 0) ? 0 : 1000000 * nodes / time;
+
+    printf("info multipv %zu depth %zu seldepth %zu score cp %d nodes %zu nps %zu tbhits 0 time %" PRIu64 " pv ",
+           multipv, depth, depth, score, nodes, nps, time_ms);
     print_move(stdout, best_move);
     putc('\n', stdout);
     fflush(stdout);

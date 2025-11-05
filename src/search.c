@@ -106,6 +106,7 @@ static Score root_search(struct Searcher* searcher, size_t depth, size_t* best_m
 static void iterative_deepening(struct Searcher* searcher) {
     assert(searcher != NULL);
 
+    uint64_t start_time = get_time_us();
     size_t max_depth = searcher->thread_pool->search_arguments->max_depth;
 
     for (size_t depth = 1; depth <= max_depth; ++depth) {
@@ -124,7 +125,8 @@ static void iterative_deepening(struct Searcher* searcher) {
         }
 
         if (is_main_thread(searcher)) {
-            uci_long_info(depth, 1, searcher->best_score, searcher->nodes_searched, searcher->best_move);
+            uint64_t elapsed_time = get_time_us() - start_time;
+            uci_long_info(depth, 1, searcher->best_score, searcher->nodes_searched, elapsed_time, searcher->best_move);
 
             if (searcher->nodes_searched > searcher->thread_pool->search_arguments->max_nodes)
                 atomic_store(&searcher->thread_pool->stop_search, true);

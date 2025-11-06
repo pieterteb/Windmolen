@@ -11,15 +11,14 @@
 
 
 
-/* Run the main uci loop. */
-void print_move(FILE* stream, Move move);
+void print_move(Move move);
 
+
+/* Run the main uci loop. */
 void uci_loop(struct Engine* engine);
 
 
 void uci_best_move(Move best_move);
-
-
 void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, uint64_t time, Move best_move);
 
 

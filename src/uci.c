@@ -48,8 +48,7 @@ static Move parse_move(struct Position* position, const char* move_string) {
     return new_move(source, destination, move_type);
 }
 
-void print_move(FILE* stream, Move move) {
-    assert(stream != NULL);
+void print_move(Move move) {
     assert(is_valid_move(move));
 
     // clang-format off
@@ -65,10 +64,10 @@ void print_move(FILE* stream, Move move) {
     };
     // clang-format on
 
-    fprintf(stream, "%s%s", square_to_string[move_source(move)], square_to_string[move_destination(move)]);
+    printf("%s%s", square_to_string[move_source(move)], square_to_string[move_destination(move)]);
 
     if (move_type(move) == MOVE_TYPE_PROMOTION)
-        fputc(promotion_to_char(move), stream);
+        putchar(promotion_to_char(move));
 }
 
 
@@ -89,16 +88,14 @@ static void uci_options() {
            MIN_THREAD_COUNT, MAX_THREAD_COUNT);
     printf("option name " MULTIPV_OPTION_NAME " type spin default %zu min %zu max %zu\n", DEFAULT_MULTIPV, MIN_MULTIPV,
            MAX_MULTIPV);
-    fflush(stdout);
 }
 
 void uci_best_move(Move best_move) {
     assert(is_valid_move(best_move));
 
     printf("bestmove ");
-    print_move(stdout, best_move);
-    putc('\n', stdout);
-    fflush(stdout);
+    print_move(best_move);
+    putchar('\n');
 }
 
 
@@ -220,21 +217,20 @@ static void handle_go(struct Engine* engine) {
                     size_t extended_info[PERFT_COUNT];
                     const size_t nodes = extended_perft(&engine->position, depth, extended_info);
                     printf("Nodes searched: %zu\n", nodes);
-                    fflush(stdout);
                 } else {
                     // Regular perft.
                     const size_t nodes = perft(&engine->position, (size_t)strtoull(argument, NULL, 10));
                     printf("Nodes searched: %zu\n", nodes);
-                    fflush(stdout);
                 }
             } else if (strcmp(argument, "divide") == 0) {
                 const size_t nodes_searched = divide(&engine->position,
                                                      (size_t)strtoull(strtok(NULL, delimeters), NULL, 10));
                 printf("\nNodes searched: %zu\n", nodes_searched);
-                fflush(stdout);
             } else if (strcmp(argument, "print") == 0) {
-                print_position(stdout, &engine->position);
-                fflush(stdout);
+                print_position(&engine->position);
+            } else if (strcmp(argument, "fen") == 0) {
+                print_fen(&engine->position);
+                putchar('\n');
             }
 
             return;
@@ -301,7 +297,6 @@ void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, uint
 
     printf("info multipv %zu depth %zu seldepth %zu score cp %d nodes %zu nps %zu tbhits 0 time %" PRIu64 " pv ",
            multipv, depth, depth, score, nodes, nps, time_ms);
-    print_move(stdout, best_move);
-    putc('\n', stdout);
-    fflush(stdout);
+    print_move(best_move);
+    putchar('\n');
 }

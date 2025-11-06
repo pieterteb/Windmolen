@@ -304,8 +304,7 @@ static const int piece_to_char[] = {
 };
 // clang-format on
 
-void print_fen(FILE* stream, const struct Position* position) {
-    assert(stream != NULL);
+void print_fen(const struct Position* position) {
     assert(position != NULL);
 
     // Print board.
@@ -319,67 +318,65 @@ void print_fen(FILE* stream, const struct Position* position) {
                 ++empty_squares;
             } else {
                 if (empty_squares != 0) {
-                    fputc('0' + (char)empty_squares, stream);
+                    putchar('0' + (char)empty_squares);
                     empty_squares = 0;
                 }
-                fputc(piece_to_char[piece_on_square(position, square)], stream);
+                putchar(piece_to_char[piece_on_square(position, square)]);
             }
         }
 
         if (empty_squares != 0)
-            fputc('0' + (char)empty_squares, stream);
+            putchar('0' + (char)empty_squares);
         if (rank != RANK_1)
-            fputc('/', stream);
+            putchar('/');
     }
 
     // Print side to move.
-    fputs((position->side_to_move == COLOR_WHITE) ? " w " : " b ", stream);
+    printf((position->side_to_move == COLOR_WHITE) ? " w " : " b ");
 
     // Print castling rights.
     if (position->castling_rights == CASTLE_NONE) {
-        fputs("- ", stream);
+        printf("- ");
     } else {
         if (position->castling_rights & CASTLE_WHITE_00)
-            fputs("K", stream);
+            putchar('K');
         if (position->castling_rights & CASTLE_WHITE_000)
-            fputs("Q", stream);
+            putchar('Q');
         if (position->castling_rights & CASTLE_BLACK_00)
-            fputs("k", stream);
+            putchar('k');
         if (position->castling_rights & CASTLE_BLACK_000)
-            fputs("q", stream);
-        fputc(' ', stream);
+            putchar('q');
+        putchar(' ');
     }
 
     // Print en passant square.
     if (position->en_passant_square != SQUARE_NONE) {
-        fputc('a' + (char)file_from_square(position->en_passant_square), stream);
-        fputc('1' + (char)file_from_square(position->en_passant_square), stream);
+        putchar('a' + (char)file_from_square(position->en_passant_square));
+        putchar('1' + (char)file_from_square(position->en_passant_square));
     } else {
-        fputc('-', stream);
+        putchar('-');
     }
 
     // Print halfmove clock and fullmove counter.
-    fprintf(stream, " %zu %zu ", position->halfmove_clock, position->fullmove_counter);
+    printf(" %zu %zu ", position->halfmove_clock, position->fullmove_counter);
 }
 
-void print_position(FILE* stream, const struct Position* position) {
-    assert(stream != NULL);
+void print_position(const struct Position* position) {
     assert(position != NULL);
 
-    fputs("+---+---+---+---+---+---+---+---+\n", stream);
+    puts("+---+---+---+---+---+---+---+---+");
 
     for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
         for (File file = FILE_A; file <= FILE_H; ++file)
-            fprintf(stream, "| %c ", piece_to_char[piece_on_square(position, square_from_coordinates(file, rank))]);
+            printf("| %c ", piece_to_char[piece_on_square(position, square_from_coordinates(file, rank))]);
 
         static_assert(IS_SAME_TYPE(Rank, int8_t), "Wrong format specifier used.");
-        fprintf(stream, "| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", (Rank)(rank + 1));
+        printf("| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", (Rank)(rank + 1));
     }
 
-    fputs(
+    puts(
     "  a   b   c   d   e   f   g   h\n"
-    "FEN: ",
-    stream);
-    print_fen(stream, position);
-    fputc('\n', stream);
+    "FEN: ");
+    print_fen(position);
+    putchar('\n');
 }

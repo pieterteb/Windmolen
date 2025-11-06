@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "bitboard.h"
@@ -215,8 +214,8 @@ void setup_start_position(struct Position* position);
 void setup_kiwipete_position(struct Position* position);
 const char* setup_position_from_fen(struct Position* position, const char* fen);
 
-void print_fen(FILE* stream, const struct Position* position);
-void print_position(FILE* stream, const struct Position* position);
+void print_fen(const struct Position* position);
+void print_position(const struct Position* position);
 
 
 

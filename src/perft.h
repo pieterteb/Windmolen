@@ -51,7 +51,7 @@ static size_t divide(struct Position* position, size_t depth) {
         nodes += move_nodes;
         *position = copy;
 
-        print_move(stdout, movelist[i]);
+        print_move(movelist[i]);
         printf(": %zu\n", move_nodes);
     }
 

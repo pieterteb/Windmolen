@@ -295,8 +295,24 @@ void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, uint
     uint64_t time_ms = time / 1000;
     size_t nps       = (time == 0) ? 0 : 1000000 * nodes / time;
 
-    printf("info multipv %zu depth %zu seldepth %zu score cp %d nodes %zu nps %zu tbhits 0 time %" PRIu64 " pv ",
-           multipv, depth, depth, score, nodes, nps, time_ms);
+    bool mate = false;
+    if (score >= MATE_SCORE - MAX_SEARCH_DEPTH) {
+        mate = true;
+        score = MATE_SCORE - score;
+    } else if (score <= -MATE_SCORE + MAX_SEARCH_DEPTH) {
+        mate = true;
+        score = -MATE_SCORE - score;
+    }
+
+    printf("info multipv %zu ", multipv);
+    printf("depth %zu ", depth);
+    printf("seldepth %zu ", depth);
+    printf(mate ? "score mate %d " : "score cp %d ", score);
+    printf("nodes %zu ", nodes);
+    printf("nps %zu ", nps);
+    printf("tbhits 0 ");
+    printf("time %" PRIu64 " ", time_ms);
+    printf("pv ");
     print_move(best_move);
     putchar('\n');
 }

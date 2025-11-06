@@ -8,7 +8,8 @@
 static uint64_t s;
 
 void seed_rand64(uint64_t seed) {
-    assert(seed);
+    assert(seed != 0);
+
     s = seed;
 }
 

@@ -374,7 +374,7 @@ void print_position(const struct Position* position) {
         printf("| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", (Rank)(rank + 1));
     }
 
-    puts(
+    printf(
     "  a   b   c   d   e   f   g   h\n"
     "FEN: ");
     print_fen(position);

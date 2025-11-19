@@ -3,11 +3,13 @@
 #include "bitboard.h"
 #include "engine.h"
 #include "uci.h"
+#include "zobrist.h"
 
 
 
 int main(void) {
     initialize_bitboards();
+    initialize_zobrist_keys();
 
     // Make sure stdtou is line buffered.
     setvbuf(stdout, NULL, _IOLBF, 0);

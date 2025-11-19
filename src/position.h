@@ -4,12 +4,14 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdlib.h>
 
 #include "bitboard.h"
 #include "types.h"
 #include "util.h"
+#include "zobrist.h"
 
 
 
@@ -17,6 +19,8 @@ typedef uint16_t Move;
 
 
 struct Position {
+    uint64_t zobrist_hash;
+
     Bitboard occupancy_by_type[PIECE_TYPE_COUNT - 1];  // We do not differentiate between white and black pawns here.
     Bitboard occupancy_by_color[COLOR_COUNT];
     Bitboard total_occupancy;
@@ -126,6 +130,7 @@ static inline void place_piece(struct Position* position, Piece piece, Square sq
     position->occupancy_by_type[type_of_piece(piece)] |= bitboard;
     position->occupancy_by_color[color_of_piece(piece)] |= bitboard;
     position->piece_on_square[square] = piece;
+    position->zobrist_hash ^= piece_zobrist_keys[piece][square];
 }
 
 static inline void place_piece_type(struct Position* position, Color color, PieceType piece_type, Square square) {
@@ -134,10 +139,12 @@ static inline void place_piece_type(struct Position* position, Color color, Piec
     assert(is_valid_piece_type(piece_type));
     assert(is_valid_square(square));
 
+    Piece piece = create_piece(color, piece_type);
     Bitboard bitboard = square_bitboard(square);
     position->occupancy_by_type[piece_type] |= bitboard;
     position->occupancy_by_color[color] |= bitboard;
-    position->piece_on_square[square] = create_piece(color, piece_type);
+    position->piece_on_square[square] = piece;
+    position->zobrist_hash ^= piece_zobrist_keys[piece][square];
 }
 
 static inline void remove_piece(struct Position* position, Piece piece, Square square) {
@@ -154,6 +161,7 @@ static inline void remove_piece(struct Position* position, Piece piece, Square s
     position->occupancy_by_type[type_of_piece(piece)] ^= bitboard;
     position->occupancy_by_color[color_of_piece(piece)] ^= bitboard;
     position->piece_on_square[square] = PIECE_NONE;
+    position->zobrist_hash ^= piece_zobrist_keys[piece][square];
 }
 
 static inline void remove_piece_type(struct Position* position, Color color, PieceType piece_type, Square square) {
@@ -171,6 +179,7 @@ static inline void remove_piece_type(struct Position* position, Color color, Pie
     position->occupancy_by_type[piece_type] ^= bitboard;
     position->occupancy_by_color[color] ^= bitboard;
     position->piece_on_square[square] = PIECE_NONE;
+    position->zobrist_hash ^= piece_zobrist_keys[create_piece(color, piece_type)][square];
 }
 
 

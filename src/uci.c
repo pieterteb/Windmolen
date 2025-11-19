@@ -246,6 +246,7 @@ void uci_loop(struct Engine* engine) {
     assert(engine != NULL);
 
     initialize_engine(engine);
+    
     uci_startup_message();
 
     char line[LINE_BUFFER_SIZE];

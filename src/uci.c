@@ -253,7 +253,7 @@ void uci_loop(struct Engine* engine) {
     const char* command = NULL;
 
     while (true) {
-        if (command == NULL) {
+        while (command == NULL) {
             fgets(line, LINE_BUFFER_SIZE, stdin);
             line[strcspn(line, "\n")] = '\0';
             command                   = strtok(line, delimeters);

@@ -1,4 +1,4 @@
-A chess engine written in C. Currently, Windmolen is in a usable state, but the engine does not know about draws other than stalemate and some UCI features are not implemented yet. The bare minimum is available though.
+Currently, Windmolen is a completely functional UCI chess engine (no Chess960 support) written in C. It uses only the bare minimum of chess engine techniques: negamax search and pure material evaluation.
 
 Usage:
 ```bash

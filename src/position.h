@@ -120,7 +120,7 @@ static inline Square king_square(const struct Position* position, Color color) {
 static inline bool in_check(const struct Position* position) {
     assert(position != NULL);
 
-    return position->checkers[position->side_to_move] != 0;
+    return position->checkers[position->side_to_move] != EMPTY_BITBOARD;
 }
 
 
@@ -219,12 +219,6 @@ static inline Bitboard attackers_of_square(const struct Position* position, Squa
 }
 
 
-static inline bool is_check(const struct Position* position) {
-    assert(position != NULL);
-
-    return position->checkers[position->side_to_move] != EMPTY_BITBOARD;
-}
-
 static inline bool is_repetition(const struct Position* position) {
     assert(position != NULL);
 
@@ -242,11 +236,12 @@ static inline bool is_repetition(const struct Position* position) {
     return false;
 }
 
+// We assume that it is not checkmate here.
 static inline bool is_draw(const struct Position* position) {
     assert(position != NULL);
     assert(position->halfmove_clock <= 100);
 
-    return (position->halfmove_clock == 100 && !is_check(position)) || is_repetition(position);
+    return position->halfmove_clock == 100 || is_repetition(position);
 }
 
 

@@ -60,8 +60,8 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
     size_t move_count = generate_legal_moves(position, movelist);
 
     // Check if it is a stalemate position. If move_count == 0 but it ís check, it is mate which will be handled
-    // automatically after this if statement.
-    if (move_count == 0 && !in_check(position))
+    // automatically after this if statement. Also check the 50-move-rule and threefold repetition.
+    if ((move_count == 0 && !in_check(position)) || is_draw(position))
         return DRAWN_SCORE;
 
     Score best_score = -MATE_SCORE + (Score)ply;

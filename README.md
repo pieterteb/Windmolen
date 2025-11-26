@@ -7,3 +7,5 @@ cd Windmolen/src
 make
 ./windmolen
 ```
+
+Windmolen can be challenged as a [Lichess bot](https://lichess.org/@/Windmolen_bot) (if it is online).

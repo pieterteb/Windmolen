@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -19,7 +20,9 @@ typedef uint16_t Move;
 
 
 struct Position {
-    uint64_t zobrist_hash;
+    ZobristHash zobrist_hash;
+    ZobristHash repetition_hashes[99];
+    size_t repetition_hash_count;
 
     Bitboard occupancy_by_type[PIECE_TYPE_COUNT - 1];  // We do not differentiate between white and black pawns here.
     Bitboard occupancy_by_color[COLOR_COUNT];
@@ -139,7 +142,7 @@ static inline void place_piece_type(struct Position* position, Color color, Piec
     assert(is_valid_piece_type(piece_type));
     assert(is_valid_square(square));
 
-    Piece piece = create_piece(color, piece_type);
+    Piece piece       = create_piece(color, piece_type);
     Bitboard bitboard = square_bitboard(square);
     position->occupancy_by_type[piece_type] |= bitboard;
     position->occupancy_by_color[color] |= bitboard;
@@ -213,6 +216,37 @@ static inline Bitboard attackers_of_square(const struct Position* position, Squa
     | (piece_base_attacks(PIECE_TYPE_WHITE_PAWN, square) & piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_PAWN))
     | (piece_base_attacks(PIECE_TYPE_BLACK_PAWN, square) & piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN))
     | (piece_base_attacks(PIECE_TYPE_KING, square) & piece_occupancy_by_type(position, PIECE_TYPE_KING)));
+}
+
+
+static inline bool is_check(const struct Position* position) {
+    assert(position != NULL);
+
+    return position->checkers[position->side_to_move] != EMPTY_BITBOARD;
+}
+
+static inline bool is_repetition(const struct Position* position) {
+    assert(position != NULL);
+
+    const ZobristHash current_hash = position->zobrist_hash;
+    size_t count                   = 0;
+
+    for (int i = (int)position->repetition_hash_count - 2; i >= 0; i -= 2) {
+        if (position->repetition_hashes[i] == current_hash) {
+            ++count;
+            if (count == 2)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+static inline bool is_draw(const struct Position* position) {
+    assert(position != NULL);
+    assert(position->halfmove_clock <= 100);
+
+    return (position->halfmove_clock == 100 && !is_check(position)) || is_repetition(position);
 }
 
 

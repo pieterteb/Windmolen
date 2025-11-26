@@ -1,13 +1,18 @@
 #ifndef WINDMOLEN_ZOBRIST_H_
 #define WINDMOLEN_ZOBRIST_H_
 
+#include <assert.h>
 #include <inttypes.h>
 
 #include "types.h"
+#include "util.h"
 
 
 
 typedef uint64_t ZobristKey;
+typedef uint64_t ZobristHash;
+
+static_assert(IS_SAME_TYPE(uint64_t, ZobristHash));
 
 
 extern ZobristKey piece_zobrist_keys[PIECE_COUNT][SQUARE_COUNT];

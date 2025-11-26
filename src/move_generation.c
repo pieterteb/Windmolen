@@ -385,9 +385,6 @@ size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_
     assert(position != NULL);
     assert(movelist != NULL);
 
-    if (position->fullmove_counter == 100)
-        return 0;
-
     Move* current = movelist;
     movelist      = (position->side_to_move == COLOR_WHITE) ? generate_white_pseudo_legal_moves(position, movelist)
                                                             : generate_black_pseudo_legal_moves(position, movelist);

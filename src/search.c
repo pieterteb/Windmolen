@@ -53,6 +53,9 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
     if (is_main_thread(searcher) && !searcher->thread_pool->search_arguments->infinite)
         stop_if_time_exceeded(searcher);
 
+    if (is_draw(position))
+        return DRAWN_SCORE;
+
     Move movelist[MAX_MOVES];
     size_t move_count = generate_legal_moves(position, movelist);
 
@@ -107,7 +110,7 @@ static void iterative_deepening(struct Searcher* searcher) {
     assert(searcher != NULL);
 
     uint64_t start_time = get_time_us();
-    size_t max_depth = searcher->thread_pool->search_arguments->max_depth;
+    size_t max_depth    = searcher->thread_pool->search_arguments->max_depth;
 
     for (size_t depth = 1; depth <= max_depth; ++depth) {
         size_t best_move_index = SIZE_MAX;

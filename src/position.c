@@ -55,12 +55,13 @@ void do_move(struct Position* position, Move move) {
     assert(position != NULL);
     assert(is_valid_move(move));
 
-    const Square source      = move_source(move);
-    const Square destination = move_destination(move);
-    const MoveType type      = move_type(move);
-    Piece piece              = position->piece_on_square[source];
-    const Color side_to_move = position->side_to_move;
-    const Color opponent     = opposite_color(side_to_move);
+    const Square source             = move_source(move);
+    const Square destination        = move_destination(move);
+    const MoveType type             = move_type(move);
+    Piece piece                     = position->piece_on_square[source];
+    const Color side_to_move        = position->side_to_move;
+    const Color opponent            = opposite_color(side_to_move);
+    const ZobristHash previous_hash = position->zobrist_hash;
 
     assert(piece != PIECE_NONE);
     assert(is_valid_color(side_to_move));
@@ -142,25 +143,30 @@ void do_move(struct Position* position, Move move) {
             position->occupancy_by_color[side_to_move] ^= rook_bitboards[destination];
         }
 
-        // Revert zobrist hashing for current castling rights, and after updating the castling rights update the zobrist hash.
+        // Revert zobrist hashing for current castling rights, and after updating the castling rights update the zobrist
+        // hash.
         position->zobrist_hash ^= castle_zobrist_keys[position->castling_rights];
         position->castling_rights &= (side_to_move == COLOR_WHITE) ? ~CASTLE_WHITE : ~CASTLE_BLACK;
         position->zobrist_hash ^= castle_zobrist_keys[position->castling_rights];
     }
 
-    bool is_double_pawn_push = piece_type == PIECE_TYPE_PAWN && abs(destination - source) == 2 * DIRECTION_NORTH;
+    const bool is_double_pawn_push = piece_type == PIECE_TYPE_PAWN && abs(destination - source) == 2 * DIRECTION_NORTH;
+    // We always undo the en passant zobrist key if there was an en passant square in the previous position. We either
+    // get a new en passant square this move or we do not have an en passant square at all.
+    if (position->en_passant_square != SQUARE_NONE)
+        position->zobrist_hash ^= en_passant_zobrist_keys[file_from_square(position->en_passant_square)];
     if (is_double_pawn_push) {
         position->en_passant_square = (Square)(source
                                                + ((side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH));
         position->zobrist_hash ^= en_passant_zobrist_keys[file_from_square(position->en_passant_square)];
     } else {
-        position->zobrist_hash ^= en_passant_zobrist_keys[file_from_square(position->en_passant_square)];
         position->en_passant_square = SQUARE_NONE;
     }
 
     position->total_occupancy = position->occupancy_by_color[COLOR_WHITE] | position->occupancy_by_color[COLOR_BLACK];
 
-    // Revert zobrist hashing for current castling rights, and after updating the castling rights update the zobrist hash.
+    // Revert zobrist hashing for current castling rights, and after updating the castling rights update the zobrist
+    // hash.
     position->zobrist_hash ^= castle_zobrist_keys[position->castling_rights];
     if (position->piece_on_square[SQUARE_A1] != PIECE_WHITE_ROOK)
         position->castling_rights &= ~CASTLE_WHITE_000;
@@ -181,10 +187,13 @@ void do_move(struct Position* position, Move move) {
     position->side_to_move = opponent;
     position->zobrist_hash ^= side_to_move_zobrist_key;
 
-    if (is_capture || piece_type == PIECE_TYPE_PAWN)
-        position->halfmove_clock = 0;
-    else
+    if (is_capture || piece_type == PIECE_TYPE_PAWN) {
+        position->halfmove_clock        = 0;
+        position->repetition_hash_count = 0;
+    } else {
         ++position->halfmove_clock;
+        position->repetition_hashes[position->repetition_hash_count++] = previous_hash;
+    }
 }
 
 
@@ -401,5 +410,5 @@ void print_position(const struct Position* position) {
     "  a   b   c   d   e   f   g   h\n"
     "FEN: ");
     print_fen(position);
-    printf("\nHash: 0x%016" PRIx64 "\n", position->zobrist_hash);
+    printf("\nZobrist Hash: 0x%016" PRIx64 "\n", position->zobrist_hash);
 }

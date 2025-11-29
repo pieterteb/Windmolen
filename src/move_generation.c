@@ -1,7 +1,6 @@
 #include "move_generation.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "bitboard.h"
@@ -11,59 +10,59 @@
 
 
 
-static inline Move* splat_pawn_moves(Move* movelist, Bitboard pawn_moves, Direction step) {
-    assert(movelist != NULL);
+static inline Move* splat_pawn_moves(Move* movelist, Bitboard pawn_moves, enum Direction step) {
+    assert(movelist != nullptr);
 
     while (pawn_moves != EMPTY_BITBOARD) {
-        Square to   = (Square)pop_lsb64(&pawn_moves);
-        *movelist++ = new_move(to - step, to, MOVE_TYPE_NORMAL);
+        enum Square destination = (enum Square)pop_lsb64(&pawn_moves);
+        *movelist++             = new_move(destination - (enum Square)step, destination, MOVE_TYPE_NORMAL);
     }
 
     return movelist;
 }
 
-static inline Move* splat_piece_moves(Move* movelist, Bitboard moves, Square from) {
-    assert(movelist != NULL);
-    assert(is_valid_square(from));
+static inline Move* splat_piece_moves(Move* movelist, Bitboard moves, enum Square source) {
+    assert(movelist != nullptr);
+    assert(is_valid_square(source));
 
     while (moves != EMPTY_BITBOARD)
-        *movelist++ = new_move(from, (Square)pop_lsb64(&moves), MOVE_TYPE_NORMAL);
+        *movelist++ = new_move(source, (enum Square)pop_lsb64(&moves), MOVE_TYPE_NORMAL);
 
     return movelist;
 }
 
 
 static Move* white_pawn_pseudo_legal_moves(const struct Position* position, Move* movelist, Bitboard target) {
-    assert(position != NULL);
-    assert(movelist != NULL);
+    assert(position != nullptr);
+    assert(movelist != nullptr);
 
     const Bitboard non_promotion_pawns = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN)
-                                       & ~rank_bitboard(RANK_7);
+                                       & ~RANK_7_BITBOARD;
     const Bitboard enemies = piece_occupancy_by_color(position, COLOR_BLACK) & target;
     Bitboard empty_squares = ~position->total_occupancy;  // For pawn pushes.
 
     /* Pawn pushes. */
-    Bitboard push_once = shift_bitboard(non_promotion_pawns, DIRECTION_NORTH) & empty_squares;
+    Bitboard push_once = shift_bitboard_north(non_promotion_pawns) & empty_squares;
     empty_squares &= target;
-    Bitboard push_twice = shift_bitboard(push_once & rank_bitboard(RANK_3), DIRECTION_NORTH) & empty_squares;
+    Bitboard push_twice = shift_bitboard_north(push_once & RANK_3_BITBOARD) & empty_squares;
     push_once &= target;
     movelist = splat_pawn_moves(movelist, push_once, DIRECTION_NORTH);
     movelist = splat_pawn_moves(movelist, push_twice, 2 * DIRECTION_NORTH);
 
     /* Non-promotion captures. */
-    Bitboard attacks_east = shift_bitboard(non_promotion_pawns, DIRECTION_NORTHEAST) & enemies;
-    Bitboard attacks_west = shift_bitboard(non_promotion_pawns, DIRECTION_NORTHWEST) & enemies;
+    Bitboard attacks_east = shift_bitboard_northeast(non_promotion_pawns) & enemies;
+    Bitboard attacks_west = shift_bitboard_northwest(non_promotion_pawns) & enemies;
     movelist              = splat_pawn_moves(movelist, attacks_east, DIRECTION_NORTHEAST);
     movelist              = splat_pawn_moves(movelist, attacks_west, DIRECTION_NORTHWEST);
 
     if (position->en_passant_square != SQUARE_NONE) {
-        assert(rank_from_square(position->en_passant_square) == RANK_6);
+        assert(rank_of_square(position->en_passant_square) == RANK_6);
 
         Bitboard en_passant_attackers = non_promotion_pawns
                                       & piece_base_attacks(PIECE_TYPE_BLACK_PAWN, position->en_passant_square);
 
         while (en_passant_attackers != EMPTY_BITBOARD)
-            *movelist++ = new_move((Square)pop_lsb64(&en_passant_attackers), position->en_passant_square,
+            *movelist++ = new_move((enum Square)pop_lsb64(&en_passant_attackers), position->en_passant_square,
                                    MOVE_TYPE_EN_PASSANT);
     }
 
@@ -71,24 +70,24 @@ static Move* white_pawn_pseudo_legal_moves(const struct Position* position, Move
     const Bitboard promotion_pawns = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN) & rank_bitboard(RANK_7);
 
     if (promotion_pawns != EMPTY_BITBOARD) {
-        push_once    = shift_bitboard(promotion_pawns, DIRECTION_NORTH) & empty_squares;
-        attacks_east = shift_bitboard(promotion_pawns, DIRECTION_NORTHEAST) & enemies;
-        attacks_west = shift_bitboard(promotion_pawns, DIRECTION_NORTHWEST) & enemies;
+        push_once    = shift_bitboard_north(promotion_pawns) & empty_squares;
+        attacks_east = shift_bitboard_northeast(promotion_pawns) & enemies;
+        attacks_west = shift_bitboard_northwest(promotion_pawns) & enemies;
 
-        Square to;
+        enum Square to;
         while (attacks_east != EMPTY_BITBOARD) {
-            to       = (Square)pop_lsb64(&attacks_east);
-            movelist = new_promotions(movelist, to - DIRECTION_NORTHEAST, to);
+            to       = (enum Square)pop_lsb64(&attacks_east);
+            movelist = new_promotions(movelist, to - (enum Square)DIRECTION_NORTHEAST, to);
         }
 
         while (attacks_west != EMPTY_BITBOARD) {
-            to       = (Square)pop_lsb64(&attacks_west);
-            movelist = new_promotions(movelist, to - DIRECTION_NORTHWEST, to);
+            to       = (enum Square)pop_lsb64(&attacks_west);
+            movelist = new_promotions(movelist, to - (enum Square)DIRECTION_NORTHWEST, to);
         }
 
         while (push_once != EMPTY_BITBOARD) {
-            to       = (Square)pop_lsb64(&push_once);
-            movelist = new_promotions(movelist, to - DIRECTION_NORTH, to);
+            to       = (enum Square)pop_lsb64(&push_once);
+            movelist = new_promotions(movelist, to - (enum Square)DIRECTION_NORTH, to);
         }
     }
 
@@ -105,27 +104,27 @@ static Move* black_pawn_pseudo_legal_moves(const struct Position* position, Move
     Bitboard empty_squares = ~position->total_occupancy;  // For pawn pushes.
 
     /* Pawn pushes. */
-    Bitboard push_once = shift_bitboard(non_promotion_pawns, DIRECTION_SOUTH) & empty_squares;
+    Bitboard push_once = shift_bitboard_south(non_promotion_pawns) & empty_squares;
     empty_squares &= target;
-    Bitboard push_twice = shift_bitboard(push_once & rank_bitboard(RANK_6), DIRECTION_SOUTH) & empty_squares;
+    Bitboard push_twice = shift_bitboard_south(push_once & rank_bitboard(RANK_6)) & empty_squares;
     push_once &= target;
     movelist = splat_pawn_moves(movelist, push_once, DIRECTION_SOUTH);
     movelist = splat_pawn_moves(movelist, push_twice, 2 * DIRECTION_SOUTH);
 
     /* Non-promotion captures. */
-    Bitboard attacks_east = shift_bitboard(non_promotion_pawns, DIRECTION_SOUTHEAST) & enemies;
-    Bitboard attacks_west = shift_bitboard(non_promotion_pawns, DIRECTION_SOUTHWEST) & enemies;
+    Bitboard attacks_east = shift_bitboard_southeast(non_promotion_pawns) & enemies;
+    Bitboard attacks_west = shift_bitboard_southwest(non_promotion_pawns) & enemies;
     movelist              = splat_pawn_moves(movelist, attacks_east, DIRECTION_SOUTHEAST);
     movelist              = splat_pawn_moves(movelist, attacks_west, DIRECTION_SOUTHWEST);
 
     if (position->en_passant_square != SQUARE_NONE) {
-        assert(rank_from_square(position->en_passant_square) == RANK_3);
+        assert(rank_of_square(position->en_passant_square) == RANK_3);
 
         Bitboard en_passant_attackers = non_promotion_pawns
                                       & piece_base_attacks(PIECE_TYPE_WHITE_PAWN, position->en_passant_square);
 
         while (en_passant_attackers != EMPTY_BITBOARD)
-            *movelist++ = new_move((Square)pop_lsb64(&en_passant_attackers), position->en_passant_square,
+            *movelist++ = new_move((enum Square)pop_lsb64(&en_passant_attackers), position->en_passant_square,
                                    MOVE_TYPE_EN_PASSANT);
     }
 
@@ -133,24 +132,24 @@ static Move* black_pawn_pseudo_legal_moves(const struct Position* position, Move
     const Bitboard promotion_pawns = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_PAWN) & rank_bitboard(RANK_2);
 
     if (promotion_pawns != EMPTY_BITBOARD) {
-        push_once    = shift_bitboard(promotion_pawns, DIRECTION_SOUTH) & empty_squares;
-        attacks_east = shift_bitboard(promotion_pawns, DIRECTION_SOUTHEAST) & enemies;
-        attacks_west = shift_bitboard(promotion_pawns, DIRECTION_SOUTHWEST) & enemies;
+        push_once    = shift_bitboard_south(promotion_pawns) & empty_squares;
+        attacks_east = shift_bitboard_southeast(promotion_pawns) & enemies;
+        attacks_west = shift_bitboard_southwest(promotion_pawns) & enemies;
 
-        Square to;
+        enum Square to;
         while (push_once != EMPTY_BITBOARD) {
-            to       = (Square)pop_lsb64(&push_once);
-            movelist = new_promotions(movelist, to - DIRECTION_SOUTH, to);
+            to       = (enum Square)pop_lsb64(&push_once);
+            movelist = new_promotions(movelist, to - (enum Square)DIRECTION_SOUTH, to);
         }
 
         while (attacks_east != EMPTY_BITBOARD) {
-            to       = (Square)pop_lsb64(&attacks_east);
-            movelist = new_promotions(movelist, to - DIRECTION_SOUTHEAST, to);
+            to       = (enum Square)pop_lsb64(&attacks_east);
+            movelist = new_promotions(movelist, to - (enum Square)DIRECTION_SOUTHEAST, to);
         }
 
         while (attacks_west != EMPTY_BITBOARD) {
-            to       = (Square)pop_lsb64(&attacks_west);
-            movelist = new_promotions(movelist, to - DIRECTION_SOUTHWEST, to);
+            to       = (enum Square)pop_lsb64(&attacks_west);
+            movelist = new_promotions(movelist, to - (enum Square)DIRECTION_SOUTHWEST, to);
         }
     }
 
@@ -164,7 +163,7 @@ static Move* white_knight_pseudo_legal_moves(const struct Position* position, Mo
     Bitboard white_knights = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_KNIGHT);
 
     while (white_knights != EMPTY_BITBOARD) {
-        Square knight_square = (Square)pop_lsb64(&white_knights);
+        enum Square knight_square = (enum Square)pop_lsb64(&white_knights);
         movelist = splat_piece_moves(movelist, piece_base_attacks(PIECE_TYPE_KNIGHT, knight_square) & target,
                                      knight_square);
     }
@@ -179,7 +178,7 @@ static Move* black_knight_pseudo_legal_moves(const struct Position* position, Mo
     Bitboard black_knights = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_KNIGHT);
 
     while (black_knights != EMPTY_BITBOARD) {
-        Square knight_square = (Square)pop_lsb64(&black_knights);
+        enum Square knight_square = (enum Square)pop_lsb64(&black_knights);
         movelist = splat_piece_moves(movelist, piece_base_attacks(PIECE_TYPE_KNIGHT, knight_square) & target,
                                      knight_square);
     }
@@ -194,7 +193,7 @@ static Move* white_bishop_pseudo_legal_moves(const struct Position* position, Mo
     Bitboard white_bishops = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_BISHOP);
 
     while (white_bishops != EMPTY_BITBOARD) {
-        Square bishop_square = (Square)pop_lsb64(&white_bishops);
+        enum Square bishop_square = (enum Square)pop_lsb64(&white_bishops);
         movelist = splat_piece_moves(movelist, bishop_attacks(bishop_square, position->total_occupancy) & target,
                                      bishop_square);
     }
@@ -209,7 +208,7 @@ static Move* black_bishop_pseudo_legal_moves(const struct Position* position, Mo
     Bitboard black_bishops = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_BISHOP);
 
     while (black_bishops != EMPTY_BITBOARD) {
-        Square bishop_square = (Square)pop_lsb64(&black_bishops);
+        enum Square bishop_square = (enum Square)pop_lsb64(&black_bishops);
         movelist = splat_piece_moves(movelist, bishop_attacks(bishop_square, position->total_occupancy) & target,
                                      bishop_square);
     }
@@ -224,7 +223,7 @@ static Move* white_rook_pseudo_legal_moves(const struct Position* position, Move
     Bitboard white_rooks = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_ROOK);
 
     while (white_rooks != EMPTY_BITBOARD) {
-        Square rook_square = (Square)pop_lsb64(&white_rooks);
+        enum Square rook_square = (enum Square)pop_lsb64(&white_rooks);
         movelist           = splat_piece_moves(movelist, rook_attacks(rook_square, position->total_occupancy) & target,
                                                rook_square);
     }
@@ -239,7 +238,7 @@ static Move* black_rook_pseudo_legal_moves(const struct Position* position, Move
     Bitboard black_rooks = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_ROOK);
 
     while (black_rooks != EMPTY_BITBOARD) {
-        Square rook_square = (Square)pop_lsb64(&black_rooks);
+        enum Square rook_square = (enum Square)pop_lsb64(&black_rooks);
         movelist           = splat_piece_moves(movelist, rook_attacks(rook_square, position->total_occupancy) & target,
                                                rook_square);
     }
@@ -254,7 +253,7 @@ static Move* white_queen_pseudo_legal_moves(const struct Position* position, Mov
     Bitboard white_queens = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_QUEEN);
 
     while (white_queens != EMPTY_BITBOARD) {
-        Square queen_square = (Square)pop_lsb64(&white_queens);
+        enum Square queen_square = (enum Square)pop_lsb64(&white_queens);
         movelist            = splat_piece_moves(movelist,
                                                 (bishop_attacks(queen_square, position->total_occupancy)
                                       | rook_attacks(queen_square, position->total_occupancy))
@@ -272,7 +271,7 @@ static Move* black_queen_pseudo_legal_moves(const struct Position* position, Mov
     Bitboard black_queens = piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_QUEEN);
 
     while (black_queens != EMPTY_BITBOARD) {
-        Square queen_square = (Square)pop_lsb64(&black_queens);
+        enum Square queen_square = (enum Square)pop_lsb64(&black_queens);
         movelist            = splat_piece_moves(movelist,
                                                 (bishop_attacks(queen_square, position->total_occupancy)
                                       | rook_attacks(queen_square, position->total_occupancy))
@@ -287,7 +286,7 @@ static Move* white_king_pseudo_legal_moves(const struct Position* position, Move
     assert(position != NULL);
     assert(movelist != NULL);
 
-    const Square king = king_square(position, COLOR_WHITE);
+    const enum Square king = king_square(position, COLOR_WHITE);
 
     movelist = splat_piece_moves(movelist, piece_base_attacks(PIECE_TYPE_KING, king) & target, king);
 
@@ -308,7 +307,7 @@ static Move* black_king_pseudo_legal_moves(const struct Position* position, Move
     assert(position != NULL);
     assert(movelist != NULL);
 
-    const Square king = king_square(position, COLOR_BLACK);
+    const enum Square king = king_square(position, COLOR_BLACK);
 
     movelist = splat_piece_moves(movelist, piece_base_attacks(PIECE_TYPE_KING, king) & target, king);
 
@@ -337,7 +336,7 @@ static Move* generate_white_pseudo_legal_moves(const struct Position* position, 
 
     if (!popcount64_greater_than_one(checkers)) {
         if (checkers != EMPTY_BITBOARD)
-            target &= between_bitboard(king_square(position, COLOR_WHITE), (Square)lsb64(checkers));
+            target &= between_bitboard(king_square(position, COLOR_WHITE), (enum Square)lsb64(checkers));
 
         movelist = white_pawn_pseudo_legal_moves(position, movelist, target);
         movelist = white_knight_pseudo_legal_moves(position, movelist, target);
@@ -363,7 +362,7 @@ Move* generate_black_pseudo_legal_moves(const struct Position* position, Move* m
 
     if (!popcount64_greater_than_one(checkers)) {
         if (checkers != EMPTY_BITBOARD)
-            target &= between_bitboard(king_square(position, COLOR_BLACK), (Square)lsb64(checkers));
+            target &= between_bitboard(king_square(position, COLOR_BLACK), (enum Square)lsb64(checkers));
 
         movelist = black_pawn_pseudo_legal_moves(position, movelist, target);
         movelist = black_knight_pseudo_legal_moves(position, movelist, target);
@@ -391,11 +390,11 @@ size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_
 
     const Bitboard pinned = position->blockers[position->side_to_move]
                           & position->occupancy_by_color[position->side_to_move];
-    const Square king = king_square(position, position->side_to_move);
+    const enum Square king = king_square(position, position->side_to_move);
 
     size_t size = 0;
     while (current != movelist) {
-        Square source = move_source(*current);
+        enum Square source = move_source(*current);
 
         if ((source == king && !is_legal_king_move(position, *current))
             || ((pinned & square_bitboard(source)) != EMPTY_BITBOARD && !is_legal_pinned_move(position, *current))
@@ -431,7 +430,7 @@ static bool is_legal_king_move(const struct Position* position, Move move) {
         Bitboard squares_to_traverse = castling_squares[move_destination(move)];
 
         while (squares_to_traverse != EMPTY_BITBOARD) {
-            Square square = (Square)pop_lsb64(&squares_to_traverse);
+            enum Square square = (enum Square)pop_lsb64(&squares_to_traverse);
 
             if (square_is_attacked(position, !position->side_to_move, square, position->total_occupancy))
                 return false;
@@ -467,8 +466,8 @@ static bool is_legal_en_passant(struct Position* position, Move move) {
     const Bitboard source_bitboard      = square_bitboard(move_source(move));
     const Bitboard destination_bitboard = square_bitboard(move_destination(move));
     const Bitboard captured_bitboard    = (position->side_to_move == COLOR_WHITE)
-                                        ? shift_bitboard(destination_bitboard, DIRECTION_SOUTH)
-                                        : shift_bitboard(destination_bitboard, DIRECTION_NORTH);
+                                        ? shift_bitboard_south(destination_bitboard)
+                                        : shift_bitboard_north(destination_bitboard);
 
     position->occupancy_by_color[!position->side_to_move] ^= captured_bitboard;
     const Bitboard attackers = attackers_of_square(

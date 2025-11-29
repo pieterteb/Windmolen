@@ -20,26 +20,26 @@ static const char start_position_fen[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB
 static const char kiwipete_fen[]       = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 
 
-static inline Bitboard compute_checkers(const struct Position* position, Color color) {
-    assert(position != NULL);
+static INLINE Bitboard compute_checkers(const struct Position* position, enum Color color) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
 
     return attackers_of_square(position, king_square(position, color), position->total_occupancy)
          & piece_occupancy_by_color(position, !color);
 }
 
-static inline Bitboard compute_blockers(const struct Position* position, Color color) {
+static inline Bitboard compute_blockers(const struct Position* position, enum Color color) {
     assert(position != NULL);
     assert(is_valid_color(color));
 
-    Square king = king_square(position, color);
+    enum Square king = king_square(position, color);
 
     Bitboard potential_pinners = attackers_of_square(position, king, EMPTY_BITBOARD)
                                & piece_occupancy_by_color(position, !color);
 
     Bitboard blockers = EMPTY_BITBOARD;
     while (potential_pinners != EMPTY_BITBOARD) {
-        Square pinner_square        = (Square)pop_lsb64(&potential_pinners);
+        enum Square pinner_square   = (enum Square)pop_lsb64(&potential_pinners);
         Bitboard potential_blockers = between_bitboard(pinner_square, king)
                                     & (position->total_occupancy ^ square_bitboard(king));
 
@@ -55,12 +55,12 @@ void do_move(struct Position* position, Move move) {
     assert(position != NULL);
     assert(is_valid_move(move));
 
-    const Square source             = move_source(move);
-    const Square destination        = move_destination(move);
-    const MoveType type             = move_type(move);
-    Piece piece                     = position->piece_on_square[source];
-    const Color side_to_move        = position->side_to_move;
-    const Color opponent            = opposite_color(side_to_move);
+    const enum Square source        = move_source(move);
+    const enum Square destination   = move_destination(move);
+    const enum MoveType type        = move_type(move);
+    enum Piece piece                = piece_on_square(position, source);
+    const enum Color side_to_move   = position->side_to_move;
+    const enum Color opponent       = opposite_color(side_to_move);
     const ZobristHash previous_hash = position->zobrist_hash;
 
     assert(piece != PIECE_NONE);
@@ -74,13 +74,13 @@ void do_move(struct Position* position, Move move) {
     if (type == MOVE_TYPE_PROMOTION)
         piece = create_piece(side_to_move, promotion_piece_type(move));
 
-    const PieceType piece_type          = type_of_piece(piece);
+    const enum PieceType piece_type     = type_of_piece(piece);
     const Bitboard destination_bitboard = square_bitboard(destination);
 
     const bool is_capture = position->piece_on_square[destination] != PIECE_NONE || type == MOVE_TYPE_EN_PASSANT;
     if (is_capture) {
         if (type != MOVE_TYPE_EN_PASSANT) {
-            Piece captured_piece = piece_on_square(position, destination);
+            enum Piece captured_piece = piece_on_square(position, destination);
 
             assert(color_of_piece(captured_piece) == opponent);
 
@@ -88,8 +88,8 @@ void do_move(struct Position* position, Move move) {
             position->occupancy_by_color[opponent] ^= destination_bitboard;
             position->zobrist_hash ^= piece_zobrist_keys[captured_piece][destination];
         } else {
-            Square deletion_square = (Square)(destination
-                                              + ((side_to_move == COLOR_WHITE) ? DIRECTION_SOUTH : DIRECTION_NORTH));
+            enum Square deletion_square = (enum Square)(
+            destination + ((side_to_move == COLOR_WHITE) ? DIRECTION_SOUTH : DIRECTION_NORTH));
             remove_piece_type(position, opponent, PIECE_TYPE_PAWN, deletion_square);
         }
     }
@@ -115,13 +115,13 @@ void do_move(struct Position* position, Move move) {
                 [SQUARE_G8] = SQUARE_BITBOARD(SQUARE_F8) | SQUARE_BITBOARD(SQUARE_H8),
                 [SQUARE_C8] = SQUARE_BITBOARD(SQUARE_A8) | SQUARE_BITBOARD(SQUARE_D8)
             };
-            static const Square rook_sources[SQUARE_COUNT] = {
+            static const enum Square rook_sources[SQUARE_COUNT] = {
                 [SQUARE_G1] = SQUARE_H1,
                 [SQUARE_C1] = SQUARE_A1,
                 [SQUARE_G8] = SQUARE_H8,
                 [SQUARE_C8] = SQUARE_A8
             };
-            static const Square rook_destinations[SQUARE_COUNT] = {
+            static const enum Square rook_destinations[SQUARE_COUNT] = {
                 [SQUARE_G1] = SQUARE_F1,
                 [SQUARE_C1] = SQUARE_D1,
                 [SQUARE_G8] = SQUARE_F8,
@@ -129,10 +129,10 @@ void do_move(struct Position* position, Move move) {
             };
             // clang-format on
 
-            const Square rook_source_square      = rook_sources[destination];
-            const Square rook_destination_square = rook_destinations[destination];
+            const enum Square rook_source_square      = rook_sources[destination];
+            const enum Square rook_destination_square = rook_destinations[destination];
 
-            const Piece rook                                   = create_piece(side_to_move, PIECE_TYPE_ROOK);
+            const enum Piece rook                              = create_piece(side_to_move, PIECE_TYPE_ROOK);
             position->piece_on_square[rook_destination_square] = rook;
             position->piece_on_square[rook_source_square]      = PIECE_NONE;
             position->zobrist_hash ^= piece_zobrist_keys[rook][rook_source_square]
@@ -154,11 +154,11 @@ void do_move(struct Position* position, Move move) {
     // We always undo the en passant zobrist key if there was an en passant square in the previous position. We either
     // get a new en passant square this move or we do not have an en passant square at all.
     if (position->en_passant_square != SQUARE_NONE)
-        position->zobrist_hash ^= en_passant_zobrist_keys[file_from_square(position->en_passant_square)];
+        position->zobrist_hash ^= en_passant_zobrist_keys[file_of_square(position->en_passant_square)];
     if (is_double_pawn_push) {
-        position->en_passant_square = (Square)(source
+        position->en_passant_square = (enum Square)(source
                                                + ((side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH));
-        position->zobrist_hash ^= en_passant_zobrist_keys[file_from_square(position->en_passant_square)];
+        position->zobrist_hash ^= en_passant_zobrist_keys[file_of_square(position->en_passant_square)];
     } else {
         position->en_passant_square = SQUARE_NONE;
     }
@@ -214,7 +214,7 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
     assert(fen != NULL);
 
     // clang-format off
-    static const Piece char_to_piece[] = {
+    static const enum Piece char_to_piece[] = {
         ['P'] = PIECE_WHITE_PAWN,   ['p'] = PIECE_BLACK_PAWN,
         ['N'] = PIECE_WHITE_KNIGHT, ['n'] = PIECE_BLACK_KNIGHT,
         ['B'] = PIECE_WHITE_BISHOP, ['b'] = PIECE_BLACK_BISHOP,
@@ -228,20 +228,20 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
                   == sizeof(struct Position),
                   "piece_on_square must be the last member of struct Position.");
     memset(position, 0, offsetof(struct Position, piece_on_square));
-    static_assert(sizeof(PieceType) == 1U, "memset() requires byte size array elements.");
+    static_assert(sizeof(enum PieceType) == 1U, "memset() requires byte size array elements.");
     memset(&position->piece_on_square, PIECE_NONE, sizeof(position->piece_on_square));
 
     // Parse board configuration.
-    Square square = SQUARE_A8;
+    enum Square square = SQUARE_A8;
     char current_char;
     while (!isspace(*fen)) {
         current_char = *fen++;
         if (isdigit(current_char)) {
-            square += (Square)(current_char - '0') * DIRECTION_EAST;
+            square += (enum Square)((current_char - '0') * DIRECTION_EAST);
         } else if (current_char == '/') {
             square += 2 * DIRECTION_SOUTH;
         } else {
-            Piece piece = char_to_piece[(int)current_char];
+            enum Piece piece = char_to_piece[(int)current_char];
             place_piece(position, piece, square);
 
             position->zobrist_hash ^= piece_zobrist_keys[piece][square];
@@ -257,7 +257,7 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
     ++fen;  // Skip space.
 
     // Parse side to move.
-    Color side_to_move     = (*fen++ == 'w') ? COLOR_WHITE : COLOR_BLACK;
+    enum Color side_to_move     = (*fen++ == 'w') ? COLOR_WHITE : COLOR_BLACK;
     position->side_to_move = side_to_move;
     static_assert(COLOR_WHITE == 0, "COLOR_WHITE should have a value of 0.");
     position->zobrist_hash ^= (ZobristKey)side_to_move * side_to_move_zobrist_key;
@@ -288,8 +288,8 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
 
     // Parse en passant square.
     if (*fen != '-') {
-        File file                   = char_to_file(*fen++);
-        Rank rank                   = char_to_rank(*fen++);
+        enum File file                   = char_to_file(*fen++);
+        enum Rank rank                   = char_to_rank(*fen++);
         position->en_passant_square = square_from_coordinates(file, rank);
         position->zobrist_hash ^= en_passant_zobrist_keys[file];
     } else {
@@ -341,10 +341,10 @@ void print_fen(const struct Position* position) {
 
     // Print board.
     size_t empty_squares;
-    for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
+    for (enum Rank rank = RANK_8; rank < RANK_COUNT; --rank) {
         empty_squares = 0;
-        for (File file = FILE_A; file <= FILE_H; ++file) {
-            Square square = square_from_coordinates(file, rank);
+        for (enum File file = FILE_A; file <= FILE_H; ++file) {
+            enum Square square = square_from_coordinates(file, rank);
 
             if (piece_on_square(position, square) == PIECE_NONE) {
                 ++empty_squares;
@@ -383,8 +383,8 @@ void print_fen(const struct Position* position) {
 
     // Print en passant square.
     if (position->en_passant_square != SQUARE_NONE) {
-        putchar('a' + (char)file_from_square(position->en_passant_square));
-        putchar('1' + (char)file_from_square(position->en_passant_square));
+        putchar('a' + (char)file_of_square(position->en_passant_square));
+        putchar('1' + (char)file_of_square(position->en_passant_square));
     } else {
         putchar('-');
     }
@@ -398,12 +398,12 @@ void print_position(const struct Position* position) {
 
     puts("+---+---+---+---+---+---+---+---+");
 
-    for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
-        for (File file = FILE_A; file <= FILE_H; ++file)
+    for (enum Rank rank = RANK_8; rank < RANK_COUNT; --rank) {
+        for (enum File file = FILE_A; file <= FILE_H; ++file)
             printf("| %c ", piece_to_char[piece_on_square(position, square_from_coordinates(file, rank))]);
 
-        static_assert(IS_SAME_TYPE(Rank, int8_t), "Wrong format specifier used.");
-        printf("| %" PRId8 "\n+---+---+---+---+---+---+---+---+\n", (Rank)(rank + 1));
+        static_assert(IS_SAME_TYPE(enum Rank, uint8_t), "Wrong format specifier used.");
+        printf("| %" PRIu8 "\n+---+---+---+---+---+---+---+---+\n", (enum Rank)(rank + 1));
     }
 
     printf(

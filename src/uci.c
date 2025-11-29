@@ -13,6 +13,7 @@
 #include "options.h"
 #include "perft.h"
 #include "position.h"
+#include "search.h"
 #include "time_manager.h"
 #include "types.h"
 
@@ -28,14 +29,14 @@ static Move parse_move(struct Position* position, const char* move_string) {
     assert(move_string != NULL);
     assert(move_string[4] == '\0' || move_string[5] == '\0');
 
-    static const MoveType char_to_promotion[] = {['n'] = MOVE_TYPE_KNIGHT_PROMOTION,
-                                                 ['b'] = MOVE_TYPE_BISHOP_PROMOTION,
-                                                 ['r'] = MOVE_TYPE_ROOK_PROMOTION,
-                                                 ['q'] = MOVE_TYPE_QUEEN_PROMOTION};
+    static const enum MoveType char_to_promotion[] = {['n'] = MOVE_TYPE_KNIGHT_PROMOTION,
+                                                      ['b'] = MOVE_TYPE_BISHOP_PROMOTION,
+                                                      ['r'] = MOVE_TYPE_ROOK_PROMOTION,
+                                                      ['q'] = MOVE_TYPE_QUEEN_PROMOTION};
 
-    const Square source      = square_from_coordinates(char_to_file(move_string[0]), char_to_rank(move_string[1]));
-    const Square destination = square_from_coordinates(char_to_file(move_string[2]), char_to_rank(move_string[3]));
-    MoveType move_type       = MOVE_TYPE_NORMAL;
+    const enum Square source      = square_from_coordinates(char_to_file(move_string[0]), char_to_rank(move_string[1]));
+    const enum Square destination = square_from_coordinates(char_to_file(move_string[2]), char_to_rank(move_string[3]));
+    enum MoveType move_type       = MOVE_TYPE_NORMAL;
 
     if (source == king_square(position, position->side_to_move) && abs(destination - source) == 2 * DIRECTION_EAST) {
         move_type = MOVE_TYPE_CASTLE;
@@ -246,7 +247,7 @@ void uci_loop(struct Engine* engine) {
     assert(engine != NULL);
 
     initialize_engine(engine);
-    
+
     uci_startup_message();
 
     char line[LINE_BUFFER_SIZE];
@@ -297,11 +298,11 @@ void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, uint
     size_t nps       = (time == 0) ? 0 : 1000000 * nodes / time;
 
     bool mate = false;
-    if (score >= MATE_SCORE - MAX_SEARCH_DEPTH) {
-        mate = true;
+    if (score >= MATE_SCORE - (Score)MAX_SEARCH_DEPTH) {
+        mate  = true;
         score = MATE_SCORE - score;
-    } else if (score <= -MATE_SCORE + MAX_SEARCH_DEPTH) {
-        mate = true;
+    } else if (score <= -MATE_SCORE + (Score)MAX_SEARCH_DEPTH) {
+        mate  = true;
         score = -MATE_SCORE - score;
     }
 

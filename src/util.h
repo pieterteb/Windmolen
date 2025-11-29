@@ -3,26 +3,32 @@
 
 
 #include <assert.h>
-#include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 
 
-#define IS_SAME_TYPE(T1, T2) _Generic(((T1*)NULL), T2*: true, default: false)
+#define INLINE inline __attribute__((always_inline))
+
+#define IS_SAME_TYPE(T1, T2) _Generic((T1){0}, T2: true, default: false)
 
 
+// Seeds the 64-bit pseudorandom number generator with `seed`.
 void seed_rand64(uint64_t seed);
+
+// Returns a pseudorandom 64-bit integer.
 uint64_t rand64();
+
+// Returns a pseudorandom 64-bit integer with on average only 1/8 of the bits set to 1.
 uint64_t sparse_rand64();
 
 
-static inline int lsb64(uint64_t x) {
+// Returns the index of the least significant bit of a nonzero integer.
+static INLINE int lsb64(uint64_t x) {
     assert(x != 0);
 
 #ifdef __GNUC__
     return __builtin_ctzll(x);
-#elif defined(_MSC_VER)
+#elifdef _MSC_VER
     unsigned long index;
     _BitScanForward64(&index, x);
     return (int)index;
@@ -44,10 +50,11 @@ static inline int lsb64(uint64_t x) {
 #endif /* #ifdef __GNUC__ */
 }
 
-static inline int popcount64(uint64_t x) {
+// Returns the number of 1-bits of `x`.
+static INLINE int popcount64(uint64_t x) {
 #ifdef __GNUC__
     return __builtin_popcountll(x);
-#elif defined(_MSC_VER)
+#elifdef _MSC_VER
     return _mm_popcnt_u64(x);
 #else
     // Fallback.
@@ -56,17 +63,11 @@ static inline int popcount64(uint64_t x) {
     x *= 0x1111111111111111ULL;
     x >>= 60;
     return (int)x;
-
-    // x = x - ((x >> 1) & 0x55555555);
-    // x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
-    // x = (x + (x >> 4)) & 0x0F0F0F0F;
-    // x = x + (x >> 8);
-    // x = x + (x >> 16);
-    // return (int)(x & 0x3F);
 #endif /* #ifdef __GNUC__ */
 }
 
-static inline int pop_lsb64(uint64_t* x) {
+// Removes the least significant bit of `x` and returns its index.
+static INLINE int pop_lsb64(uint64_t* x) {
     assert(*x != 0);
 
     int lsb_index = lsb64(*x);
@@ -75,7 +76,9 @@ static inline int pop_lsb64(uint64_t* x) {
     return lsb_index;
 }
 
-static inline bool popcount64_greater_than_one(uint64_t x) {
+
+// Returns whether the number of 1-bits in `x` is greater than one.
+static INLINE bool popcount64_greater_than_one(uint64_t x) {
     return (x & (x - 1)) != 0;
 }
 

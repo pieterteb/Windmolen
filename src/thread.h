@@ -35,7 +35,7 @@ struct ThreadPool {
     struct TimeManager* time_manager;
     struct SearchArguments* search_arguments;
 
-    atomic_bool stop_search;
+    _Atomic(bool) stop_search;
 };
 
 static inline struct Thread* main_thread(struct ThreadPool* thread_pool) {

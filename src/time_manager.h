@@ -50,7 +50,7 @@ struct TimeManager {
 
 
 void reset_time_manager(struct TimeManager* time_manager);
-void update_time_manager(struct TimeManager* time_manager, Color side_to_move);
+void update_time_manager(struct TimeManager* time_manager, enum Color side_to_move);
 
 
 

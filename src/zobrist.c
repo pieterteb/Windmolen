@@ -19,14 +19,14 @@ void initialize_zobrist_keys() {
 
     seed_rand64(15146693);
 
-    for (Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece)
-        for (Square square = SQUARE_A1; square < SQUARE_COUNT; ++square)
+    for (enum Piece piece = PIECE_WHITE_PAWN; piece < PIECE_COUNT; ++piece)
+        for (enum Square square = SQUARE_A1; square < SQUARE_COUNT; ++square)
             piece_zobrist_keys[piece][square] = rand64();
 
-    for (CastlingRights castling_rights = CASTLE_NONE; castling_rights < CASTLE_COUNT; ++castling_rights)
+    for (enum CastlingRights castling_rights = CASTLE_NONE; castling_rights < CASTLE_COUNT; ++castling_rights)
         castle_zobrist_keys[castling_rights] = rand64();
 
-    for (File file = FILE_A; file < FILE_COUNT; ++file)
+    for (enum File file = FILE_A; file < FILE_COUNT; ++file)
         en_passant_zobrist_keys[file] = rand64();
 
     side_to_move_zobrist_key = rand64();

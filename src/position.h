@@ -5,9 +5,8 @@
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stddef.h>
-#include <stdlib.h>
+#include <stdint.h>
 
 #include "bitboard.h"
 #include "types.h"
@@ -16,7 +15,7 @@
 
 
 
-typedef uint16_t Move;
+typedef uint16_t Move;  // Redefinition of Move type to prevent circular includes.
 
 
 struct Position {
@@ -29,103 +28,104 @@ struct Position {
     Bitboard total_occupancy;
     Bitboard checkers[COLOR_COUNT];
     Bitboard blockers[COLOR_COUNT];
-    Square king_square[COLOR_COUNT];
-    Square en_passant_square;
+    enum Square king_square[COLOR_COUNT];
+    enum Square en_passant_square;
 
-    CastlingRights castling_rights;
-    Color side_to_move;
+    enum CastlingRights castling_rights;
+    enum Color side_to_move;
 
     size_t halfmove_clock;
     size_t fullmove_counter;
 
-    Piece piece_on_square[SQUARE_COUNT];
+    enum Piece piece_on_square[SQUARE_COUNT];
 };
 
 
-/*  Returns a bitboard of the occupancy of the pieces of `piece_type` in `position`. */
-static inline Bitboard piece_occupancy_by_type(const struct Position* position, PieceType piece_type) {
-    assert(position != NULL);
+// Returns a bitboard of the occupancy of the pieces of `piece_type` in `position`.
+static INLINE Bitboard piece_occupancy_by_type(const struct Position* position, enum PieceType piece_type) {
+    assert(position != nullptr);
     assert(is_valid_piece_type(piece_type));
     assert(piece_type != PIECE_TYPE_BLACK_PAWN);
 
     return position->occupancy_by_type[piece_type];
 }
 
-/* Returns a bitboard of the occupancy of all pieces of `color` in `position`. */
-static inline Bitboard piece_occupancy_by_color(const struct Position* position, Color color) {
-    assert(position != NULL);
+// Returns a bitboard of the occupancy of all pieces of `color` in `position`.
+static INLINE Bitboard piece_occupancy_by_color(const struct Position* position, enum Color color) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
 
     return position->occupancy_by_color[color];
 }
 
-/* Returns a bitboard of the occupancy of the piece of `piece_type` and `color` in `position`. */
-static inline Bitboard piece_occupancy(const struct Position* position, Color color, PieceType piece_type) {
-    assert(position != NULL);
+// Returns a bitboard of the occupancy of the piece of `color` and `piece_type` in `position`.
+static INLINE Bitboard piece_occupancy(const struct Position* position, enum Color color, enum PieceType piece_type) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
     assert(is_valid_piece_type(piece_type));
 
     return piece_occupancy_by_type(position, piece_type) & piece_occupancy_by_color(position, color);
 }
 
-
-/* Returns a bitboard of the occupancy of bishops and queens of `color` in `position`. */
-static inline Bitboard bishop_queen_occupancy(const struct Position* position, Color color) {
-    assert(position != NULL);
+// Returns a bitboard of the occupancy of bishops and queens of `color` in `position`.
+static INLINE Bitboard bishop_queen_occupancy(const struct Position* position, enum Color color) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
 
     return piece_occupancy(position, color, PIECE_TYPE_BISHOP) | piece_occupancy(position, color, PIECE_TYPE_QUEEN);
 }
 
-/* Returns a bitboard of the occupancy of bishops and queens in `position`. */
-static inline Bitboard bishop_queen_occupancy_by_type(const struct Position* position) {
-    assert(position != NULL);
+// Returns a bitboard of the occupancy of bishops and queens in `position`.
+static INLINE Bitboard bishop_queen_occupancy_by_type(const struct Position* position) {
+    assert(position != nullptr);
 
     return piece_occupancy_by_type(position, PIECE_TYPE_BISHOP) | piece_occupancy_by_type(position, PIECE_TYPE_QUEEN);
 }
 
-/* Returns a bitboard of the occupancy of bishops and queens of `color` in `position`. */
-static inline Bitboard rook_queen_occupancy(const struct Position* position, Color color) {
-    assert(position != NULL);
+// Returns a bitboard of the occupancy of rooks and queens of `color` in `position`.
+static INLINE Bitboard rook_queen_occupancy(const struct Position* position, enum Color color) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
 
     return piece_occupancy(position, color, PIECE_TYPE_ROOK) | piece_occupancy(position, color, PIECE_TYPE_QUEEN);
 }
 
-/* Returns a bitboard of the occupancy of rooks and queens in `position`. */
-static inline Bitboard rook_queen_occupancy_by_type(const struct Position* position) {
-    assert(position != NULL);
+// Returns a bitboard of the occupancy of rooks and queens in `position`.
+static INLINE Bitboard rook_queen_occupancy_by_type(const struct Position* position) {
+    assert(position != nullptr);
 
     return piece_occupancy_by_type(position, PIECE_TYPE_ROOK) | piece_occupancy_by_type(position, PIECE_TYPE_QUEEN);
 }
 
-/* Returns which piece is on `square` in `position`. */
-static inline Piece piece_on_square(const struct Position* position, Square square) {
-    assert(position != NULL);
+// Returns which piece is on `square` in `position`.
+static INLINE enum Piece piece_on_square(const struct Position* position, enum Square square) {
+    assert(position != nullptr);
     assert(is_valid_square(square));
 
     return position->piece_on_square[square];
 }
 
 
-/* Returns the square of the king of `color` in `position`. */
-static inline Square king_square(const struct Position* position, Color color) {
-    assert(position != NULL);
+// Returns the kingsquare of `color` in `position`.
+static INLINE enum Square king_square(const struct Position* position, enum Color color) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
     assert(popcount64(piece_occupancy_by_type(position, PIECE_TYPE_KING)) == 2);
 
     return position->king_square[color];
 }
 
-static inline bool in_check(const struct Position* position) {
-    assert(position != NULL);
+// Returns whether the side to move in `position` is in check.
+static INLINE bool in_check(const struct Position* position) {
+    assert(position != nullptr);
 
     return position->checkers[position->side_to_move] != EMPTY_BITBOARD;
 }
 
 
-static inline void place_piece(struct Position* position, Piece piece, Square square) {
-    assert(position != NULL);
+// Places `piece` on `square` in `position`.
+static INLINE void place_piece(struct Position* position, enum Piece piece, enum Square square) {
+    assert(position != nullptr);
     assert(is_valid_piece(piece));
     assert(is_valid_square(square));
 
@@ -136,13 +136,14 @@ static inline void place_piece(struct Position* position, Piece piece, Square sq
     position->zobrist_hash ^= piece_zobrist_keys[piece][square];
 }
 
-static inline void place_piece_type(struct Position* position, Color color, PieceType piece_type, Square square) {
-    assert(position != NULL);
+// Places piece of `color` and `piece_type` on `square` in `position`.
+static INLINE void place_piece_type(struct Position* position, enum Color color, enum PieceType piece_type, enum Square square) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
     assert(is_valid_piece_type(piece_type));
     assert(is_valid_square(square));
 
-    Piece piece       = create_piece(color, piece_type);
+    enum Piece piece       = create_piece(color, piece_type);
     Bitboard bitboard = square_bitboard(square);
     position->occupancy_by_type[piece_type] |= bitboard;
     position->occupancy_by_color[color] |= bitboard;
@@ -150,8 +151,9 @@ static inline void place_piece_type(struct Position* position, Color color, Piec
     position->zobrist_hash ^= piece_zobrist_keys[piece][square];
 }
 
-static inline void remove_piece(struct Position* position, Piece piece, Square square) {
-    assert(position != NULL);
+// Removes `piece` from `square` in `position`.
+static INLINE void remove_piece(struct Position* position, enum Piece piece, enum Square square) {
+    assert(position != nullptr);
     assert(is_valid_piece(piece));
     assert(is_valid_square(square));
 
@@ -167,8 +169,9 @@ static inline void remove_piece(struct Position* position, Piece piece, Square s
     position->zobrist_hash ^= piece_zobrist_keys[piece][square];
 }
 
-static inline void remove_piece_type(struct Position* position, Color color, PieceType piece_type, Square square) {
-    assert(position != NULL);
+// Removes piece of `color` and `piece_type` from `square` in `position`.
+static INLINE void remove_piece_type(struct Position* position, enum Color color, enum PieceType piece_type, enum Square square) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
     assert(is_valid_piece_type(piece_type));
     assert(is_valid_square(square));
@@ -187,8 +190,9 @@ static inline void remove_piece_type(struct Position* position, Color color, Pie
 
 
 /* Returns whether `square` is attacked by pieces of `color` with `occupancy` in `position`. */
-static inline bool square_is_attacked(const struct Position* position, Color color, Square square, Bitboard occupancy) {
-    assert(position != NULL);
+// Returns whether `square` is attacked by pieces of `color` with `occupancy` in `position`.
+static INLINE bool square_is_attacked(const struct Position* position, enum Color color, enum Square square, Bitboard occupancy) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
     assert(is_valid_square(square));
 
@@ -204,9 +208,9 @@ static inline bool square_is_attacked(const struct Position* position, Color col
             != EMPTY_BITBOARD);
 }
 
-/* Returns a bitboard of the pieces of that attack `square` with `occupancy` in `position`. */
-static inline Bitboard attackers_of_square(const struct Position* position, Square square, Bitboard occupancy) {
-    assert(position != NULL);
+// Returns a bitboard of the pieces that attack `square` with `occupancy` in `position`.
+static INLINE Bitboard attackers_of_square(const struct Position* position, enum Square square, Bitboard occupancy) {
+    assert(position != nullptr);
     assert(is_valid_square(square));
 
     return (
@@ -219,8 +223,9 @@ static inline Bitboard attackers_of_square(const struct Position* position, Squa
 }
 
 
-static inline bool is_repetition(const struct Position* position) {
-    assert(position != NULL);
+// Returns whether `position` has occured for the third time, implying a draw by repetition.
+static INLINE bool is_repetition(const struct Position* position) {
+    assert(position != nullptr);
 
     const ZobristHash current_hash = position->zobrist_hash;
     size_t count                   = 0;
@@ -236,23 +241,33 @@ static inline bool is_repetition(const struct Position* position) {
     return false;
 }
 
-// We assume that it is not checkmate here.
-static inline bool is_draw(const struct Position* position) {
-    assert(position != NULL);
+// Returns whether `position` is a draw by repetition or 50-move-rule. We assume that it is not checkmate here.
+static INLINE bool is_draw(const struct Position* position) {
+    assert(position != nullptr);
     assert(position->halfmove_clock <= 100);
 
     return position->halfmove_clock == 100 || is_repetition(position);
 }
 
 
+// Performs `move` on `position`.
 void do_move(struct Position* position, Move move);
 
 
+// Sets `position` to the start position of chess.
 void setup_start_position(struct Position* position);
+
+// Sets `position` to the kiwipete position (https://www.chessprogramming.org/Perft_Results#Position_2).
 void setup_kiwipete_position(struct Position* position);
+
+// Sets `position` from Forsyth-Edwards Notation (https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation).
 const char* setup_position_from_fen(struct Position* position, const char* fen);
 
+
+// Prints FEN of `positionf` to `stdout`.
 void print_fen(const struct Position* position);
+
+// Prints `position` to `stdout`.
 void print_position(const struct Position* position);
 
 

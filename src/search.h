@@ -14,7 +14,7 @@
 
 
 
-#define MAX_SEARCH_DEPTH MAX_MOVES
+constexpr size_t MAX_SEARCH_DEPTH = MAX_MOVES;
 
 
 struct Searcher {
@@ -27,7 +27,7 @@ struct Searcher {
 
     Move best_move;
     Score best_score;
-    atomic_uint_fast64_t nodes_searched;
+    _Atomic(uint64_t) nodes_searched;
 
     struct ThreadPool* thread_pool;
     size_t thread_index;

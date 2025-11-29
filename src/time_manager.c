@@ -13,7 +13,7 @@ void reset_time_manager(struct TimeManager* time_manager) {
     *time_manager = (struct TimeManager){0};
 }
 
-void update_time_manager(struct TimeManager* time_manager, Color side_to_move) {
+void update_time_manager(struct TimeManager* time_manager, enum Color side_to_move) {
     assert(time_manager != NULL);
     assert(is_valid_color(side_to_move));
     assert((time_manager->black_time > 0 && time_manager->white_time > 0) || time_manager->move_time > 0);

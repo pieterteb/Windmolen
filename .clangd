@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: [-std=c23, -Wall, -Wextra, -Werror, -Wpedantic, -Wshadow, -Wconversion, -Wunused, -Wnull-dereference, -Wformat=2, -fdiagnostics-color=always, -Wno-error=unused-result]

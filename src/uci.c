@@ -40,7 +40,7 @@ static Move parse_move(struct Position* position, const char* move_string) {
 
     if (source == king_square(position, position->side_to_move) && abs(destination - source) == 2 * DIRECTION_EAST) {
         move_type = MOVE_TYPE_CASTLE;
-    } else if (destination == position->en_passant_square) {
+    } else if (destination == position->info->en_passant_square) {
         move_type = MOVE_TYPE_EN_PASSANT;
     } else if (move_string[4] != '\0') {
         move_type = char_to_promotion[(int)move_string[4]];
@@ -125,8 +125,14 @@ static void handle_setoption(struct Engine* engine) {
     }
 }
 
+// THIS IS A TEMPORARY SOLUTION
+static struct PositionInfo temp_infos[8000];
+static size_t temp_info_count = 0;
+
 static void handle_position(struct Engine* engine) {
     assert(engine != NULL);
+
+    temp_info_count = 0;
 
     // strtok() has already been 'initialized' in the main UCI loop.
     const char* argument = strtok(NULL, delimeters);
@@ -136,11 +142,11 @@ static void handle_position(struct Engine* engine) {
         fen_string = argument + strlen(argument) + 1;  // Move to first character after terminator.
         while (isspace(*fen_string))
             ++fen_string;  // Move pointer to start of fen string.
-        fen_string = setup_position_from_fen(&engine->position, fen_string);
+        fen_string = setup_position_from_fen(&engine->position, &engine->info, fen_string);
     } else if (strcmp(argument, "startpos") == 0) {
-        setup_start_position(&engine->position);
+        setup_start_position(&engine->position, &engine->info);
     } else if (strcmp(argument, "kiwipete") == 0) {
-        setup_kiwipete_position(&engine->position);
+        setup_kiwipete_position(&engine->position, &engine->info);
     }
 
     argument = strtok((char*)fen_string, delimeters);
@@ -151,7 +157,7 @@ static void handle_position(struct Engine* engine) {
         argument = strtok(NULL, delimeters);
         while (argument != NULL) {
             const Move move = parse_move(&engine->position, argument);
-            do_move(&engine->position, move);
+            do_move(&engine->position, &temp_infos[temp_info_count++], move);
             argument = strtok(NULL, delimeters);
         }
     }
@@ -211,13 +217,13 @@ static void handle_go(struct Engine* engine) {
             search_arguments->mate_in_x = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
         } else {
             if (strcmp(argument, "perft") == 0) {
-                argument = strtok(NULL, delimeters);
+                argument = strtok(nullptr, delimeters);
                 if (strcmp(argument, "ext") == 0) {
                     // Extended perth.
-                    const size_t depth = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
-                    size_t extended_info[PERFT_COUNT];
-                    const size_t nodes = extended_perft(&engine->position, depth, extended_info);
-                    printf("Nodes searched: %zu\n", nodes);
+                    // const size_t depth = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+                    // size_t extended_info[PERFT_COUNT];
+                    // const size_t nodes = extended_perft(&engine->position, depth, extended_info);
+                    // printf("Nodes searched: %zu\n", nodes);
                 } else {
                     // Regular perft.
                     const size_t nodes = perft(&engine->position, (size_t)strtoull(argument, NULL, 10));

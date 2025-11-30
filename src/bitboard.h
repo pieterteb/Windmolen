@@ -15,7 +15,7 @@
 typedef uint64_t Bitboard;
 constexpr Bitboard EMPTY_BITBOARD = (Bitboard)0;
 
-// File masks/
+// File masks.
 static constexpr Bitboard FILE_A_BITBOARD = 0x0101010101010101;
 static constexpr Bitboard FILE_B_BITBOARD = FILE_A_BITBOARD << 1;
 static constexpr Bitboard FILE_C_BITBOARD = FILE_A_BITBOARD << 2;
@@ -75,7 +75,7 @@ static INLINE Bitboard line_bitboard(enum Square square1, enum Square square2) {
     assert(is_valid_square(square1));
     assert(is_valid_square(square2));
 
-    return line_bitboards[square1][square2];  // Precomputed by ../tools/lookup_tables/line_bitboards.py.
+    return line_bitboards[square1][square2];  // Precomputed by Windmolen/tools/lookup_tables/line_bitboards.py.
 }
 
 // Returns a bitboard of the squares in the semi-open segment between `square1` and `square2` (excluding `square1`,
@@ -86,7 +86,7 @@ static INLINE Bitboard between_bitboard(enum Square square1, enum Square square2
     assert(is_valid_square(square1));
     assert(is_valid_square(square2));
 
-    return between_bitboards[square1][square2];  // Precomputed by ../tools/lookup_tables/between_bitboards.py.
+    return between_bitboards[square1][square2];  // Precomputed by Windmolen/tools/lookup_tables/between_bitboards.py.
 }
 
 // Returns a bitboard of the base attacks of a piece of type `piece_type` on `square`.
@@ -95,7 +95,7 @@ static INLINE Bitboard piece_base_attacks(enum PieceType piece_type, enum Square
     assert(is_valid_square(square));
 
     return piece_base_attacks_table[piece_type]
-                                   [square];  // Precomputed by ../tools/lookup_tables/piece_base_attacks_table.py.
+                                   [square];  // Precomputed by Windmolen/tools/lookup_tables/piece_base_attacks_table.py.
 }
 
 

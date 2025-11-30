@@ -1933,8 +1933,8 @@ static void initialize_bishop_magics() {
         bishop_magic_table[square].mask         = new_bishop_attacks(square, EMPTY_BITBOARD) & ~edges;
         const unsigned index_bits               = (unsigned)popcount64(bishop_magic_table[square].mask);
         bishop_magic_table[square].shift        = 64U - index_bits;
+        bishop_magic_table[square].factor       = bishop_magics[square];
         offset += 1ULL << index_bits;
-        bishop_magic_table[square].factor = bishop_magics[square];
 
         Bitboard subset = EMPTY_BITBOARD;
         do {
@@ -1969,8 +1969,8 @@ static void initialize_rook_magics() {
         rook_magic_table[square].mask         = new_rook_attacks(square, EMPTY_BITBOARD) & ~edges;
         const unsigned index_bits             = (unsigned)popcount64(rook_magic_table[square].mask);
         rook_magic_table[square].shift        = 64U - index_bits;
+        rook_magic_table[square].factor       = rook_magics[square];
         offset += 1ULL << index_bits;
-        rook_magic_table[square].factor = rook_magics[square];
 
         Bitboard subset = EMPTY_BITBOARD;
         do {

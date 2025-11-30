@@ -36,10 +36,9 @@ static Move* white_pawn_pseudo_legal_moves(const struct Position* position, Move
     assert(position != nullptr);
     assert(movelist != nullptr);
 
-    const Bitboard non_promotion_pawns = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN)
-                                       & ~RANK_7_BITBOARD;
-    const Bitboard enemies = piece_occupancy_by_color(position, COLOR_BLACK) & target;
-    Bitboard empty_squares = ~position->total_occupancy;  // For pawn pushes.
+    const Bitboard non_promotion_pawns = piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN) & ~RANK_7_BITBOARD;
+    const Bitboard enemies             = piece_occupancy_by_color(position, COLOR_BLACK) & target;
+    Bitboard empty_squares             = ~position->total_occupancy;  // For pawn pushes.
 
     /* Pawn pushes. */
     Bitboard push_once = shift_bitboard_north(non_promotion_pawns) & empty_squares;
@@ -55,14 +54,14 @@ static Move* white_pawn_pseudo_legal_moves(const struct Position* position, Move
     movelist              = splat_pawn_moves(movelist, attacks_east, DIRECTION_NORTHEAST);
     movelist              = splat_pawn_moves(movelist, attacks_west, DIRECTION_NORTHWEST);
 
-    if (position->en_passant_square != SQUARE_NONE) {
-        assert(rank_of_square(position->en_passant_square) == RANK_6);
+    if (position->info->en_passant_square != SQUARE_NONE) {
+        assert(rank_of_square(position->info->en_passant_square) == RANK_6);
 
         Bitboard en_passant_attackers = non_promotion_pawns
-                                      & piece_base_attacks(PIECE_TYPE_BLACK_PAWN, position->en_passant_square);
+                                      & piece_base_attacks(PIECE_TYPE_BLACK_PAWN, position->info->en_passant_square);
 
         while (en_passant_attackers != EMPTY_BITBOARD)
-            *movelist++ = new_move((enum Square)pop_lsb64(&en_passant_attackers), position->en_passant_square,
+            *movelist++ = new_move((enum Square)pop_lsb64(&en_passant_attackers), position->info->en_passant_square,
                                    MOVE_TYPE_EN_PASSANT);
     }
 
@@ -117,14 +116,14 @@ static Move* black_pawn_pseudo_legal_moves(const struct Position* position, Move
     movelist              = splat_pawn_moves(movelist, attacks_east, DIRECTION_SOUTHEAST);
     movelist              = splat_pawn_moves(movelist, attacks_west, DIRECTION_SOUTHWEST);
 
-    if (position->en_passant_square != SQUARE_NONE) {
-        assert(rank_of_square(position->en_passant_square) == RANK_3);
+    if (position->info->en_passant_square != SQUARE_NONE) {
+        assert(rank_of_square(position->info->en_passant_square) == RANK_3);
 
         Bitboard en_passant_attackers = non_promotion_pawns
-                                      & piece_base_attacks(PIECE_TYPE_WHITE_PAWN, position->en_passant_square);
+                                      & piece_base_attacks(PIECE_TYPE_WHITE_PAWN, position->info->en_passant_square);
 
         while (en_passant_attackers != EMPTY_BITBOARD)
-            *movelist++ = new_move((enum Square)pop_lsb64(&en_passant_attackers), position->en_passant_square,
+            *movelist++ = new_move((enum Square)pop_lsb64(&en_passant_attackers), position->info->en_passant_square,
                                    MOVE_TYPE_EN_PASSANT);
     }
 
@@ -224,8 +223,8 @@ static Move* white_rook_pseudo_legal_moves(const struct Position* position, Move
 
     while (white_rooks != EMPTY_BITBOARD) {
         enum Square rook_square = (enum Square)pop_lsb64(&white_rooks);
-        movelist           = splat_piece_moves(movelist, rook_attacks(rook_square, position->total_occupancy) & target,
-                                               rook_square);
+        movelist = splat_piece_moves(movelist, rook_attacks(rook_square, position->total_occupancy) & target,
+                                     rook_square);
     }
 
     return movelist;
@@ -239,8 +238,8 @@ static Move* black_rook_pseudo_legal_moves(const struct Position* position, Move
 
     while (black_rooks != EMPTY_BITBOARD) {
         enum Square rook_square = (enum Square)pop_lsb64(&black_rooks);
-        movelist           = splat_piece_moves(movelist, rook_attacks(rook_square, position->total_occupancy) & target,
-                                               rook_square);
+        movelist = splat_piece_moves(movelist, rook_attacks(rook_square, position->total_occupancy) & target,
+                                     rook_square);
     }
 
     return movelist;
@@ -254,11 +253,11 @@ static Move* white_queen_pseudo_legal_moves(const struct Position* position, Mov
 
     while (white_queens != EMPTY_BITBOARD) {
         enum Square queen_square = (enum Square)pop_lsb64(&white_queens);
-        movelist            = splat_piece_moves(movelist,
-                                                (bishop_attacks(queen_square, position->total_occupancy)
+        movelist                 = splat_piece_moves(movelist,
+                                                     (bishop_attacks(queen_square, position->total_occupancy)
                                       | rook_attacks(queen_square, position->total_occupancy))
-                                                & target,
-                                                queen_square);
+                                                     & target,
+                                                     queen_square);
     }
 
     return movelist;
@@ -272,11 +271,11 @@ static Move* black_queen_pseudo_legal_moves(const struct Position* position, Mov
 
     while (black_queens != EMPTY_BITBOARD) {
         enum Square queen_square = (enum Square)pop_lsb64(&black_queens);
-        movelist            = splat_piece_moves(movelist,
-                                                (bishop_attacks(queen_square, position->total_occupancy)
+        movelist                 = splat_piece_moves(movelist,
+                                                     (bishop_attacks(queen_square, position->total_occupancy)
                                       | rook_attacks(queen_square, position->total_occupancy))
-                                                & target,
-                                                queen_square);
+                                                     & target,
+                                                     queen_square);
     }
 
     return movelist;
@@ -291,12 +290,12 @@ static Move* white_king_pseudo_legal_moves(const struct Position* position, Move
     movelist = splat_piece_moves(movelist, piece_base_attacks(PIECE_TYPE_KING, king) & target, king);
 
     /* For pseudo-legal castling moves, we check whether there is any piece in the way or if the king is in check. */
-    if (position->castling_rights != CASTLE_NONE && position->checkers[COLOR_WHITE] == EMPTY_BITBOARD) {
+    if (position->info->castling_rights != CASTLE_NONE && position->info->checkers == EMPTY_BITBOARD) {
         if ((between_bitboard(SQUARE_E1, SQUARE_G1) & position->total_occupancy) == EMPTY_BITBOARD
-            && (CASTLE_WHITE_00 & position->castling_rights) != 0)
+            && (CASTLE_WHITE_00 & position->info->castling_rights) != 0)
             *movelist++ = new_castle(CASTLE_WHITE_00);
         if ((between_bitboard(SQUARE_E1, SQUARE_B1) & position->total_occupancy) == EMPTY_BITBOARD
-            && (CASTLE_WHITE_000 & position->castling_rights) != 0)
+            && (CASTLE_WHITE_000 & position->info->castling_rights) != 0)
             *movelist++ = new_castle(CASTLE_WHITE_000);
     }
 
@@ -312,12 +311,12 @@ static Move* black_king_pseudo_legal_moves(const struct Position* position, Move
     movelist = splat_piece_moves(movelist, piece_base_attacks(PIECE_TYPE_KING, king) & target, king);
 
     /* For pseudo-legal castling moves, we check whether there is any piece in the way or if the king is in check. */
-    if (position->castling_rights != CASTLE_NONE && position->checkers[COLOR_BLACK] == EMPTY_BITBOARD) {
+    if (position->info->castling_rights != CASTLE_NONE && position->info->checkers == EMPTY_BITBOARD) {
         if ((between_bitboard(SQUARE_E8, SQUARE_G8) & position->total_occupancy) == EMPTY_BITBOARD
-            && (CASTLE_BLACK_00 & position->castling_rights) != 0)
+            && (CASTLE_BLACK_00 & position->info->castling_rights) != 0)
             *movelist++ = new_castle(CASTLE_BLACK_00);
         if ((between_bitboard(SQUARE_E8, SQUARE_B8) & position->total_occupancy) == EMPTY_BITBOARD
-            && (CASTLE_BLACK_000 & position->castling_rights) != 0)
+            && (CASTLE_BLACK_000 & position->info->castling_rights) != 0)
             *movelist++ = new_castle(CASTLE_BLACK_000);
     }
 
@@ -330,9 +329,9 @@ static Move* generate_white_pseudo_legal_moves(const struct Position* position, 
 
     Bitboard target = ~position->occupancy_by_color[COLOR_WHITE];
 
-    assert(popcount64(position->checkers[COLOR_WHITE]) <= 2);
+    assert(popcount64(position->info->checkers) <= 2);
 
-    const Bitboard checkers = position->checkers[COLOR_WHITE];
+    const Bitboard checkers = position->info->checkers;
 
     if (!popcount64_greater_than_one(checkers)) {
         if (checkers != EMPTY_BITBOARD)
@@ -356,9 +355,9 @@ Move* generate_black_pseudo_legal_moves(const struct Position* position, Move* m
 
     Bitboard target = ~position->occupancy_by_color[COLOR_BLACK];
 
-    assert(popcount64(position->checkers[COLOR_BLACK]) <= 2);
+    assert(popcount64(position->info->checkers) <= 2);
 
-    const Bitboard checkers = position->checkers[COLOR_BLACK];
+    const Bitboard checkers = position->info->checkers;
 
     if (!popcount64_greater_than_one(checkers)) {
         if (checkers != EMPTY_BITBOARD)
@@ -388,7 +387,7 @@ size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_
     movelist      = (position->side_to_move == COLOR_WHITE) ? generate_white_pseudo_legal_moves(position, movelist)
                                                             : generate_black_pseudo_legal_moves(position, movelist);
 
-    const Bitboard pinned = position->blockers[position->side_to_move]
+    const Bitboard pinned = position->info->blockers[position->side_to_move]
                           & position->occupancy_by_color[position->side_to_move];
     const enum Square king = king_square(position, position->side_to_move);
 

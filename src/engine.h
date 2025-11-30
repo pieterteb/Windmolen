@@ -32,6 +32,7 @@ struct Engine {
 
     struct ThreadPool thread_pool;
     struct Position position;
+    struct PositionInfo info;
 };
 
 

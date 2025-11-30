@@ -10,9 +10,6 @@
 
 
 typedef uint64_t ZobristKey;
-typedef uint64_t ZobristHash;
-
-static_assert(IS_SAME_TYPE(uint64_t, ZobristHash));
 
 
 extern ZobristKey piece_zobrist_keys[PIECE_COUNT][SQUARE_COUNT];

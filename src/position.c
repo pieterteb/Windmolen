@@ -1,11 +1,11 @@
 #include "position.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "bitboard.h"
@@ -20,22 +20,23 @@ static const char start_position_fen[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB
 static const char kiwipete_fen[]       = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 
 
-static INLINE Bitboard compute_checkers(const struct Position* position, enum Color color) {
+// Returns a bitboard of all pieces that put the king of `color` in attack.
+static INLINE Bitboard compute_checkers(const struct Position* position, const enum Color color) {
     assert(position != nullptr);
     assert(is_valid_color(color));
 
     return attackers_of_square(position, king_square(position, color), position->total_occupancy)
-         & piece_occupancy_by_color(position, !color);
+         & piece_occupancy_by_color(position, opposite_color(color));
 }
 
-static inline Bitboard compute_blockers(const struct Position* position, enum Color color) {
-    assert(position != NULL);
+// Returns a bitboard of all pieces that stand between an attacking piece and the king of `color`.
+static INLINE Bitboard compute_blockers(const struct Position* position, const enum Color color) {
+    assert(position != nullptr);
     assert(is_valid_color(color));
 
-    enum Square king = king_square(position, color);
-
+    const enum Square king     = king_square(position, color);
     Bitboard potential_pinners = attackers_of_square(position, king, EMPTY_BITBOARD)
-                               & piece_occupancy_by_color(position, !color);
+                               & piece_occupancy_by_color(position, opposite_color(color));
 
     Bitboard blockers = EMPTY_BITBOARD;
     while (potential_pinners != EMPTY_BITBOARD) {
@@ -50,55 +51,131 @@ static inline Bitboard compute_blockers(const struct Position* position, enum Co
     return blockers;
 }
 
+// Returns `0` if `position` has never occured before. Else, it returns the number of plies since the previous occurence
+// of `position`, or negative that number of plies if the current repetition is a threefold.
+static INLINE int compute_repetition(const struct Position* position) {
+    assert(position != nullptr);
 
-void do_move(struct Position* position, Move move) {
-    assert(position != NULL);
+    int end = (position->info->halfmove_clock < position->plies_since_start) ? (int)position->info->halfmove_clock
+                                                                             : (int)position->plies_since_start;
+
+    if (end < 4)
+        return 0;
+
+    // We start the search 4 plies back, since that is the first time a repetition can occur.
+    struct PositionInfo* info = position->info->previous_info->previous_info;
+    for (int i = 4; i <= end; i += 2) {
+        info = info->previous_info->previous_info;
+        if (info->zobrist_key == position->info->zobrist_key)
+            return (info->repetition == 0) ? i : -i;
+    }
+
+    return 0;
+}
+
+
+// Squares between which the rook switches based on the destination of the king.
+// clang-format off
+static const Bitboard rook_bitboards[SQUARE_COUNT] = {
+    [SQUARE_G1] = SQUARE_BITBOARD(SQUARE_F1) | SQUARE_BITBOARD(SQUARE_H1),
+    [SQUARE_C1] = SQUARE_BITBOARD(SQUARE_A1) | SQUARE_BITBOARD(SQUARE_D1),
+    [SQUARE_G8] = SQUARE_BITBOARD(SQUARE_F8) | SQUARE_BITBOARD(SQUARE_H8),
+    [SQUARE_C8] = SQUARE_BITBOARD(SQUARE_A8) | SQUARE_BITBOARD(SQUARE_D8)
+};
+static const enum Square rook_sources[SQUARE_COUNT] = {
+    [SQUARE_G1] = SQUARE_H1,
+    [SQUARE_C1] = SQUARE_A1,
+    [SQUARE_G8] = SQUARE_H8,
+    [SQUARE_C8] = SQUARE_A8
+};
+static const enum Square rook_destinations[SQUARE_COUNT] = {
+    [SQUARE_G1] = SQUARE_F1,
+    [SQUARE_C1] = SQUARE_D1,
+    [SQUARE_G8] = SQUARE_F8,
+    [SQUARE_C8] = SQUARE_D8
+};
+// clang-format on
+
+void do_move(struct Position* position, struct PositionInfo* new_info, const Move move) {
+    assert(position != nullptr);
+    assert(new_info != nullptr);
     assert(is_valid_move(move));
 
-    const enum Square source        = move_source(move);
-    const enum Square destination   = move_destination(move);
-    const enum MoveType type        = move_type(move);
-    enum Piece piece                = piece_on_square(position, source);
-    const enum Color side_to_move   = position->side_to_move;
-    const enum Color opponent       = opposite_color(side_to_move);
-    const ZobristHash previous_hash = position->zobrist_hash;
+    const enum Square source      = move_source(move);
+    const enum Square destination = move_destination(move);
+    const enum MoveType type      = move_type(move);
+    enum Piece piece              = piece_on_square(position, source);
+    const enum Color side_to_move = position->side_to_move;
+    const enum Color opponent     = opposite_color(side_to_move);
 
     assert(piece != PIECE_NONE);
     assert(is_valid_color(side_to_move));
     assert(color_of_piece(piece) == side_to_move);
-    assert(type != MOVE_TYPE_EN_PASSANT || position->en_passant_square != SQUARE_NONE);
+    assert(type != MOVE_TYPE_EN_PASSANT || position->info->en_passant_square != SQUARE_NONE);
     assert(popcount64(piece_occupancy(position, side_to_move, PIECE_TYPE_KING)) == 1);
 
+
+    // Copy information from previous info and switch to new info. halfmove_clock might be set to 0 later.
+    new_info->castling_rights   = position->info->castling_rights;
+    new_info->en_passant_square = position->info->en_passant_square;
+    new_info->halfmove_clock    = position->info->halfmove_clock + 1;
+    new_info->previous_info     = position->info;
+    position->info              = new_info;
+
+
+    // Update side to move.
+    position->side_to_move = opponent;
+    ++position->plies_since_start;
+    position->fullmove_counter += side_to_move;  // Trick to only increasy the fullmove counter after black has played
+                                                 // (COLOR_WHITE == 0 and COLOR_BLACK == 1).
+    position->info->zobrist_key ^= side_to_move_zobrist_key;
+
+
+    // Remove the moved piece from its current square.
     remove_piece(position, piece, source);
 
+    // After the piece has been removed for its source square, we do not need to know anymore what type of piece it was.
+    // Therefore, we change it if the move is a promotion.
     if (type == MOVE_TYPE_PROMOTION)
         piece = create_piece(side_to_move, promotion_piece_type(move));
 
     const enum PieceType piece_type     = type_of_piece(piece);
     const Bitboard destination_bitboard = square_bitboard(destination);
 
-    const bool is_capture = position->piece_on_square[destination] != PIECE_NONE || type == MOVE_TYPE_EN_PASSANT;
+    // Handle regular and en passant captures.
+    const bool is_capture = piece_on_square(position, destination) != PIECE_NONE || type == MOVE_TYPE_EN_PASSANT;
     if (is_capture) {
         if (type != MOVE_TYPE_EN_PASSANT) {
-            enum Piece captured_piece = piece_on_square(position, destination);
+            position->info->captured_piece = piece_on_square(position, destination);
 
-            assert(color_of_piece(captured_piece) == opponent);
+            assert(color_of_piece(position->info->captured_piece) == opponent);
 
-            position->occupancy_by_type[type_of_piece(captured_piece)] ^= destination_bitboard;
+            position->occupancy_by_type[type_of_piece(position->info->captured_piece)] ^= destination_bitboard;
             position->occupancy_by_color[opponent] ^= destination_bitboard;
-            position->zobrist_hash ^= piece_zobrist_keys[captured_piece][destination];
+            position->info->zobrist_key ^= piece_zobrist_keys[position->info->captured_piece][destination];
         } else {
             enum Square deletion_square = (enum Square)(
             destination + ((side_to_move == COLOR_WHITE) ? DIRECTION_SOUTH : DIRECTION_NORTH));
+            position->info->captured_piece = create_piece(opponent, PIECE_TYPE_PAWN);
+
             remove_piece_type(position, opponent, PIECE_TYPE_PAWN, deletion_square);
         }
+
+        position->info->halfmove_clock = 0;  // Irreversible move was played.
+    } else {
+        position->info->captured_piece = PIECE_NONE;
     }
 
+    if (piece_type == PIECE_TYPE_PAWN)
+        position->info->halfmove_clock = 0;  // Irreversible move was played.
+
+    // Place moved piece on destination square.
+    position->piece_on_square[destination] = piece;
     position->occupancy_by_type[piece_type] |= destination_bitboard;
     position->occupancy_by_color[side_to_move] |= destination_bitboard;
-    position->piece_on_square[destination] = piece;
-    position->zobrist_hash ^= piece_zobrist_keys[piece][destination];
+    position->info->zobrist_key ^= piece_zobrist_keys[piece][destination];
 
+    // Handle king moves.
     if (piece_type == PIECE_TYPE_KING) {
         position->king_square[side_to_move] = destination;
 
@@ -107,111 +184,157 @@ void do_move(struct Position* position, Move move) {
             assert(side_to_move == COLOR_BLACK || (destination == SQUARE_G1 || destination == SQUARE_C1));
             assert(side_to_move == COLOR_WHITE || (destination == SQUARE_G8 || destination == SQUARE_C8));
 
-            // Squares between which the rook switches based on the destination of the king.
-            // clang-format off
-            static const Bitboard rook_bitboards[SQUARE_COUNT] = {
-                [SQUARE_G1] = SQUARE_BITBOARD(SQUARE_F1) | SQUARE_BITBOARD(SQUARE_H1),
-                [SQUARE_C1] = SQUARE_BITBOARD(SQUARE_A1) | SQUARE_BITBOARD(SQUARE_D1),
-                [SQUARE_G8] = SQUARE_BITBOARD(SQUARE_F8) | SQUARE_BITBOARD(SQUARE_H8),
-                [SQUARE_C8] = SQUARE_BITBOARD(SQUARE_A8) | SQUARE_BITBOARD(SQUARE_D8)
-            };
-            static const enum Square rook_sources[SQUARE_COUNT] = {
-                [SQUARE_G1] = SQUARE_H1,
-                [SQUARE_C1] = SQUARE_A1,
-                [SQUARE_G8] = SQUARE_H8,
-                [SQUARE_C8] = SQUARE_A8
-            };
-            static const enum Square rook_destinations[SQUARE_COUNT] = {
-                [SQUARE_G1] = SQUARE_F1,
-                [SQUARE_C1] = SQUARE_D1,
-                [SQUARE_G8] = SQUARE_F8,
-                [SQUARE_C8] = SQUARE_D8
-            };
-            // clang-format on
-
             const enum Square rook_source_square      = rook_sources[destination];
             const enum Square rook_destination_square = rook_destinations[destination];
 
             const enum Piece rook                              = create_piece(side_to_move, PIECE_TYPE_ROOK);
             position->piece_on_square[rook_destination_square] = rook;
             position->piece_on_square[rook_source_square]      = PIECE_NONE;
-            position->zobrist_hash ^= piece_zobrist_keys[rook][rook_source_square]
-                                    ^ piece_zobrist_keys[rook][rook_destination_square];
+            position->info->zobrist_key ^= piece_zobrist_keys[rook][rook_source_square]
+                                         ^ piece_zobrist_keys[rook][rook_destination_square];
 
-            // This switches the rook bit between the rook source and destination squares.
+            // This switches the rook bit between the rook source and destination squares. This will work since the rook
+            // destination square must be empty in a legal move.
             position->occupancy_by_type[PIECE_TYPE_ROOK] ^= rook_bitboards[destination];
             position->occupancy_by_color[side_to_move] ^= rook_bitboards[destination];
         }
 
         // Revert zobrist hashing for current castling rights, and after updating the castling rights update the zobrist
-        // hash.
-        position->zobrist_hash ^= castle_zobrist_keys[position->castling_rights];
-        position->castling_rights &= (side_to_move == COLOR_WHITE) ? ~CASTLE_WHITE : ~CASTLE_BLACK;
-        position->zobrist_hash ^= castle_zobrist_keys[position->castling_rights];
+        // hash. We use a clever trick to update the castlingright, abusing compiler LEA instruction optimization:
+        // https://godbolt.org/z/qGjac46e9.
+        position->info->zobrist_key ^= castle_zobrist_keys[position->info->castling_rights];
+        position->info->castling_rights &= ~CASTLE_BLACK + opponent * (~CASTLE_WHITE - ~CASTLE_BLACK);
+        position->info->zobrist_key ^= castle_zobrist_keys[position->info->castling_rights];
     }
 
-    const bool is_double_pawn_push = piece_type == PIECE_TYPE_PAWN && abs(destination - source) == 2 * DIRECTION_NORTH;
-    // We always undo the en passant zobrist key if there was an en passant square in the previous position. We either
-    // get a new en passant square this move or we do not have an en passant square at all.
-    if (position->en_passant_square != SQUARE_NONE)
-        position->zobrist_hash ^= en_passant_zobrist_keys[file_of_square(position->en_passant_square)];
-    if (is_double_pawn_push) {
-        position->en_passant_square = (enum Square)(source
-                                               + ((side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH));
-        position->zobrist_hash ^= en_passant_zobrist_keys[file_of_square(position->en_passant_square)];
-    } else {
-        position->en_passant_square = SQUARE_NONE;
-    }
-
-    position->total_occupancy = position->occupancy_by_color[COLOR_WHITE] | position->occupancy_by_color[COLOR_BLACK];
+    // All bitboards have been updated at this point.
+    position->total_occupancy = piece_occupancy_by_color(position, COLOR_WHITE)
+                              | piece_occupancy_by_color(position, COLOR_BLACK);
 
     // Revert zobrist hashing for current castling rights, and after updating the castling rights update the zobrist
     // hash.
-    position->zobrist_hash ^= castle_zobrist_keys[position->castling_rights];
+    position->info->zobrist_key ^= castle_zobrist_keys[position->info->castling_rights];
     if (position->piece_on_square[SQUARE_A1] != PIECE_WHITE_ROOK)
-        position->castling_rights &= ~CASTLE_WHITE_000;
+        position->info->castling_rights &= ~CASTLE_WHITE_000;
     if (position->piece_on_square[SQUARE_H1] != PIECE_WHITE_ROOK)
-        position->castling_rights &= ~CASTLE_WHITE_00;
+        position->info->castling_rights &= ~CASTLE_WHITE_00;
     if (position->piece_on_square[SQUARE_A8] != PIECE_BLACK_ROOK)
-        position->castling_rights &= ~CASTLE_BLACK_000;
+        position->info->castling_rights &= ~CASTLE_BLACK_000;
     if (position->piece_on_square[SQUARE_H8] != PIECE_BLACK_ROOK)
-        position->castling_rights &= ~CASTLE_BLACK_00;
-    position->zobrist_hash ^= castle_zobrist_keys[position->castling_rights];
+        position->info->castling_rights &= ~CASTLE_BLACK_00;
+    position->info->zobrist_key ^= castle_zobrist_keys[position->info->castling_rights];
 
-    position->checkers[opponent]     = compute_checkers(position, opponent);
-    position->blockers[side_to_move] = compute_blockers(position, side_to_move);
-    position->blockers[opponent]     = compute_blockers(position, opponent);
-
-    if (side_to_move == COLOR_BLACK)
-        ++position->fullmove_counter;
-    position->side_to_move = opponent;
-    position->zobrist_hash ^= side_to_move_zobrist_key;
-
-    if (is_capture || piece_type == PIECE_TYPE_PAWN) {
-        position->halfmove_clock        = 0;
-        position->repetition_hash_count = 0;
+    const bool is_double_pawn_push = piece_type == PIECE_TYPE_PAWN && distance(source, destination) == 2;
+    // We always undo the en passant zobrist key if there was an en passant square in the previous position. We either
+    // get a new en passant square this move or we do not have an en passant square at all.
+    if (position->info->en_passant_square != SQUARE_NONE)
+        position->info->zobrist_key ^= en_passant_zobrist_keys[file_of_square(position->info->en_passant_square)];
+    if (is_double_pawn_push) {
+        position->info->en_passant_square = (enum Square)(
+        source + ((side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH));
+        position->info->zobrist_key ^= en_passant_zobrist_keys[file_of_square(position->info->en_passant_square)];
     } else {
-        ++position->halfmove_clock;
-        position->repetition_hashes[position->repetition_hash_count++] = previous_hash;
+        position->info->en_passant_square = SQUARE_NONE;
     }
+
+    // At this point, the Zobrist key has been calculated so we can update repetition.
+    position->info->repetition = compute_repetition(position);
+
+    position->info->checkers               = compute_checkers(position, opponent);
+    position->info->blockers[side_to_move] = compute_blockers(position, side_to_move);
+    position->info->blockers[opponent]     = compute_blockers(position, opponent);
+}
+
+void undo_move(struct Position* position, const Move move) {
+    assert(position != nullptr);
+    assert(is_valid_move(move));
+
+    assert(position->info->previous_info != nullptr);
+
+    const enum Square source        = move_source(move);
+    const enum Square destination   = move_destination(move);
+    const enum MoveType type        = move_type(move);
+    enum Piece piece                = piece_on_square(position, destination);
+    const enum Color opponent       = position->side_to_move;
+    const enum Color side_to_move   = opposite_color(opponent);
+    const enum Piece captured_piece = position->info->captured_piece;
+
+
+    assert(piece != PIECE_NONE);
+    assert(is_valid_color(side_to_move));
+    assert(color_of_piece(piece) == side_to_move);
+    assert(popcount64(piece_occupancy(position, side_to_move, PIECE_TYPE_KING)) == 1);
+
+    position->side_to_move = side_to_move;
+    --position->plies_since_start;
+    position->fullmove_counter -= opponent;
+
+    if (type == MOVE_TYPE_CASTLE) {
+        const enum Square king = king_square(position, side_to_move);
+
+        // Switch the rook back.
+        position->occupancy_by_type[PIECE_TYPE_ROOK] ^= rook_bitboards[king];
+        position->occupancy_by_color[side_to_move] ^= rook_bitboards[king];
+        position->piece_on_square[rook_sources[king]]      = create_piece(side_to_move, PIECE_TYPE_ROOK);
+        position->piece_on_square[rook_destinations[king]] = PIECE_NONE;
+    }
+
+    const Bitboard destination_bitboard    = square_bitboard(destination);
+    position->piece_on_square[destination] = PIECE_NONE;
+    position->occupancy_by_type[type_of_piece(piece)] ^= destination_bitboard;
+    position->occupancy_by_color[color_of_piece(piece)] ^= destination_bitboard;
+
+    if (type == MOVE_TYPE_PROMOTION)
+        piece = create_piece(side_to_move, PIECE_TYPE_PAWN);
+
+    const Bitboard source_bitboard    = square_bitboard(source);
+    position->piece_on_square[source] = piece;
+    position->occupancy_by_type[type_of_piece(piece)] |= source_bitboard;
+    position->occupancy_by_color[color_of_piece(piece)] |= source_bitboard;
+
+    if (type_of_piece(piece) == PIECE_TYPE_KING)
+        position->king_square[side_to_move] = source;
+
+    if (type == MOVE_TYPE_EN_PASSANT) {
+        assert(type_of_piece(captured_piece) == PIECE_TYPE_PAWN);
+
+        const enum Square pawn_square = destination
+                                      + (enum Square)((side_to_move == COLOR_WHITE) ? DIRECTION_SOUTH
+                                                                                    : DIRECTION_NORTH);
+        position->piece_on_square[pawn_square] = captured_piece;
+        position->occupancy_by_type[PIECE_TYPE_PAWN] |= square_bitboard(pawn_square);
+        position->occupancy_by_color[opponent] |= square_bitboard(pawn_square);
+    } else if (captured_piece != PIECE_NONE) {
+        position->piece_on_square[destination] = captured_piece;
+        position->occupancy_by_type[type_of_piece(captured_piece)] |= destination_bitboard;
+        position->occupancy_by_color[color_of_piece(captured_piece)] |= destination_bitboard;
+    }
+
+    position->total_occupancy = piece_occupancy_by_color(position, COLOR_WHITE)
+                              | piece_occupancy_by_color(position, COLOR_BLACK);
+
+    position->info = position->info->previous_info;
 }
 
 
-void setup_start_position(struct Position* position) {
-    assert(position != NULL);
+void setup_start_position(struct Position* position, struct PositionInfo* info) {
+    assert(position != nullptr);
+    assert(info != nullptr);
 
-    setup_position_from_fen(position, start_position_fen);
+    setup_position_from_fen(position, info, start_position_fen);
 }
 
-void setup_kiwipete_position(struct Position* position) {
-    assert(position != NULL);
+void setup_kiwipete_position(struct Position* position, struct PositionInfo* info) {
+    assert(position != nullptr);
+    assert(info != nullptr);
 
-    setup_position_from_fen(position, kiwipete_fen);
+    setup_position_from_fen(position, info, kiwipete_fen);
 }
 
-const char* setup_position_from_fen(struct Position* position, const char* fen) {
-    assert(position != NULL);
-    assert(fen != NULL);
+const char* setup_position_from_fen(struct Position* position, struct PositionInfo* info, const char* fen) {
+    assert(position != nullptr);
+    assert(info != nullptr);
+    assert(fen != nullptr);
 
     // clang-format off
     static const enum Piece char_to_piece[] = {
@@ -231,6 +354,10 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
     static_assert(sizeof(enum PieceType) == 1U, "memset() requires byte size array elements.");
     memset(&position->piece_on_square, PIECE_NONE, sizeof(position->piece_on_square));
 
+    memset(info, 0, sizeof(*info));
+    info->captured_piece = PIECE_NONE;
+    position->info       = info;
+
     // Parse board configuration.
     enum Square square = SQUARE_A8;
     char current_char;
@@ -244,7 +371,7 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
             enum Piece piece = char_to_piece[(int)current_char];
             place_piece(position, piece, square);
 
-            position->zobrist_hash ^= piece_zobrist_keys[piece][square];
+            position->info->zobrist_key ^= piece_zobrist_keys[piece][square];
 
             if (piece == PIECE_WHITE_KING)
                 position->king_square[COLOR_WHITE] = square;
@@ -257,43 +384,43 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
     ++fen;  // Skip space.
 
     // Parse side to move.
-    enum Color side_to_move     = (*fen++ == 'w') ? COLOR_WHITE : COLOR_BLACK;
-    position->side_to_move = side_to_move;
+    const enum Color side_to_move = (*fen++ == 'w') ? COLOR_WHITE : COLOR_BLACK;
+    position->side_to_move        = side_to_move;
     static_assert(COLOR_WHITE == 0, "COLOR_WHITE should have a value of 0.");
-    position->zobrist_hash ^= (ZobristKey)side_to_move * side_to_move_zobrist_key;
+    position->info->zobrist_key ^= (ZobristKey)side_to_move * side_to_move_zobrist_key;
     ++fen;  // Skip space.
 
     // Parse castling rights.
     do {
         switch (*fen++) {
             case 'K':
-                position->castling_rights |= CASTLE_WHITE_00;
+                position->info->castling_rights |= CASTLE_WHITE_00;
                 break;
             case 'Q':
-                position->castling_rights |= CASTLE_WHITE_000;
+                position->info->castling_rights |= CASTLE_WHITE_000;
                 break;
             case 'k':
-                position->castling_rights |= CASTLE_BLACK_00;
+                position->info->castling_rights |= CASTLE_BLACK_00;
                 break;
             case 'q':
-                position->castling_rights |= CASTLE_BLACK_000;
+                position->info->castling_rights |= CASTLE_BLACK_000;
                 break;
             case '-':
                 // Do nothing.
                 break;
         }
     } while (!isspace(*fen));
-    position->zobrist_hash ^= castle_zobrist_keys[position->castling_rights];
+    position->info->zobrist_key ^= castle_zobrist_keys[position->info->castling_rights];
     ++fen;  // Skip space.
 
     // Parse en passant square.
     if (*fen != '-') {
-        enum File file                   = char_to_file(*fen++);
-        enum Rank rank                   = char_to_rank(*fen++);
-        position->en_passant_square = square_from_coordinates(file, rank);
-        position->zobrist_hash ^= en_passant_zobrist_keys[file];
+        enum File file                    = char_to_file(*fen++);
+        enum Rank rank                    = char_to_rank(*fen++);
+        position->info->en_passant_square = square_from_coordinates(file, rank);
+        position->info->zobrist_key ^= en_passant_zobrist_keys[file];
     } else {
-        position->en_passant_square = SQUARE_NONE;
+        position->info->en_passant_square = SQUARE_NONE;
         ++fen;
     }
     ++fen;  // Skip space.
@@ -302,7 +429,7 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
     size_t temp = 0;
     while (isdigit(*fen))
         temp = temp * 10 + (size_t)(*fen++ - '0');
-    position->halfmove_clock = temp;
+    position->info->halfmove_clock = temp;
     ++fen;  // Skip space.
 
     // Parse fullmove counter.
@@ -314,10 +441,9 @@ const char* setup_position_from_fen(struct Position* position, const char* fen) 
     // Compute remaining tables.
     position->total_occupancy = position->occupancy_by_color[COLOR_WHITE] | position->occupancy_by_color[COLOR_BLACK];
 
-    position->blockers[COLOR_WHITE] = compute_blockers(position, COLOR_WHITE);
-    position->blockers[COLOR_BLACK] = compute_blockers(position, COLOR_BLACK);
-    position->checkers[COLOR_WHITE] = compute_checkers(position, COLOR_WHITE);
-    position->checkers[COLOR_BLACK] = compute_checkers(position, COLOR_BLACK);
+    position->info->blockers[COLOR_WHITE] = compute_blockers(position, COLOR_WHITE);
+    position->info->blockers[COLOR_BLACK] = compute_blockers(position, COLOR_BLACK);
+    position->info->checkers              = compute_checkers(position, side_to_move);
 
     return fen;
 }
@@ -367,34 +493,34 @@ void print_fen(const struct Position* position) {
     printf((position->side_to_move == COLOR_WHITE) ? " w " : " b ");
 
     // Print castling rights.
-    if (position->castling_rights == CASTLE_NONE) {
+    if (position->info->castling_rights == CASTLE_NONE) {
         printf("- ");
     } else {
-        if (position->castling_rights & CASTLE_WHITE_00)
+        if (position->info->castling_rights & CASTLE_WHITE_00)
             putchar('K');
-        if (position->castling_rights & CASTLE_WHITE_000)
+        if (position->info->castling_rights & CASTLE_WHITE_000)
             putchar('Q');
-        if (position->castling_rights & CASTLE_BLACK_00)
+        if (position->info->castling_rights & CASTLE_BLACK_00)
             putchar('k');
-        if (position->castling_rights & CASTLE_BLACK_000)
+        if (position->info->castling_rights & CASTLE_BLACK_000)
             putchar('q');
         putchar(' ');
     }
 
     // Print en passant square.
-    if (position->en_passant_square != SQUARE_NONE) {
-        putchar('a' + (char)file_of_square(position->en_passant_square));
-        putchar('1' + (char)file_of_square(position->en_passant_square));
+    if (position->info->en_passant_square != SQUARE_NONE) {
+        putchar('a' + (char)file_of_square(position->info->en_passant_square));
+        putchar('1' + (char)file_of_square(position->info->en_passant_square));
     } else {
         putchar('-');
     }
 
     // Print halfmove clock and fullmove counter.
-    printf(" %zu %zu", position->halfmove_clock, position->fullmove_counter);
+    printf(" %zu %zu", position->info->halfmove_clock, position->fullmove_counter);
 }
 
 void print_position(const struct Position* position) {
-    assert(position != NULL);
+    assert(position != nullptr);
 
     puts("+---+---+---+---+---+---+---+---+");
 
@@ -410,5 +536,5 @@ void print_position(const struct Position* position) {
     "  a   b   c   d   e   f   g   h\n"
     "FEN: ");
     print_fen(position);
-    printf("\nZobrist Hash: 0x%016" PRIx64 "\n", position->zobrist_hash);
+    printf("\nZobrist Hash: 0x%016" PRIx64 "\n", position->info->zobrist_key);
 }

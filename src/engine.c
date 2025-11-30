@@ -37,7 +37,7 @@ void initialize_engine(struct Engine* engine) {
 
     engine->thread_pool.thread_count = 0;
     construct_thread_pool(&engine->thread_pool, engine->options.thread_count);
-    setup_start_position(&engine->position);
+    setup_start_position(&engine->position, &engine->info);
 }
 
 

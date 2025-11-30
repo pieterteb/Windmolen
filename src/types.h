@@ -105,7 +105,11 @@ static INLINE enum PieceType type_of_piece(enum Piece piece) {
 static INLINE enum PieceType type_of_pawn(enum Color color) {
     assert(is_valid_color(color));
 
-    return (color == COLOR_WHITE) ? PIECE_TYPE_WHITE_PAWN : PIECE_TYPE_BLACK_PAWN;
+    // Notice this works since PIECE_TYPE_WHITE_PAWN == 0 and COLOR_WHITE == 0. A
+    // multiplication is faster here than a ternary because we
+    // multiply by 6 which compiles down to two LEA instructions.
+    // https://godbolt.org/z/jPxjT85vn
+    return (enum PieceType)color * PIECE_TYPE_BLACK_PAWN;
 }
 
 

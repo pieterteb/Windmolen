@@ -58,16 +58,18 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
 
     // Check if it is a stalemate position. If move_count == 0 but it ís check, it is mate which will be handled
     // automatically after this if statement. Also check the 50-move-rule and threefold repetition.
-    if ((move_count == 0 && !in_check(position)) || is_draw(position))
+    if ((move_count == 0 && !in_check(position)) || is_draw(position, ply))
         return DRAWN_SCORE;
 
     Score best_score = -MATE_SCORE + (Score)ply;
+    struct PositionInfo info;
     for (size_t i = 0; i < move_count; ++i) {
-        struct Position new_position = *position;
-        do_move(&new_position, movelist[i]);
+        do_move(position, &info, movelist[i]);
 
-        Score score = -negamax(searcher, &new_position, depth - 1, ply + 1);
+        Score score = -negamax(searcher, position, depth - 1, ply + 1);
         best_score  = (score > best_score) ? score : best_score;
+
+        undo_move(position, movelist[i]);
 
         if (atomic_load(&searcher->thread_pool->stop_search)) {
             searcher->search_aborted = true;
@@ -86,15 +88,17 @@ static Score root_search(struct Searcher* searcher, size_t depth, size_t* best_m
     ++searcher->nodes_searched;
 
     Score best_score = -MATE_SCORE;
+    struct PositionInfo info;
     for (size_t i = 0; i < searcher->root_move_count; ++i) {
-        struct Position new_position = searcher->root_position;
-        do_move(&new_position, searcher->root_moves[i]);
+        do_move(&searcher->root_position, &info, searcher->root_moves[i]);
 
-        Score score = -negamax(searcher, &new_position, depth - 1, 1);
+        Score score = -negamax(searcher, &searcher->root_position, depth - 1, 1);
         if (score > best_score && !searcher->search_aborted) {
             best_score       = score;
             *best_move_index = i;
         }
+
+        undo_move(&searcher->root_position, searcher->root_moves[i]);
 
         if (atomic_load(&searcher->thread_pool->stop_search))
             break;

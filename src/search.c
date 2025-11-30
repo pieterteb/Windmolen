@@ -53,9 +53,6 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
     if (is_main_thread(searcher) && !searcher->thread_pool->search_arguments->infinite)
         stop_if_time_exceeded(searcher);
 
-    if (is_draw(position))
-        return DRAWN_SCORE;
-
     Move movelist[MAX_MOVES];
     size_t move_count = generate_legal_moves(position, movelist);
 

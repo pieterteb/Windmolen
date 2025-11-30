@@ -11,7 +11,7 @@ int main(void) {
     initialize_bitboards();
     initialize_zobrist_keys();
 
-    // Make sure stdtou is line buffered.
+    // Make sure stdout is line buffered.
     setvbuf(stdout, NULL, _IOLBF, 0);
 
     struct Engine engine;

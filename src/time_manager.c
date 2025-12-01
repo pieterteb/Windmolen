@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "types.h"
+#include "piece.h"
 
 
 

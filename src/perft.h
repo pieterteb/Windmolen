@@ -48,8 +48,8 @@ static size_t divide(struct Position* position, size_t depth) {
     for (size_t i = 0; i < move_count; ++i) {
         do_move(position, &position_info, movelist[i]);
         move_nodes = perft(position, depth - 1);
-        nodes += move_nodes;
         undo_move(position, movelist[i]);
+        nodes += move_nodes;
 
         print_move(movelist[i]);
         printf(": %zu\n", move_nodes);

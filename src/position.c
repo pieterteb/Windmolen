@@ -9,8 +9,9 @@
 #include <string.h>
 
 #include "bitboard.h"
-#include "move_generation.h"
-#include "types.h"
+#include "board.h"
+#include "move.h"
+#include "piece.h"
 #include "util.h"
 #include "zobrist.h"
 
@@ -99,7 +100,7 @@ static const enum Square rook_destinations[SQUARE_COUNT] = {
 void do_move(struct Position* position, struct PositionInfo* new_info, const Move move) {
     assert(position != nullptr);
     assert(new_info != nullptr);
-    assert(is_valid_move(move));
+    assert(!is_weird_move(move));
 
     const enum Square source      = move_source(move);
     const enum Square destination = move_destination(move);
@@ -247,7 +248,7 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
 
 void undo_move(struct Position* position, const Move move) {
     assert(position != nullptr);
-    assert(is_valid_move(move));
+    assert(!is_weird_move(move));
 
     assert(position->info->previous_info != nullptr);
 

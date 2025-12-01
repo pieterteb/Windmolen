@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "types.h"
+#include "piece.h"
 
 #if defined(__linux__) || defined(__APPLE__)
 #    include <sys/time.h>

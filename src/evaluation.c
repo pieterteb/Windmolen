@@ -4,7 +4,6 @@
 #include <stddef.h>
 
 #include "position.h"
-#include "types.h"
 #include "util.h"
 
 

@@ -4,7 +4,9 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#include "types.h"
+#include "board.h"
+#include "move.h"
+#include "piece.h"
 #include "util.h"
 
 

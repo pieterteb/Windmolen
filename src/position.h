@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include "bitboard.h"
-#include "types.h"
+#include "move.h"
 #include "util.h"
 #include "zobrist.h"
 
@@ -128,6 +128,13 @@ static INLINE enum Square king_square(const struct Position* position, const enu
     return position->king_square[color];
 }
 
+// Returns the en passant square of `position`.
+static INLINE enum Square en_passant_square(const struct Position* position) {
+    assert(position != nullptr);
+
+    return position->info->en_passant_square;
+}
+
 // Returns whether the side to move in `position` is in check.
 static INLINE bool in_check(const struct Position* position) {
     assert(position != nullptr);
@@ -236,6 +243,35 @@ static INLINE Bitboard attackers_of_square(const struct Position* position, cons
          | (piece_base_attacks(PIECE_TYPE_WHITE_PAWN, square) & piece_occupancy(position, COLOR_BLACK, PIECE_TYPE_PAWN))
          | (piece_base_attacks(PIECE_TYPE_BLACK_PAWN, square) & piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN))
          | (piece_base_attacks(PIECE_TYPE_KING, square) & piece_occupancy_by_type(position, PIECE_TYPE_KING));
+}
+
+
+// Returns whether castling king side for white is unobstructed in `position`.
+static INLINE bool white_king_side_unobstructed(const struct Position* position) {
+    assert(position != nullptr);
+
+    return (between_bitboard(SQUARE_E1, SQUARE_G1) & position->total_occupancy) == EMPTY_BITBOARD;
+}
+
+// Returns whether castling queen side for white is unobstructed in `position`.
+static INLINE bool white_queen_side_unobstructed(const struct Position* position) {
+    assert(position != nullptr);
+
+    return (between_bitboard(SQUARE_E1, SQUARE_B1) & position->total_occupancy) == EMPTY_BITBOARD;
+}
+
+// Returns whether castling king side for black is unobstructed in `position`.
+static INLINE bool black_king_side_unobstructed(const struct Position* position) {
+    assert(position != nullptr);
+
+    return (between_bitboard(SQUARE_E8, SQUARE_G8) & position->total_occupancy) == EMPTY_BITBOARD;
+}
+
+// Returns whether castling queen side for black is unobstructed in `position`.
+static INLINE bool black_queen_side_unobstructed(const struct Position* position) {
+    assert(position != nullptr);
+
+    return (between_bitboard(SQUARE_E8, SQUARE_B8) & position->total_occupancy) == EMPTY_BITBOARD;
 }
 
 

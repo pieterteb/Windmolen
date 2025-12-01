@@ -9,13 +9,11 @@
 #include <string.h>
 
 #include "engine.h"
-#include "move_generation.h"
 #include "options.h"
 #include "perft.h"
 #include "position.h"
 #include "search.h"
 #include "time_manager.h"
-#include "types.h"
 
 
 
@@ -50,7 +48,7 @@ static Move parse_move(struct Position* position, const char* move_string) {
 }
 
 void print_move(Move move) {
-    assert(is_valid_move(move));
+    assert(!is_weird_move(move));
 
     // clang-format off
     static const char square_to_string[SQUARE_COUNT][3] = {
@@ -92,7 +90,7 @@ static void uci_options() {
 }
 
 void uci_best_move(Move best_move) {
-    assert(is_valid_move(best_move));
+    assert(!is_weird_move(best_move));
 
     printf("bestmove ");
     print_move(best_move);

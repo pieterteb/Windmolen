@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "types.h"
+#include "board.h"
 #include "util.h"
 
 
@@ -17,56 +17,28 @@ constexpr Bitboard EMPTY_BITBOARD = (Bitboard)0;
 
 // File masks.
 static constexpr Bitboard FILE_A_BITBOARD = 0x0101010101010101;
-static constexpr Bitboard FILE_B_BITBOARD = FILE_A_BITBOARD << 1;
-static constexpr Bitboard FILE_C_BITBOARD = FILE_A_BITBOARD << 2;
-static constexpr Bitboard FILE_D_BITBOARD = FILE_A_BITBOARD << 3;
-static constexpr Bitboard FILE_E_BITBOARD = FILE_A_BITBOARD << 4;
-static constexpr Bitboard FILE_F_BITBOARD = FILE_A_BITBOARD << 5;
-static constexpr Bitboard FILE_G_BITBOARD = FILE_A_BITBOARD << 6;
-static constexpr Bitboard FILE_H_BITBOARD = FILE_A_BITBOARD << 7;
+static constexpr Bitboard FILE_B_BITBOARD = FILE_A_BITBOARD << FILE_B;
+static constexpr Bitboard FILE_C_BITBOARD = FILE_A_BITBOARD << FILE_C;
+static constexpr Bitboard FILE_D_BITBOARD = FILE_A_BITBOARD << FILE_D;
+static constexpr Bitboard FILE_E_BITBOARD = FILE_A_BITBOARD << FILE_E;
+static constexpr Bitboard FILE_F_BITBOARD = FILE_A_BITBOARD << FILE_F;
+static constexpr Bitboard FILE_G_BITBOARD = FILE_A_BITBOARD << FILE_G;
+static constexpr Bitboard FILE_H_BITBOARD = FILE_A_BITBOARD << FILE_H;
 
 // Rank masks.
 static constexpr Bitboard RANK_1_BITBOARD = 0x00000000000000ff;
-static constexpr Bitboard RANK_2_BITBOARD = RANK_1_BITBOARD << (1 * 8);
-static constexpr Bitboard RANK_3_BITBOARD = RANK_1_BITBOARD << (2 * 8);
-static constexpr Bitboard RANK_4_BITBOARD = RANK_1_BITBOARD << (3 * 8);
-static constexpr Bitboard RANK_5_BITBOARD = RANK_1_BITBOARD << (4 * 8);
-static constexpr Bitboard RANK_6_BITBOARD = RANK_1_BITBOARD << (5 * 8);
-static constexpr Bitboard RANK_7_BITBOARD = RANK_1_BITBOARD << (6 * 8);
-static constexpr Bitboard RANK_8_BITBOARD = RANK_1_BITBOARD << (7 * 8);
+static constexpr Bitboard RANK_2_BITBOARD = RANK_1_BITBOARD << (RANK_2 * 8);
+static constexpr Bitboard RANK_3_BITBOARD = RANK_1_BITBOARD << (RANK_3 * 8);
+static constexpr Bitboard RANK_4_BITBOARD = RANK_1_BITBOARD << (RANK_4 * 8);
+static constexpr Bitboard RANK_5_BITBOARD = RANK_1_BITBOARD << (RANK_5 * 8);
+static constexpr Bitboard RANK_6_BITBOARD = RANK_1_BITBOARD << (RANK_6 * 8);
+static constexpr Bitboard RANK_7_BITBOARD = RANK_1_BITBOARD << (RANK_7 * 8);
+static constexpr Bitboard RANK_8_BITBOARD = RANK_1_BITBOARD << (RANK_8 * 8);
 
-extern const uint8_t square_distances[SQUARE_COUNT][SQUARE_COUNT];
 
 extern const Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 extern const Bitboard between_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 extern const Bitboard piece_base_attacks_table[PIECE_TYPE_COUNT][SQUARE_COUNT];
-
-
-/* The distance between x and y is defined as the number of king moves required to go from x to y. */
-
-// Returns the distance between `square1` and `square2`.
-static INLINE uint8_t distance(enum Square square1, enum Square square2) {
-    assert(is_valid_square(square1));
-    assert(is_valid_square(square2));
-
-    return square_distances[square1][square2];  // Precomputed by ../tools/lookup_table/square_distances.py.
-}
-
-// Returns the distance between the files that `square1` and `square2` lie on.
-static INLINE uint8_t file_distance(enum Square square1, enum Square square2) {
-    assert(is_valid_square(square1));
-    assert(is_valid_square(square2));
-
-    return (uint8_t)abs(file_of_square(square1) - file_of_square(square2));
-}
-
-// Returns the distance between the ranks that `square1` and `square2` lie on.
-static INLINE uint8_t rank_distance(enum Square square1, enum Square square2) {
-    assert(is_valid_square(square1));
-    assert(is_valid_square(square2));
-
-    return (uint8_t)abs(rank_of_square(square1) - rank_of_square(square2));
-}
 
 
 // Returns a bitboard of an entire line that intersects `square1` and `square2`. If the squares do not lie on the same
@@ -94,8 +66,8 @@ static INLINE Bitboard piece_base_attacks(enum PieceType piece_type, enum Square
     assert(is_valid_piece_type(piece_type));
     assert(is_valid_square(square));
 
-    return piece_base_attacks_table[piece_type]
-                                   [square];  // Precomputed by Windmolen/tools/lookup_tables/piece_base_attacks_table.py.
+    return piece_base_attacks_table[piece_type][square];  // Precomputed by
+                                                          // Windmolen/tools/lookup_tables/piece_base_attacks_table.py.
 }
 
 

@@ -60,15 +60,14 @@ static INLINE int compute_repetition(const struct Position* position) {
     int end = (position->info->halfmove_clock < position->plies_since_start) ? (int)position->info->halfmove_clock
                                                                              : (int)position->plies_since_start;
 
-    if (end < 4)
-        return 0;
-
-    // We start the search 4 plies back, since that is the first time a repetition can occur.
-    struct PositionInfo* info = position->info->previous_info->previous_info;
-    for (int i = 4; i <= end; i += 2) {
-        info = info->previous_info->previous_info;
-        if (info->zobrist_key == position->info->zobrist_key)
-            return (info->repetition == 0) ? i : -i;
+    if (end >= 4) {
+        // We start the search 4 plies back, since that is the first time a repetition can occur.
+        struct PositionInfo* info = position->info->previous_info->previous_info;
+        for (int i = 4; i <= end; i += 2) {
+            info = info->previous_info->previous_info;
+            if (info->zobrist_key == position->info->zobrist_key)
+                return (info->repetition == 0) ? i : -i;
+        }
     }
 
     return 0;
@@ -120,6 +119,7 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
     new_info->castling_rights   = position->info->castling_rights;
     new_info->en_passant_square = position->info->en_passant_square;
     new_info->halfmove_clock    = position->info->halfmove_clock + 1;
+    new_info->zobrist_key       = position->info->zobrist_key;
     new_info->previous_info     = position->info;
     position->info              = new_info;
 

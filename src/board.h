@@ -158,6 +158,16 @@ enum Direction : int8_t {
     DIRECTION_SOUTH2 = 2 * DIRECTION_SOUTH
 };
 
+// Returns the square described by `file` and `rank`, assuming `file` and `rank` are valid.
+static INLINE enum Square square_from_coordinates(enum File file, enum Rank rank) {
+    assert(is_valid_file(file));
+    assert(is_valid_rank(rank));
+
+    // Should compile to a single LEA instruction on modern CPUs.
+    return (enum Square)((enum Direction)file * DIRECTION_EAST + (enum Direction)rank * DIRECTION_NORTH);
+}
+
+
 // Returns the square `direction` away from `square`, assuming `square` is valid.
 static INLINE enum Square square_step(const enum Square square, const enum Direction direction) {
     assert(is_valid_square(square));

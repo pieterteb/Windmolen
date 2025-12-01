@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 #include "board.h"
 #include "util.h"
@@ -42,7 +41,8 @@ extern const Bitboard piece_base_attacks_table[PIECE_TYPE_COUNT][SQUARE_COUNT];
 
 
 // Returns a bitboard of an entire line that intersects `square1` and `square2`. If the squares do not lie on the same
-// file/rank/diagonal/antidiagonal, the function returns `EMPTY_BITBOARD`.
+// file/rank/diagonal/antidiagonal, the function returns `EMPTY_BITBOARD`. We assume `square1` and `square2` are both
+// valid squares.
 static INLINE Bitboard line_bitboard(enum Square square1, enum Square square2) {
     assert(is_valid_square(square1));
     assert(is_valid_square(square2));
@@ -53,7 +53,7 @@ static INLINE Bitboard line_bitboard(enum Square square1, enum Square square2) {
 // Returns a bitboard of the squares in the semi-open segment between `square1` and `square2` (excluding `square1`,
 // including `square2`). If the squares do not lie on the same file/rank/diagonal/antidiagonal, the function returns a
 // bitboard of `square2`. This way, we are able to compute check evasion moves without the king faster, as the piece
-// that is moved must either interpose or capture the attacker.
+// that is moved must either interpose or capture the attacker. We assume `square1` and `square2` are valid squares.
 static INLINE Bitboard between_bitboard(enum Square square1, enum Square square2) {
     assert(is_valid_square(square1));
     assert(is_valid_square(square2));
@@ -61,7 +61,8 @@ static INLINE Bitboard between_bitboard(enum Square square1, enum Square square2
     return between_bitboards[square1][square2];  // Precomputed by Windmolen/tools/lookup_tables/between_bitboards.py.
 }
 
-// Returns a bitboard of the base attacks of a piece of type `piece_type` on `square`.
+// Returns a bitboard of the base attacks of a piece of type `piece_type` on `square`, assuming `piece_type` and
+// `square` are valid.
 static INLINE Bitboard piece_base_attacks(enum PieceType piece_type, enum Square square) {
     assert(is_valid_piece_type(piece_type));
     assert(is_valid_square(square));
@@ -71,7 +72,7 @@ static INLINE Bitboard piece_base_attacks(enum PieceType piece_type, enum Square
 }
 
 
-// Returns a bitboard of `square`.
+// Returns a bitboard of `square`, assuming `square` is valid.
 static INLINE Bitboard square_bitboard(enum Square square) {
     assert(is_valid_square(square));
 
@@ -81,49 +82,40 @@ static INLINE Bitboard square_bitboard(enum Square square) {
 // Static evaluation version of `square_bitboard()`.
 #define SQUARE_BITBOARD(square) ((Bitboard)1 << (square))
 
-// Returns a bitboard of `file`.
+// Returns a bitboard of `file`, assuming `file` is valid.
 static INLINE Bitboard file_bitboard(enum File file) {
     assert(is_valid_file(file));
 
     return FILE_A_BITBOARD << file;
 }
 
-// Returns a bitboard of `rank`.
+// Returns a bitboard of `rank`, assuming `rank` is valid.
 static INLINE Bitboard rank_bitboard(enum Rank rank) {
     assert(is_valid_rank(rank));
 
     return RANK_1_BITBOARD << (rank << 3);  // << 3: fast multiplication by 8.
 }
 
-// Returns a bitboard of the file that `square` lies on.
+// Returns a bitboard of the file that `square` lies on, assuming `square` is valid.
 static INLINE Bitboard file_bitboard_from_square(enum Square square) {
     assert(is_valid_square(square));
 
     return file_bitboard(file_of_square(square));
 }
 
-// Returns a bitboard of the rank that `square` lies on.
+// Returns a bitboard of the rank that `square` lies on, assuming `square` is valid.
 static INLINE Bitboard rank_bitboard_from_square(enum Square square) {
     assert(is_valid_square(square));
 
     return rank_bitboard(rank_of_square(square));
 }
 
-// Returns a bitboard of the square described by `file` and `rank`.
+// Returns a bitboard of the square described by `file` and `rank`, assuming `file` and `rank` are valid.
 static INLINE Bitboard bitboard_from_coordinates(enum File file, enum Rank rank) {
     assert(is_valid_file(file));
     assert(is_valid_rank(rank));
 
     return file_bitboard(file) & rank_bitboard(rank);
-}
-
-// Returns the square described by `file` and `rank`.
-static INLINE enum Square square_from_coordinates(enum File file, enum Rank rank) {
-    assert(is_valid_file(file));
-    assert(is_valid_rank(rank));
-
-    // Should compile to a single LEA instruction on modern CPUs.
-    return (enum Square)((enum Direction)file * DIRECTION_EAST + (enum Direction)rank * DIRECTION_NORTH);
 }
 
 
@@ -196,7 +188,7 @@ static INLINE size_t magic_index(const struct Magic* magic, Bitboard occupancy) 
     return (unsigned)(((magic->mask & occupancy) * magic->factor) >> magic->shift);
 }
 
-// Returns a bitboard of all attacks of a bishop on `square` given `occupancy`.
+// Returns a bitboard of all attacks of a bishop on `square` given `occupancy`, assuming `square` is valid.
 static inline Bitboard bishop_attacks(enum Square square, Bitboard occupancy) {
     assert(is_valid_square(square));
 
@@ -205,7 +197,7 @@ static inline Bitboard bishop_attacks(enum Square square, Bitboard occupancy) {
     return magic->attack_table[magic_index(magic, occupancy)];
 }
 
-// Returns a bitboard of all attacks of a rook on `square` given `occupancy`.
+// Returns a bitboard of all attacks of a rook on `square` given `occupancy`, assuming `square` is valid.
 static inline Bitboard rook_attacks(enum Square square, Bitboard occupancy) {
     assert(is_valid_square(square));
 

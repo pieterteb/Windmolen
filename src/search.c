@@ -39,7 +39,8 @@ static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool
 }
 
 
-static Score negamax(struct Searcher* searcher, struct Position* position, size_t depth, size_t ply) {
+static Score alphabeta(struct Searcher* searcher, struct Position* position, Score alpha, Score beta, size_t depth,
+                       size_t ply) {
     assert(searcher != NULL);
     assert(position != NULL);
 
@@ -65,11 +66,16 @@ static Score negamax(struct Searcher* searcher, struct Position* position, size_
     struct PositionInfo info;
     for (size_t i = 0; i < move_count; ++i) {
         do_move(position, &info, movelist[i]);
-
-        Score score = -negamax(searcher, position, depth - 1, ply + 1);
-        best_score  = (score > best_score) ? score : best_score;
-
+        Score score = -alphabeta(searcher, position, -beta, -alpha, depth - 1, ply + 1);
         undo_move(position, movelist[i]);
+
+        if (score > best_score) {
+            best_score = score;
+            if (score > alpha)
+                alpha = score;
+        }
+        if (score >= beta)
+            return best_score;
 
         if (atomic_load(&searcher->thread_pool->stop_search)) {
             searcher->search_aborted = true;
@@ -92,7 +98,7 @@ static Score root_search(struct Searcher* searcher, size_t depth, size_t* best_m
     for (size_t i = 0; i < searcher->root_move_count; ++i) {
         do_move(&searcher->root_position, &info, searcher->root_moves[i]);
 
-        Score score = -negamax(searcher, &searcher->root_position, depth - 1, 1);
+        Score score = -alphabeta(searcher, &searcher->root_position, -MATE_SCORE, MATE_SCORE, depth - 1, 1);
         if (score > best_score && !searcher->search_aborted) {
             best_score       = score;
             *best_move_index = i;

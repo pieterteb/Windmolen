@@ -14,7 +14,7 @@ constexpr size_t MAX_MOVES = 256;
 
 
 // Generates all legal moves in `position` to `movelist` and returns the number of legal moves found.
-size_t generate_legal_moves(struct Position* position, Move movelist[MAX_MOVES]);
+size_t generate_legal_moves(const struct Position* position, Move movelist[MAX_MOVES]);
 
 
 

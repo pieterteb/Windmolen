@@ -129,6 +129,8 @@ static Move* white_pseudolegal_moves(const struct Position* position, Move movel
     const enum Square en_passant = en_passant_square(position);
     if (en_passant != SQUARE_NONE) {
         assert(rank_of_square(en_passant) == RANK_6);
+        // Notice how we are always considering en passant captures, even if we are in check and the en passant pawn is
+        // not the attacker of the king. We deal with this later in is_legal_en_passant().
 
         // A white pawn attacks the en passant square if a black pawn on the en passant square would be attacking that
         // white pawn.
@@ -264,6 +266,8 @@ static Move* black_pseudolegal_moves(const struct Position* position, Move movel
     const enum Square en_passant = en_passant_square(position);
     if (en_passant != SQUARE_NONE) {
         assert(rank_of_square(en_passant) == RANK_3);
+        // Notice how we are always considering en passant captures, even if we are in check and the en passant pawn is
+        // not the attacker of the king. We deal with this later in is_legal_en_passant().
 
         // A black pawn attacks the en passant square if a white pawn on the en passant square would be attacking that
         // black pawn.
@@ -374,9 +378,55 @@ static INLINE bool is_legal_pinned_move(const struct Position* position, const M
         != EMPTY_BITBOARD;
 }
 
-static bool is_legal_en_passant(struct Position* position, Move move);
+// Returns whether a pseudolegal en passant capture `move` is legal.
+static bool is_legal_en_passant(const struct Position* position, const Move move) {
+    assert(position != nullptr);
+    assert(!is_weird_move(move));
+    assert(move_type(move) == MOVE_TYPE_EN_PASSANT);
 
-size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_MOVES]) {
+    // At this point, we have already checked that the pawn is not directly pinned. There is still an edge case where
+    // the capture can put the king in check. It is also possible that the en passant pawn is giving check currently. To
+    // make sure neither of these are the case, we essentially perform the move and make sure it is not check. These
+    // edge cases will be rare anyways, so the performance impact is neglible.
+    const Bitboard source_bitboard      = square_bitboard(move_source(move));
+    const Bitboard destination_bitboard = square_bitboard(move_destination(move));
+    const enum Color side_to_move       = position->side_to_move;
+    const Bitboard captured_bitboard    = (side_to_move == COLOR_WHITE) ? shift_bitboard_south(destination_bitboard)
+                                                                        : shift_bitboard_north(destination_bitboard);
+
+    const enum Square king    = king_square(position, side_to_move);
+    const enum Color opponent = opposite_color(side_to_move);
+
+    // The updated occupancy needs the friendly pawn removed from the source and the enemy pawn removed since they may
+    // be indirectly pinned by a rook/queen. The friendly pawn needs to be placed on the destination square since it
+    // might block a check from a rook/queen that x-rays the en passant pawn to the king.
+    const Bitboard occupancy = (position->total_occupancy | destination_bitboard) ^ source_bitboard ^ captured_bitboard;
+
+    // We manually inline square_is_attacked() here and modify it slightly (sorry for the mess). It is guaranteed that
+    // the king is not attacked by the opponent king. Besides that, we remove the en passant pawn from the enemy
+    // attackers.
+    const bool square_is_attacked = ((piece_base_attacks(PIECE_TYPE_BISHOP, king)
+                                      & bishop_queen_occupancy(position, opponent))
+                                     != EMPTY_BITBOARD
+                                     && (bishop_attacks(king, occupancy) & bishop_queen_occupancy(position, opponent))
+                                        != EMPTY_BITBOARD)
+                                 || ((piece_base_attacks(PIECE_TYPE_ROOK, king)
+                                      & rook_queen_occupancy(position, opponent))
+                                     != EMPTY_BITBOARD
+                                     && (rook_attacks(king, occupancy) & rook_queen_occupancy(position, opponent))
+                                        != EMPTY_BITBOARD)
+                                 || ((piece_base_attacks(PIECE_TYPE_KNIGHT, king)
+                                      & piece_occupancy(position, opponent, PIECE_TYPE_KNIGHT))
+                                     != EMPTY_BITBOARD)
+                                 || ((piece_base_attacks(type_of_pawn(side_to_move), king)
+                                      & (piece_occupancy(position, opponent, PIECE_TYPE_PAWN) ^ captured_bitboard))
+                                     != EMPTY_BITBOARD);
+
+    return !square_is_attacked;
+}
+
+
+size_t generate_legal_moves(const struct Position* position, Move movelist[static MAX_MOVES]) {
     assert(position != nullptr);
     assert(movelist != nullptr);
 
@@ -403,29 +453,4 @@ size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_
     }
 
     return size;
-}
-
-
-
-static bool is_legal_en_passant(struct Position* position, Move move) {
-    assert(position != NULL);
-    assert(!is_weird_move(move));
-    assert(move_type(move) == MOVE_TYPE_EN_PASSANT);
-
-    /* At this point, we have already checked that the pawn is not directly pinned. We sort of perform the move and
-     * check that our king does not end up in check. */
-    const Bitboard source_bitboard      = square_bitboard(move_source(move));
-    const Bitboard destination_bitboard = square_bitboard(move_destination(move));
-    const Bitboard captured_bitboard    = (position->side_to_move == COLOR_WHITE)
-                                        ? shift_bitboard_south(destination_bitboard)
-                                        : shift_bitboard_north(destination_bitboard);
-
-    position->occupancy_by_color[!position->side_to_move] ^= captured_bitboard;
-    const Bitboard attackers = attackers_of_square(
-                               position, king_square(position, position->side_to_move),
-                               (position->total_occupancy | destination_bitboard) ^ source_bitboard ^ captured_bitboard)
-                             & piece_occupancy_by_color(position, !position->side_to_move);
-    position->occupancy_by_color[!position->side_to_move] |= captured_bitboard;
-
-    return attackers == EMPTY_BITBOARD;
 }

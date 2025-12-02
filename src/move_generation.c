@@ -328,7 +328,40 @@ static Move* black_pseudolegal_moves(const struct Position* position, Move movel
 }
 
 
-static bool is_legal_king_move(const struct Position* position, Move move);
+// Returns whether a pseudolegal king `move` is legal in `position`.
+static bool is_legal_king_move(const struct Position* position, const Move move) {
+    assert(position != nullptr);
+    assert(!is_weird_move(move));
+    assert(move_source(move) == king_square(position, position->side_to_move));
+
+    // When entering this function, it is assumed that the king is not in check if the move is a castle move. For every
+    // king move, we need to at least check that the destination square is not being attacked. Therefore, for a castle
+    // move, we have to perform only one extra test: check whether the square in between the source and destination is
+    // being attacked.
+
+    // Squares that king traverses while travelling to the index square.
+    // clang-format off
+    static enum Square traversed_squares[SQUARE_COUNT] = {
+        [SQUARE_G1] = SQUARE_F1,
+        [SQUARE_C1] = SQUARE_D1,
+        [SQUARE_G8] = SQUARE_F8,
+        [SQUARE_C8] = SQUARE_D8
+    };
+    // clang-format on
+
+    const enum Square destination = move_destination(move);
+    const enum Color opponent     = opposite_color(position->side_to_move);
+
+    if (move_type(move) == MOVE_TYPE_CASTLE
+        && square_is_attacked(position, opponent, traversed_squares[destination], position->total_occupancy))
+        return false;
+
+    // We bitwise-xor the total occupancy with the bitboard of our king for the case where the destination square lies
+    // on the same line as the attacker.
+    return !square_is_attacked(position, opponent, destination,
+                               position->total_occupancy ^ king_occupancy(position, position->side_to_move));
+}
+
 static inline bool is_legal_pinned_move(const struct Position* position, Move move);
 static bool is_legal_en_passant(struct Position* position, Move move);
 
@@ -362,41 +395,6 @@ size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_
 }
 
 
-static bool is_legal_king_move(const struct Position* position, Move move) {
-    assert(position != NULL);
-    assert(!is_weird_move(move));
-    assert(move_source(move) == king_square(position, position->side_to_move));
-
-    // Squares that king traverses while travelling to the index square.
-    // clang-format off
-    static const Bitboard castling_squares[SQUARE_COUNT] = {
-        [SQUARE_G1] = SQUARE_BITBOARD(SQUARE_F1) | SQUARE_BITBOARD(SQUARE_G1),
-        [SQUARE_C1] = SQUARE_BITBOARD(SQUARE_D1) | SQUARE_BITBOARD(SQUARE_C1),
-        [SQUARE_G8] = SQUARE_BITBOARD(SQUARE_F8) | SQUARE_BITBOARD(SQUARE_G8),
-        [SQUARE_C8] = SQUARE_BITBOARD(SQUARE_D8) | SQUARE_BITBOARD(SQUARE_C8)
-    };
-    // clang-format on
-
-    if (move_type(move) == MOVE_TYPE_CASTLE) {
-        /* At this point, for castling moves, we have only checked whether there are pieces in the way and whether the
-         * king is in check. We will now check if the king moves over an attacked square. */
-        Bitboard squares_to_traverse = castling_squares[move_destination(move)];
-
-        while (squares_to_traverse != EMPTY_BITBOARD) {
-            enum Square square = (enum Square)pop_lsb64(&squares_to_traverse);
-
-            if (square_is_attacked(position, !position->side_to_move, square, position->total_occupancy))
-                return false;
-        }
-
-        return true;
-    }
-
-    return square_is_attacked(
-           position, !position->side_to_move, move_destination(move),
-           position->total_occupancy ^ piece_occupancy(position, position->side_to_move, PIECE_TYPE_KING))
-        == EMPTY_BITBOARD;
-}
 
 static inline bool is_legal_pinned_move(const struct Position* position, Move move) {
     assert(position != NULL);

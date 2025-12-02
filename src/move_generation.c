@@ -387,7 +387,7 @@ static bool is_legal_en_passant(const struct Position* position, const Move move
     // At this point, we have already checked that the pawn is not directly pinned. There is still an edge case where
     // the capture can put the king in check. It is also possible that the en passant pawn is giving check currently. To
     // make sure neither of these are the case, we essentially perform the move and make sure it is not check. These
-    // edge cases will be rare anyways, so the performance impact is neglible.
+    // edge cases will be rare anyways, so the performance impact is negligible.
     const Bitboard source_bitboard      = square_bitboard(move_source(move));
     const Bitboard destination_bitboard = square_bitboard(move_destination(move));
     const enum Color side_to_move       = position->side_to_move;

@@ -13,6 +13,10 @@
 
 
 
+// Clarification: Currently, we are storing/computing the blockers and king_square fields for both colors at all times.
+// In the code however, we only ever use them for the side to move. Still, we keep them as they are likely to be needed
+// for future engine enhancements.
+
 // Struct used for undoing moves.
 struct PositionInfo {
     enum CastlingRights castling_rights;

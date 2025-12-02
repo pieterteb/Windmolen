@@ -268,7 +268,7 @@ void undo_move(struct Position* position, const Move move) {
 
     position->side_to_move = side_to_move;
     --position->plies_since_start;
-    position->fullmove_counter -= opponent;
+    position->fullmove_counter -= side_to_move;
 
     if (type == MOVE_TYPE_CASTLE) {
         const enum Square king = king_square(position, side_to_move);

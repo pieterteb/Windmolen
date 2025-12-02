@@ -1,7 +1,6 @@
 #include "move_generation.h"
 
 #include <assert.h>
-#include <stdlib.h>
 
 #include "bitboard.h"
 #include "board.h"

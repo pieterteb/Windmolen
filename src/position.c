@@ -510,8 +510,8 @@ void print_fen(const struct Position* position) {
 
     // Print en passant square.
     if (position->info->en_passant_square != SQUARE_NONE) {
-        putchar('a' + (char)file_of_square(position->info->en_passant_square));
-        putchar('1' + (char)file_of_square(position->info->en_passant_square));
+        putchar('a' + (char)file_of_square(en_passant_square(position)));
+        putchar('1' + (char)rank_of_square(en_passant_square(position)));
     } else {
         putchar('-');
     }

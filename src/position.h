@@ -13,9 +13,6 @@
 
 
 
-typedef uint16_t Move;  // Redefinition of Move type to prevent circular includes.
-
-
 // Struct used for undoing moves.
 struct PositionInfo {
     enum CastlingRights castling_rights;

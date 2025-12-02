@@ -430,18 +430,21 @@ size_t generate_legal_moves(const struct Position* position, Move movelist[stati
     assert(position != nullptr);
     assert(movelist != nullptr);
 
-    Move* current = movelist;
-    movelist      = (position->side_to_move == COLOR_WHITE) ? white_pseudolegal_moves(position, movelist)
-                                                            : black_pseudolegal_moves(position, movelist);
+    const enum Color side_to_move = position->side_to_move;
 
-    const Bitboard pinned = position->info->blockers[position->side_to_move]
-                          & position->occupancy_by_color[position->side_to_move];
-    const enum Square king = king_square(position, position->side_to_move);
+    Move* current = movelist;
+    movelist      = (side_to_move == COLOR_WHITE) ? white_pseudolegal_moves(position, movelist)
+                                                  : black_pseudolegal_moves(position, movelist);
+
+    const Bitboard pinned  = position->info->blockers[side_to_move] & piece_occupancy_by_color(position, side_to_move);
+    const enum Square king = king_square(position, side_to_move);
 
     size_t size = 0;
     while (current != movelist) {
-        enum Square source = move_source(*current);
+        const enum Square source = move_source(*current);
 
+        // To make sure a pseudolegal move is legal, we need to check whether it puts our king in check, which is only
+        // possible if we move the king, if we move a pinned piece or if we capture en passant.
         if ((source == king && !is_legal_king_move(position, *current))
             || ((pinned & square_bitboard(source)) != EMPTY_BITBOARD && !is_legal_pinned_move(position, *current))
             || (move_type(*current) == MOVE_TYPE_EN_PASSANT && !is_legal_en_passant(position, *current))) {

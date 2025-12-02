@@ -134,6 +134,7 @@ static INLINE Bitboard king_occupancy(const struct Position* position, const enu
     assert(position != nullptr);
     assert(is_valid_color(color));
 
+    // This works since there will always be exactly one king per side.
     return square_bitboard(king_square(position, color));
 }
 
@@ -236,8 +237,7 @@ static INLINE bool square_is_attacked(const struct Position* position, const enu
         || ((piece_base_attacks(type_of_pawn(opposite_color(color)), square)
              & piece_occupancy(position, color, PIECE_TYPE_PAWN))
             != EMPTY_BITBOARD)
-        || ((piece_base_attacks(PIECE_TYPE_KING, square) & piece_occupancy(position, color, PIECE_TYPE_KING))
-            != EMPTY_BITBOARD);
+        || ((piece_base_attacks(PIECE_TYPE_KING, square) & king_occupancy(position, color)) != EMPTY_BITBOARD);
 }
 
 // Returns a bitboard of the pieces that attack `square` with `occupancy` in `position`.

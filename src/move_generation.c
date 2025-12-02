@@ -329,7 +329,7 @@ static Move* black_pseudolegal_moves(const struct Position* position, Move movel
 
 
 // Returns whether a pseudolegal king `move` is legal in `position`.
-static bool is_legal_king_move(const struct Position* position, const Move move) {
+static INLINE bool is_legal_king_move(const struct Position* position, const Move move) {
     assert(position != nullptr);
     assert(!is_weird_move(move));
     assert(move_source(move) == king_square(position, position->side_to_move));
@@ -362,7 +362,18 @@ static bool is_legal_king_move(const struct Position* position, const Move move)
                                position->total_occupancy ^ king_occupancy(position, position->side_to_move));
 }
 
-static inline bool is_legal_pinned_move(const struct Position* position, Move move);
+// Returns whether a pseudolegal pinned piece `move` is legal.
+static INLINE bool is_legal_pinned_move(const struct Position* position, const Move move) {
+    assert(position != nullptr);
+    assert(!is_weird_move(move));
+    assert(move_type(move) != MOVE_TYPE_CASTLE);
+
+    // A pinned piece is only allowed to move on the line of the pinning piece. This can only be the case if this line
+    // crosses the king.
+    return (line_bitboard(move_source(move), move_destination(move)) & king_occupancy(position, position->side_to_move))
+        != EMPTY_BITBOARD;
+}
+
 static bool is_legal_en_passant(struct Position* position, Move move);
 
 size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_MOVES]) {
@@ -395,17 +406,6 @@ size_t generate_legal_moves(struct Position* position, Move movelist[static MAX_
 }
 
 
-
-static inline bool is_legal_pinned_move(const struct Position* position, Move move) {
-    assert(position != NULL);
-    assert(!is_weird_move(move));
-    assert(move_type(move) == MOVE_TYPE_NORMAL || move_type(move) == MOVE_TYPE_EN_PASSANT
-           || move_type(move) == MOVE_TYPE_PROMOTION);
-
-    return (line_bitboard(move_source(move), move_destination(move))
-            & piece_occupancy(position, position->side_to_move, PIECE_TYPE_KING))
-        != EMPTY_BITBOARD;
-}
 
 static bool is_legal_en_passant(struct Position* position, Move move) {
     assert(position != NULL);

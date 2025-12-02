@@ -128,6 +128,15 @@ static INLINE enum Square king_square(const struct Position* position, const enu
     return position->king_square[color];
 }
 
+// Returns a bitboard of the king of `color` in `position`. This function should be slightly faster than
+// piece_occupancy(position, color, PIECE_TYPE_KING).
+static INLINE Bitboard king_occupancy(const struct Position* position, const enum Color color) {
+    assert(position != nullptr);
+    assert(is_valid_color(color));
+
+    return square_bitboard(king_square(position, color));
+}
+
 // Returns the en passant square of `position`.
 static INLINE enum Square en_passant_square(const struct Position* position) {
     assert(position != nullptr);

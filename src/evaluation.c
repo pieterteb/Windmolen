@@ -1,7 +1,6 @@
 #include "evaluation.h"
 
 #include <assert.h>
-#include <stddef.h>
 
 #include "position.h"
 #include "util.h"
@@ -12,10 +11,10 @@
 static const Score piece_values[PIECE_TYPE_COUNT - 2] = {100, 350, 350, 525, 1000};
 
 
-Score evaluate_position(struct Position* position) {
-    assert(position != NULL);
+Score evaluate_position(const struct Position* position) {
+    assert(position != nullptr);
 
-    Score score = DRAWN_SCORE;
+    Score score = DRAW_SCORE;
 
     score += piece_values[PIECE_TYPE_PAWN]
            * (popcount64(piece_occupancy(position, COLOR_WHITE, PIECE_TYPE_PAWN))

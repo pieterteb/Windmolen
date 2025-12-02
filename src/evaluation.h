@@ -3,20 +3,19 @@
 
 
 #include <limits.h>
-#include <stddef.h>
 
 #include "position.h"
 
 
 
-#define DRAWN_SCORE ((Score)0)
-#define MATE_SCORE  ((Score)(SHRT_MAX / 2))
-
-
 typedef int Score;
 
 
-Score evaluate_position(struct Position* position);
+constexpr Score DRAW_SCORE = 0;
+constexpr Score MATE_SCORE = SHRT_MAX / 2;
+
+
+Score evaluate_position(const struct Position* position);
 
 
 

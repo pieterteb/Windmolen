@@ -38,7 +38,8 @@ static Move parse_move(struct Position* position, const char* move_string) {
 
     if (source == king_square(position, position->side_to_move) && abs(destination - source) == 2 * DIRECTION_EAST) {
         move_type = MOVE_TYPE_CASTLE;
-    } else if (destination == position->info->en_passant_square) {
+    } else if (destination == position->info->en_passant_square
+               && type_of_piece(piece_on_square(position, source)) == PIECE_TYPE_PAWN) {
         move_type = MOVE_TYPE_EN_PASSANT;
     } else if (move_string[4] != '\0') {
         move_type = char_to_promotion[(int)move_string[4]];

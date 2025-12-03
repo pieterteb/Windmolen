@@ -35,10 +35,26 @@ static constexpr Bitboard RANK_7_BITBOARD = RANK_1_BITBOARD << (RANK_7 * 8);
 static constexpr Bitboard RANK_8_BITBOARD = RANK_1_BITBOARD << (RANK_8 * 8);
 
 
+extern const Bitboard diagonal_bitboards[SQUARE_COUNT];
+extern const Bitboard antidiagonal_bitboards[SQUARE_COUNT];
 extern const Bitboard line_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 extern const Bitboard between_bitboards[SQUARE_COUNT][SQUARE_COUNT];
 extern const Bitboard piece_base_attacks_table[PIECE_TYPE_COUNT][SQUARE_COUNT];
 
+
+// Returns a bitboard of the entire diagonal on which `square` lies, assuming `square` is valid.
+static INLINE Bitboard diagonal_bitboard(const enum Square square) {
+    assert(is_valid_square(square));
+
+    return diagonal_bitboards[square];
+}
+
+// Returns a bitboard of the entire antidiagonal on which `square` lies, assuming `square` is valid.
+static INLINE Bitboard antidiagonal_bitboard(const enum Square square) {
+    assert(is_valid_square(square));
+
+    return antidiagonal_bitboards[square];
+}
 
 // Returns a bitboard of an entire line that intersects `square1` and `square2`. If the squares do not lie on the same
 // file/rank/diagonal/antidiagonal, the function returns `EMPTY_BITBOARD`. We assume `square1` and `square2` are both

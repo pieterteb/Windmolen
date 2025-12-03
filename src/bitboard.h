@@ -221,13 +221,8 @@ static INLINE Bitboard piece_attacks(const enum PieceType piece_type, const enum
             return rook_attacks(square, occupancy);
         case PIECE_TYPE_QUEEN:
             return bishop_attacks(square, occupancy) | rook_attacks(square, occupancy);
-        case PIECE_TYPE_WHITE_PAWN:
-        case PIECE_TYPE_BLACK_PAWN:
-        case PIECE_TYPE_KNIGHT:
-        case PIECE_TYPE_KING:
-            return piece_base_attacks(piece_type, square);
         default:
-            return EMPTY_BITBOARD;
+            return piece_base_attacks(piece_type, square);
     }
 }
 

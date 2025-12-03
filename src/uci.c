@@ -66,7 +66,7 @@ void print_move(Move move) {
 
     printf("%s%s", square_to_string[move_source(move)], square_to_string[move_destination(move)]);
 
-    if (move_type(move) == MOVE_TYPE_PROMOTION)
+    if (type_of_move(move) == MOVE_TYPE_PROMOTION)
         putchar(promotion_to_char(move));
 }
 

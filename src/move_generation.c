@@ -355,7 +355,7 @@ static INLINE bool is_legal_king_move(const struct Position* position, const Mov
     const enum Square destination = move_destination(move);
     const enum Color opponent     = opposite_color(position->side_to_move);
 
-    if (move_type(move) == MOVE_TYPE_CASTLE
+    if (type_of_move(move) == MOVE_TYPE_CASTLE
         && square_is_attacked(position, opponent, traversed_squares[destination], position->total_occupancy))
         return false;
 
@@ -369,7 +369,7 @@ static INLINE bool is_legal_king_move(const struct Position* position, const Mov
 static INLINE bool is_legal_pinned_move(const struct Position* position, const Move move) {
     assert(position != nullptr);
     assert(!is_weird_move(move));
-    assert(move_type(move) != MOVE_TYPE_CASTLE);
+    assert(type_of_move(move) != MOVE_TYPE_CASTLE);
 
     // A pinned piece is only allowed to move on the line of the pinning piece. This can only be the case if this line
     // crosses the king.
@@ -381,7 +381,7 @@ static INLINE bool is_legal_pinned_move(const struct Position* position, const M
 static bool is_legal_en_passant(const struct Position* position, const Move move) {
     assert(position != nullptr);
     assert(!is_weird_move(move));
-    assert(move_type(move) == MOVE_TYPE_EN_PASSANT);
+    assert(type_of_move(move) == MOVE_TYPE_EN_PASSANT);
 
     // At this point, we have already checked that the pawn is not directly pinned. There is still an edge case where
     // the capture can put the king in check. It is also possible that the en passant pawn is giving check currently. To
@@ -446,7 +446,7 @@ size_t generate_legal_moves(const struct Position* position, Move movelist[stati
         // possible if we move the king, if we move a pinned piece or if we capture en passant.
         if ((source == king && !is_legal_king_move(position, *current))
             || ((pinned & square_bitboard(source)) != EMPTY_BITBOARD && !is_legal_pinned_move(position, *current))
-            || (move_type(*current) == MOVE_TYPE_EN_PASSANT && !is_legal_en_passant(position, *current))) {
+            || (type_of_move(*current) == MOVE_TYPE_EN_PASSANT && !is_legal_en_passant(position, *current))) {
             *current = *(--movelist);
         } else {
             ++current;

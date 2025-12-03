@@ -55,7 +55,7 @@ static INLINE bool is_weird_move(const Move move) {
 }
 
 // Returns the type of `move`.
-static INLINE enum MoveType move_type(const Move move) {
+static INLINE enum MoveType type_of_move(const Move move) {
     assert(!is_weird_move(move));
 
     return move & (3 << 12);  // Mask bits 12 and 13.
@@ -65,7 +65,7 @@ static INLINE enum MoveType move_type(const Move move) {
 // function only makes sense if the move is an actual promotion.
 static INLINE char promotion_to_char(const Move move) {
     assert(!is_weird_move(move));
-    assert(move_type(move) == MOVE_TYPE_PROMOTION);
+    assert(type_of_move(move) == MOVE_TYPE_PROMOTION);
 
     return (const char[]){'n', 'b', 'r', 'q'}[move >> 14];  // Get promotion bits (14 and 15).
 }
@@ -74,7 +74,7 @@ static INLINE char promotion_to_char(const Move move) {
 // an actual promotion.
 static INLINE enum PieceType promotion_piece_type(const Move move) {
     assert(!is_weird_move(move));
-    assert(move_type(move) == MOVE_TYPE_PROMOTION);
+    assert(type_of_move(move) == MOVE_TYPE_PROMOTION);
 
     return (enum PieceType)((move >> 14) + 1);
 }

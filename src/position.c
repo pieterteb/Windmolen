@@ -103,7 +103,7 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
 
     const enum Square source      = move_source(move);
     const enum Square destination = move_destination(move);
-    const enum MoveType type      = move_type(move);
+    const enum MoveType type      = type_of_move(move);
     enum Piece piece              = piece_on_square(position, source);
     const enum Color side_to_move = position->side_to_move;
     const enum Color opponent     = opposite_color(side_to_move);
@@ -254,7 +254,7 @@ void undo_move(struct Position* position, const Move move) {
 
     const enum Square source        = move_source(move);
     const enum Square destination   = move_destination(move);
-    const enum MoveType type        = move_type(move);
+    const enum MoveType type        = type_of_move(move);
     enum Piece piece                = piece_on_square(position, destination);
     const enum Color opponent       = position->side_to_move;
     const enum Color side_to_move   = opposite_color(opponent);

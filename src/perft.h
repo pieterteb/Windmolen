@@ -5,21 +5,23 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
+#include "move.h"
 #include "move_generation.h"
 #include "position.h"
 #include "uci.h"
+#include "util.h"
 
 
 
-static size_t perft(struct Position* position, size_t depth) {
-    assert(position != NULL);
-
-    if (depth == 0)
-        return 1;
+// Computes the number of leaf nodes in the chess search tree at nonzero `depth` in `position`.
+static size_t perft_depth_nonzero(struct Position* position, const size_t depth) {
+    assert(position != nullptr);
+    assert(depth > 0);
 
     Move movelist[MAX_MOVES];
-    size_t move_count = generate_legal_moves(position, movelist);
+    const size_t move_count = generate_legal_moves(position, movelist);
 
     if (depth == 1)
         return move_count;
@@ -28,19 +30,31 @@ static size_t perft(struct Position* position, size_t depth) {
     struct PositionInfo position_info;
     for (size_t i = 0; i < move_count; ++i) {
         do_move(position, &position_info, movelist[i]);
-        nodes += perft(position, depth - 1);
+        nodes += perft_depth_nonzero(position, depth - 1);
         undo_move(position, movelist[i]);
     }
 
     return nodes;
 }
 
-static size_t divide(struct Position* position, size_t depth) {
-    assert(position != NULL);
+// Computes the number of leaf nodes in the chess search tree at `depth` in `position`.
+static INLINE size_t perft(struct Position* position, const size_t depth) {
+    assert(position != nullptr);
+
+    if (depth == 0)
+        return 1;
+
+    return perft_depth_nonzero(position, depth);
+}
+
+// Computes the number of leaf nodes in the chess search tree at nonzero `depth` in `position`. Additionally, prints the
+// number of leaf nodes in the chess search tree for each legal move in `position`.
+static size_t divide(struct Position* position, const size_t depth) {
+    assert(position != nullptr);
     assert(depth > 0);
 
     Move movelist[MAX_MOVES];
-    size_t move_count = generate_legal_moves(position, movelist);
+    const size_t move_count = generate_legal_moves(position, movelist);
 
     size_t nodes = 0;
     size_t move_nodes;
@@ -49,6 +63,7 @@ static size_t divide(struct Position* position, size_t depth) {
         do_move(position, &position_info, movelist[i]);
         move_nodes = perft(position, depth - 1);
         undo_move(position, movelist[i]);
+
         nodes += move_nodes;
 
         print_move(movelist[i]);
@@ -59,71 +74,101 @@ static size_t divide(struct Position* position, size_t depth) {
 }
 
 
-enum {
-    PERFT_CAPTURES,
-    PERFT_EN_PASSANT,
-    PERFT_CASTLES,
-    PERFT_PROMOTIONS,
-    PERFT_CHECKS,
-    PERFT_DISCOVERY_CHECKS,
-    PERFT_DOUBLE_CHECKS,
-    PERFT_CHECKMATES,
-
-    PERFT_COUNT
+// Struct to keep data of extended perft. To clarify, a move can fall under multiple categories. For example, an en
+// passant move is also a capture, and a checkmate is also a check, and can potentially be a discovery check etc.
+struct ExtendedPerft {
+    size_t capture;
+    size_t en_passant;
+    size_t castle;
+    size_t promotion;
+    size_t check;
+    size_t discovery_check;
+    size_t double_check;
+    size_t checkmate;
+    size_t double_checkmate;
 };
 
-// static size_t extended_perft(struct Position* position, size_t depth, size_t extended_info[PERFT_COUNT]) {
-//     Move movelist[MAX_MOVES];
-//     size_t move_count = generate_legal_moves(position, movelist);
+// Same as perft_depth_nonzero(), except it computes extra information and stores that in `ext_perft`.
+static size_t extended_perft_depth_nonzero(struct Position* position, size_t depth, struct ExtendedPerft* ext_perft) {
+    assert(position != nullptr);
+    assert(ext_perft != nullptr);
+    assert(depth > 0);
 
-//     if (depth == 1) {
-//         for (size_t i = 0; i < move_count; ++i) {
-//             if (piece_on_square(position, move_destination(movelist[i])) != PIECE_NONE)
-//                 ++extended_info[PERFT_CAPTURES];
+    Move movelist[MAX_MOVES];
+    const size_t move_count = generate_legal_moves(position, movelist);
 
-//             if (move_type(movelist[i]) == MOVE_TYPE_EN_PASSANT) {
-//                 ++extended_info[PERFT_CAPTURES];
-//                 ++extended_info[PERFT_EN_PASSANT];
-//             }
+    if (depth == 1) {
+        for (size_t i = 0; i < move_count; ++i) {
+            const enum Square destination = move_destination(movelist[i]);
+            const enum MoveType move_type = type_of_move(movelist[i]);
 
-//             if (move_type(movelist[i]) == MOVE_TYPE_CASTLE)
-//                 ++extended_info[PERFT_CASTLES];
+            // We do not test for en passant here as that will be done later.
+            if (piece_on_square(position, destination) != PIECE_NONE)
+                ++ext_perft->capture;
 
-//             if (move_type(movelist[i]) == MOVE_TYPE_PROMOTION)
-//                 ++extended_info[PERFT_PROMOTIONS];
+            // These three cases are mutually exclusive.
+            if (move_type == MOVE_TYPE_EN_PASSANT) {
+                // An en passant move is always a capture.
+                ++ext_perft->capture;
+                ++ext_perft->en_passant;
+            } else if (move_type == MOVE_TYPE_CASTLE) {
+                ++ext_perft->castle;
+            } else if (move_type == MOVE_TYPE_PROMOTION) {
+                ++ext_perft->promotion;
+            }
 
-//             struct Position copy = *position;
-//             do_move(&copy, movelist[i]);
 
-//             if (copy.checkers[copy.side_to_move] != EMPTY_BITBOARD) {
-//                 ++extended_info[PERFT_CHECKS];
+            const bool direct_check    = is_direct_check(position, movelist[i]);
+            const bool discovery_check = is_discovery_check(position, movelist[i]);
 
-//                 if ((copy.checkers[copy.side_to_move] & square_bitboard(move_destination(movelist[i])))
-//                     == EMPTY_BITBOARD)
-//                     ++extended_info[PERFT_DISCOVERY_CHECKS];
-//             }
+            if (direct_check | discovery_check) {
+                ++ext_perft->check;
 
-//             if (popcount64_greater_than_one(copy.checkers[copy.side_to_move]))
-//                 ++extended_info[PERFT_DOUBLE_CHECKS];
+                if (discovery_check)
+                    ++ext_perft->discovery_check;
 
-//             Move temp_movelist[MAX_MOVES];
-//             if (copy.checkers[copy.side_to_move] != EMPTY_BITBOARD && generate_legal_moves(&copy, temp_movelist) == 0)
-//                 ++extended_info[PERFT_CHECKMATES];
-//         }
+                Move temp_movelist[MAX_MOVES];
+                const size_t temp_move_count = generate_legal_moves(position, temp_movelist);
 
-//         return move_count;
-//     }
+                if (temp_move_count == 0)
+                    ++ext_perft->checkmate;
 
-//     size_t nodes = 0;
+                // A double check occurs if and only if we have a direct check and a discovery check.
+                if (direct_check && discovery_check) {
+                    ++ext_perft->double_check;
 
-//     for (size_t i = 0; i < move_count; ++i) {
-//         struct Position copy = *position;
-//         do_move(&copy, movelist[i]);
-//         nodes += extended_perft(&copy, depth - 1, extended_info);
-//     }
+                    if (move_count == 0)
+                        ++ext_perft->double_checkmate;
+                }
+            }
+        }
 
-//     return nodes;
-// }
+        return move_count;
+    }
+
+    size_t nodes = 0;
+    struct PositionInfo position_info;
+    for (size_t i = 0; i < move_count; ++i) {
+        do_move(position, &position_info, movelist[i]);
+        nodes += extended_perft_depth_nonzero(position, depth - 1, ext_perft);
+        undo_move(position, movelist[i]);
+    }
+
+    return nodes;
+}
+
+// Same as perft(), except it computes extra information and stores that in `ext_perft`.
+static size_t extended_perft(struct Position* position, size_t depth, struct ExtendedPerft* ext_perft) {
+    assert(position != nullptr);
+    assert(ext_perft != nullptr);
+
+    memset(ext_perft, 0, sizeof(*ext_perft));
+
+    if (depth == 0)
+        return 1;
+
+    return extended_perft_depth_nonzero(position, depth, ext_perft);
+}
 
 
 

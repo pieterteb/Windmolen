@@ -216,18 +216,24 @@ static void handle_go(struct Engine* engine) {
             search_arguments->mate_in_x = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
         } else {
             if (strcmp(argument, "perft") == 0) {
-                argument = strtok(nullptr, delimeters);
-                if (strcmp(argument, "ext") == 0) {
-                    // Extended perth.
-                    // const size_t depth = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
-                    // size_t extended_info[PERFT_COUNT];
-                    // const size_t nodes = extended_perft(&engine->position, depth, extended_info);
-                    // printf("Nodes searched: %zu\n", nodes);
-                } else {
-                    // Regular perft.
-                    const size_t nodes = perft(&engine->position, (size_t)strtoull(argument, NULL, 10));
-                    printf("Nodes searched: %zu\n", nodes);
-                }
+                // Regular perft.
+                const size_t nodes = perft(&engine->position, (size_t)strtoull(strtok(NULL, delimeters), NULL, 10));
+                printf("Nodes searched: %zu\n", nodes);
+            } else if (strcmp(argument, "extperft") == 0) {
+                // Extended perth.
+                struct ExtendedPerft ext_perft;
+                const size_t depth = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+                const size_t nodes = extended_perft(&engine->position, depth, &ext_perft);
+                printf("Nodes searched:    %zu\n\n", nodes);
+                printf("Capture:           %zu\n", ext_perft.capture);
+                printf("En passant:        %zu\n", ext_perft.en_passant);
+                printf("Castle:            %zu\n", ext_perft.castle);
+                printf("Promotion:         %zu\n", ext_perft.promotion);
+                printf("Check:             %zu\n", ext_perft.check);
+                printf("Discovery check:   %zu\n", ext_perft.discovery_check);
+                printf("Double check:      %zu\n", ext_perft.double_check);
+                printf("Checkmate:         %zu\n", ext_perft.checkmate);
+                printf("Double checkmate:  %zu\n", ext_perft.double_checkmate);
             } else if (strcmp(argument, "divide") == 0) {
                 const size_t nodes_searched = divide(&engine->position,
                                                      (size_t)strtoull(strtok(NULL, delimeters), NULL, 10));

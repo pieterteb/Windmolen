@@ -97,6 +97,13 @@ static INLINE enum Piece create_piece(const enum Color color, const enum PieceTy
     return (enum Piece)((piece_type << 1) + color);
 }
 
+// Returns a piece with the same type, but opposite color as `piece`, assuming `piece` is valid.
+static INLINE enum Piece opposite_piece(const enum Piece piece) {
+    assert(is_valid_piece(piece));
+
+    return piece ^ 1;  // Same trick as in opposite_color().
+}
+
 // Returns the color of `piece`, assuming `piece` is valid.
 static INLINE enum Color color_of_piece(const enum Piece piece) {
     assert(is_valid_piece(piece));

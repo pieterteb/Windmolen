@@ -304,6 +304,50 @@ static INLINE bool is_draw(const struct Position* position, const size_t ply) {
 }
 
 
+// Returns whether `move` is a capture in `position`.
+static INLINE bool is_capture(const struct Position* position, const Move move) {
+    assert(position != nullptr);
+    assert(!is_weird_move(move));
+
+    return piece_on_square(position, move_destination(move)) != PIECE_NONE
+        || type_of_move(move) == MOVE_TYPE_EN_PASSANT;
+}
+
+// Returns whether `move` is a direct check in `position`, i.e. a move such that the moved piece attacks the enemy king.
+static INLINE bool is_direct_check(const struct Position* position, const Move move) {
+    assert(position != nullptr);
+    assert(!is_weird_move(move));
+
+    const enum Piece piece    = piece_on_square(position, move_source(move));
+    const enum Square king    = king_square(position, position->side_to_move);
+    enum PieceType piece_type = type_of_piece(piece);
+
+    if (piece_type == PIECE_TYPE_PAWN)
+        piece_type = type_of_pawn(opposite_color(color_of_piece(piece)));
+
+    return (piece_attacks(piece_type, king, position->total_occupancy) & square_bitboard(move_destination(move)))
+        != EMPTY_BITBOARD;
+}
+
+// Returns whether `move` is a discovery check in `position`, i.e. a move such that the piece moving reveals an attack
+// on the king.
+static INLINE bool is_discovery_check(const struct Position* position, const Move move) {
+    assert(position != nullptr);
+    assert(!is_weird_move(move));
+
+    const bool is_blocker = (position->info->blockers[position->side_to_move] & square_bitboard(move_source(move)))
+                         != EMPTY_BITBOARD;
+    if (!is_blocker)
+        return false;  // If the moved piece is not blocking an attack, we can not have a discovery check.
+
+    const bool is_revealing = (line_bitboard(move_source(move), move_destination(move))
+                               & king_occupancy(position, position->side_to_move))
+                           == EMPTY_BITBOARD;
+
+    return is_revealing;
+}
+
+
 // Performs `move` on `position`. We assume that a legal move is supplied.
 void do_move(struct Position* position, struct PositionInfo* new_info, const Move move);
 

@@ -1268,7 +1268,7 @@ void initialize_bitboards() {
 }
 
 
-static Bitboard new_bishop_attacks(enum Square square, Bitboard occupancy) {
+static Bitboard new_bishop_attacks(const enum Square square, const Bitboard occupancy) {
     assert(is_valid_square(square));
 
     const Bitboard bitboard = square_bitboard(square);
@@ -1299,7 +1299,7 @@ static Bitboard new_bishop_attacks(enum Square square, Bitboard occupancy) {
     return attacks;
 }
 
-static Bitboard new_rook_attacks(enum Square square, Bitboard occupancy) {
+static Bitboard new_rook_attacks(const enum Square square, const Bitboard occupancy) {
     assert(is_valid_square(square));
 
     const Bitboard bitboard = square_bitboard(square);
@@ -1403,7 +1403,7 @@ static void initialize_rook_magics() {
 }
 
 
-[[maybe_unused]] void print_bitboard(Bitboard bitboard) {
+[[maybe_unused]] void print_bitboard(const Bitboard bitboard) {
     puts("+---+---+---+---+---+---+---+---+");
 
     for (enum Rank rank = RANK_8; rank < RANK_COUNT; --rank) {

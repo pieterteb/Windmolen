@@ -123,7 +123,7 @@ static INLINE enum PieceType type_of_piece(const enum Piece piece) {
 }
 
 // Returns the pawn type that corresponds to `color`, assuming `color` is valid.
-static INLINE enum PieceType type_of_pawn(const enum Color color) {
+static INLINE enum PieceType pawn_type_from_color(const enum Color color) {
     assert(is_valid_color(color));
     static_assert(PIECE_TYPE_BLACK_PAWN == 6);
 

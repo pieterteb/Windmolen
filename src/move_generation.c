@@ -404,24 +404,24 @@ static bool is_legal_en_passant(const struct Position* position, const Move move
     // We manually inline square_is_attacked() here and modify it slightly (sorry for the mess). It is guaranteed that
     // the king is not attacked by the opponent king. Besides that, we remove the en passant pawn from the enemy
     // attackers.
-    const bool square_is_attacked = ((piece_base_attacks(PIECE_TYPE_BISHOP, king)
-                                      & bishop_queen_occupancy(position, opponent))
-                                     != EMPTY_BITBOARD
-                                     && (bishop_attacks(king, occupancy) & bishop_queen_occupancy(position, opponent))
-                                        != EMPTY_BITBOARD)
-                                 || ((piece_base_attacks(PIECE_TYPE_ROOK, king)
-                                      & rook_queen_occupancy(position, opponent))
-                                     != EMPTY_BITBOARD
-                                     && (rook_attacks(king, occupancy) & rook_queen_occupancy(position, opponent))
-                                        != EMPTY_BITBOARD)
-                                 || ((piece_base_attacks(PIECE_TYPE_KNIGHT, king)
-                                      & piece_occupancy(position, opponent, PIECE_TYPE_KNIGHT))
-                                     != EMPTY_BITBOARD)
-                                 || ((piece_base_attacks(type_of_pawn(side_to_move), king)
-                                      & (piece_occupancy(position, opponent, PIECE_TYPE_PAWN) ^ captured_bitboard))
-                                     != EMPTY_BITBOARD);
+    const bool king_is_attacked = ((piece_base_attacks(PIECE_TYPE_BISHOP, king)
+                                    & bishop_queen_occupancy(position, opponent))
+                                   != EMPTY_BITBOARD
+                                   && (bishop_attacks(king, occupancy) & bishop_queen_occupancy(position, opponent))
+                                      != EMPTY_BITBOARD)
+                               || ((piece_base_attacks(PIECE_TYPE_ROOK, king)
+                                    & rook_queen_occupancy(position, opponent))
+                                   != EMPTY_BITBOARD
+                                   && (rook_attacks(king, occupancy) & rook_queen_occupancy(position, opponent))
+                                      != EMPTY_BITBOARD)
+                               || ((piece_base_attacks(PIECE_TYPE_KNIGHT, king)
+                                    & piece_occupancy(position, opponent, PIECE_TYPE_KNIGHT))
+                                   != EMPTY_BITBOARD)
+                               || ((piece_base_attacks(pawn_type_from_color(side_to_move), king)
+                                    & (piece_occupancy(position, opponent, PIECE_TYPE_PAWN) ^ captured_bitboard))
+                                   != EMPTY_BITBOARD);
 
-    return !square_is_attacked;
+    return !king_is_attacked;
 }
 
 

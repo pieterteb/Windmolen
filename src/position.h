@@ -235,7 +235,7 @@ static INLINE bool square_is_attacked(const struct Position* position, const enu
             && (rook_attacks(square, occupancy) & rook_queen_occupancy(position, color)) != EMPTY_BITBOARD)
         || ((piece_base_attacks(PIECE_TYPE_KNIGHT, square) & piece_occupancy(position, color, PIECE_TYPE_KNIGHT))
             != EMPTY_BITBOARD)
-        || ((piece_base_attacks(type_of_pawn(opposite_color(color)), square)
+        || ((piece_base_attacks(pawn_type_from_color(opposite_color(color)), square)
              & piece_occupancy(position, color, PIECE_TYPE_PAWN))
             != EMPTY_BITBOARD)
         || ((piece_base_attacks(PIECE_TYPE_KING, square) & king_occupancy(position, color)) != EMPTY_BITBOARD);
@@ -314,37 +314,91 @@ static INLINE bool is_capture(const struct Position* position, const Move move) 
 }
 
 // Returns whether `move` is a direct check in `position`, i.e. a move such that the moved piece attacks the enemy king.
-static INLINE bool is_direct_check(const struct Position* position, const Move move) {
+static INLINE bool gives_direct_check(const struct Position* position, const Move move) {
     assert(position != nullptr);
     assert(!is_weird_move(move));
 
-    const enum Piece piece    = piece_on_square(position, move_source(move));
-    const enum Square king    = king_square(position, position->side_to_move);
-    enum PieceType piece_type = type_of_piece(piece);
+    const enum Color opponent     = opposite_color(position->side_to_move);
+    const enum MoveType move_type = type_of_move(move);
+    enum PieceType piece_type     = type_of_piece(piece_on_square(position, move_source(move)));
+    enum Square destination       = move_destination(move);
 
-    if (piece_type == PIECE_TYPE_PAWN)
-        piece_type = type_of_pawn(opposite_color(color_of_piece(piece)));
+    Bitboard occupancy = position->total_occupancy;
+    if (move_type == MOVE_TYPE_CASTLE) {
+        // Squares where rook ends up after travelling based on king destination square.
+        // clang-format off
+        static enum Square rook_destinations[SQUARE_COUNT] = {
+            [SQUARE_G1] = SQUARE_F1,
+            [SQUARE_C1] = SQUARE_D1,
+            [SQUARE_G8] = SQUARE_F8,
+            [SQUARE_C8] = SQUARE_D8
+        };
+        // clang-format on
 
-    return (piece_attacks(piece_type, king, position->total_occupancy) & square_bitboard(move_destination(move)))
+        // The relevant destination is that of the rook. Also move the king out of the way.
+        piece_type  = PIECE_TYPE_ROOK;
+        destination = rook_destinations[destination];
+        occupancy ^= square_bitboard(move_source(move));
+    } else if (move_type == MOVE_TYPE_PROMOTION) {
+        // The relevant piece type is that of the promotion piece. We also need to remove the pawn in case the king was
+        // behind the pawn and we promote to a rook or queen.
+        piece_type = promotion_piece_type(move);
+        occupancy ^= square_bitboard(move_source(move));
+    } else if (piece_type == PIECE_TYPE_PAWN) {
+        piece_type = pawn_type_from_color(opponent);
+    }
+
+    return (piece_attacks(piece_type, king_square(position, opponent), occupancy) & square_bitboard(destination))
         != EMPTY_BITBOARD;
 }
 
-// Returns whether `move` is a discovery check in `position`, i.e. a move such that the piece moving reveals an attack
+// Returns whether `move` is a discovered check in `position`, i.e. a move such that the piece moving reveals an attack
 // on the king.
-static INLINE bool is_discovery_check(const struct Position* position, const Move move) {
+static INLINE bool gives_discovered_check(const struct Position* position, const Move move) {
     assert(position != nullptr);
     assert(!is_weird_move(move));
 
-    const bool is_blocker = (position->info->blockers[position->side_to_move] & square_bitboard(move_source(move)))
-                         != EMPTY_BITBOARD;
-    if (!is_blocker)
-        return false;  // If the moved piece is not blocking an attack, we can not have a discovery check.
+    const enum Color side_to_move = position->side_to_move;
+    const enum Color opponent     = opposite_color(side_to_move);
 
-    const bool is_revealing = (line_bitboard(move_source(move), move_destination(move))
-                               & king_occupancy(position, position->side_to_move))
-                           == EMPTY_BITBOARD;
+    // If the move is not en passant, it is a discovered check if and only if the moved piece is a blocker and is
+    // moved in a different direction than on the line formed by the king and the attacker.
+    const bool is_blocker = (position->info->blockers[opponent] & square_bitboard(move_source(move))) != EMPTY_BITBOARD;
+    if (is_blocker) {
+        const bool is_discovery = (line_bitboard(move_source(move), move_destination(move))
+                                   & king_occupancy(position, opponent))
+                               == EMPTY_BITBOARD;
 
-    return is_revealing;
+        if (is_discovery)
+            return true;
+    }
+
+    // If the above did not return true, there is still the possibility that we have an en passant move where an
+    // attack on the king is created after capturing the pawn.
+    if (type_of_move(move) == MOVE_TYPE_EN_PASSANT) {
+        // We essentially perform the capture on the position and make sure a potential checker is not the pawn that was
+        // just moved, i.e. the move is not a direct check. For this, we only remove the moved pawn and the capture pawn
+        // from the total occupancy, and then check if the king is attacked.
+        const Bitboard source_bitboard      = square_bitboard(move_source(move));
+        const Bitboard destination_bitboard = square_bitboard(move_destination(move));
+        const Bitboard captured_bitboard    = (opponent == COLOR_BLACK) ? shift_bitboard_south(destination_bitboard)
+                                                                        : shift_bitboard_north(destination_bitboard);
+
+        const Bitboard occupancy = (position->total_occupancy | destination_bitboard) ^ source_bitboard
+                                 ^ captured_bitboard;
+        const enum Square king = king_square(position, opponent);
+
+        // We manually inline square_is_attacked() here and modify it slightly (sorry for the mess). It is guaranteed
+        // that the king is not attacked by one of our pawns, knights or our king.
+        const bool king_is_attacked = (bishop_attacks(king, occupancy) & bishop_queen_occupancy(position, side_to_move))
+                                   != EMPTY_BITBOARD
+                                   || (rook_attacks(king, occupancy) & rook_queen_occupancy(position, side_to_move))
+                                      != EMPTY_BITBOARD;
+
+        return king_is_attacked;
+    }
+
+    return false;
 }
 
 
@@ -361,7 +415,8 @@ void setup_start_position(struct Position* position, struct PositionInfo* info);
 // Sets `position` to the kiwipete position (https://www.chessprogramming.org/Perft_Results#Position_2).
 void setup_kiwipete_position(struct Position* position, struct PositionInfo* info);
 
-// Sets `position` from Forsyth-Edwards Notation (FEN) (https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation).
+// Sets `position` from Forsyth-Edwards Notation (FEN)
+// (https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation).
 const char* setup_position_from_fen(struct Position* position, struct PositionInfo* info, const char* fen);
 
 

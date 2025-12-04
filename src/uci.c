@@ -224,16 +224,25 @@ static void handle_go(struct Engine* engine) {
                 struct ExtendedPerft ext_perft;
                 const size_t depth = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
                 const size_t nodes = extended_perft(&engine->position, depth, &ext_perft);
-                printf("Nodes searched:    %zu\n\n", nodes);
-                printf("Capture:           %zu\n", ext_perft.capture);
-                printf("En passant:        %zu\n", ext_perft.en_passant);
-                printf("Castle:            %zu\n", ext_perft.castle);
-                printf("Promotion:         %zu\n", ext_perft.promotion);
-                printf("Check:             %zu\n", ext_perft.check);
-                printf("Discovery check:   %zu\n", ext_perft.discovery_check);
-                printf("Double check:      %zu\n", ext_perft.double_check);
-                printf("Checkmate:         %zu\n", ext_perft.checkmate);
-                printf("Double checkmate:  %zu\n", ext_perft.double_checkmate);
+                printf("Nodes searched:            %zu\n\n", nodes);
+                printf("Captures:                  %zu\n", ext_perft.captures);
+                printf("En passants:               %zu\n", ext_perft.en_passants);
+                printf("Castles:                   %zu\n", ext_perft.castles);
+                printf("Promotions:                %zu\n", ext_perft.promotions);
+                printf("Direct checks:             %zu\n", ext_perft.direct_checks);
+                printf("Single discovered checks:  %zu\n", ext_perft.single_discovered_checks);
+                printf("Direct discovered checks:  %zu\n", ext_perft.direct_discovered_checks);
+                printf("Double discovered checks:  %zu\n", ext_perft.double_discovered_checks);
+                printf("Total checks:              %zu\n", ext_perft.direct_checks + ext_perft.single_discovered_checks
+                                                           + ext_perft.direct_discovered_checks
+                                                           + ext_perft.double_discovered_checks);
+                printf("Direct mates:              %zu\n", ext_perft.direct_mates);
+                printf("Single discovered mates:   %zu\n", ext_perft.single_discovered_mates);
+                printf("Direct discovered mates:   %zu\n", ext_perft.direct_discovered_mates);
+                printf("Double discovered mates:   %zu\n", ext_perft.double_discovered_mates);
+                printf("Total mates:               %zu\n", ext_perft.direct_mates + ext_perft.single_discovered_mates
+                                                           + ext_perft.direct_discovered_mates
+                                                           + ext_perft.double_discovered_mates);
             } else if (strcmp(argument, "divide") == 0) {
                 const size_t nodes_searched = divide(&engine->position,
                                                      (size_t)strtoull(strtok(NULL, delimeters), NULL, 10));

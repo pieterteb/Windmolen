@@ -74,18 +74,22 @@ static size_t divide(struct Position* position, const size_t depth) {
 }
 
 
-// Struct to keep data of extended perft. To clarify, a move can fall under multiple categories. For example, an en
-// passant move is also a capture, and a checkmate is also a check, and can potentially be a discovery check etc.
+// Struct to keep data of extended perft. To clarify, a check can only belong to one category of checks and a mating
+// move can only belong to one category of mates. This is the same as done by The Grand Chess Tree:
+// https://grandchesstree.com/
 struct ExtendedPerft {
-    size_t capture;
-    size_t en_passant;
-    size_t castle;
-    size_t promotion;
-    size_t check;
-    size_t discovery_check;
-    size_t double_check;
-    size_t checkmate;
-    size_t double_checkmate;
+    size_t captures;
+    size_t en_passants;
+    size_t castles;
+    size_t promotions;
+    size_t direct_checks;
+    size_t single_discovered_checks;
+    size_t direct_discovered_checks;
+    size_t double_discovered_checks;
+    size_t direct_mates;
+    size_t single_discovered_mates;
+    size_t direct_discovered_mates;
+    size_t double_discovered_mates;
 };
 
 // Same as perft_depth_nonzero(), except it computes extra information and stores that in `ext_perft`.
@@ -104,41 +108,60 @@ static size_t extended_perft_depth_nonzero(struct Position* position, size_t dep
 
             // We do not test for en passant here as that will be done later.
             if (piece_on_square(position, destination) != PIECE_NONE)
-                ++ext_perft->capture;
+                ++ext_perft->captures;
 
             // These three cases are mutually exclusive.
             if (move_type == MOVE_TYPE_EN_PASSANT) {
                 // An en passant move is always a capture.
-                ++ext_perft->capture;
-                ++ext_perft->en_passant;
+                ++ext_perft->captures;
+                ++ext_perft->en_passants;
             } else if (move_type == MOVE_TYPE_CASTLE) {
-                ++ext_perft->castle;
+                ++ext_perft->castles;
             } else if (move_type == MOVE_TYPE_PROMOTION) {
-                ++ext_perft->promotion;
+                ++ext_perft->promotions;
             }
 
 
-            const bool direct_check    = is_direct_check(position, movelist[i]);
-            const bool discovery_check = is_discovery_check(position, movelist[i]);
+            const bool direct_check     = gives_direct_check(position, movelist[i]);
+            const bool discovered_check = gives_discovered_check(position, movelist[i]);
 
-            if (direct_check | discovery_check) {
-                ++ext_perft->check;
-
-                if (discovery_check)
-                    ++ext_perft->discovery_check;
-
+            // We only look for checkmate if the move is check. This saves computation time as we do not need to
+            // generate all legal moves all the time.
+            if (direct_check | discovered_check) {
                 Move temp_movelist[MAX_MOVES];
+                struct PositionInfo position_info;
+                do_move(position, &position_info, movelist[i]);
                 const size_t temp_move_count = generate_legal_moves(position, temp_movelist);
 
-                if (temp_move_count == 0)
-                    ++ext_perft->checkmate;
+                const Bitboard checkers = position->info->checkers;  // We still need this for double discovered checks.
+                undo_move(position, movelist[i]);
 
-                // A double check occurs if and only if we have a direct check and a discovery check.
-                if (direct_check && discovery_check) {
-                    ++ext_perft->double_check;
-
-                    if (move_count == 0)
-                        ++ext_perft->double_checkmate;
+                // Checks, else mates.
+                if (temp_move_count != 0) {
+                    if (direct_check && discovered_check) {
+                        ++ext_perft->direct_discovered_checks;
+                    } else if (direct_check) {
+                        ++ext_perft->direct_checks;
+                    } else if (!popcount64_greater_than_one(checkers)) {
+                        // If we do not have a direct check, and there is only one checker, we must have a single
+                        // discovered check, else a double discovered check.
+                        ++ext_perft->single_discovered_checks;
+                    } else {
+                        ++ext_perft->double_discovered_checks;
+                    }
+                } else {
+                    // Same as above but with mate variants.
+                    if (direct_check && discovered_check) {
+                        ++ext_perft->direct_discovered_mates;
+                    } else if (direct_check) {
+                        ++ext_perft->direct_mates;
+                    } else if (!popcount64_greater_than_one(checkers)) {
+                        // If we do not have a direct mater, and there is only one checker, we must have a single
+                        // discovered mater, else a double discovered mater.
+                        ++ext_perft->single_discovered_mates;
+                    } else {
+                        ++ext_perft->double_discovered_mates;
+                    }
                 }
             }
         }

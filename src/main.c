@@ -4,12 +4,14 @@
 #include "engine.h"
 #include "uci.h"
 #include "zobrist.h"
+#include "evaluation.h"
 
 
 
 int main(void) {
     initialize_bitboards();
     initialize_zobrist_keys();
+    initialize_piece_square_tables();
 
     // Make sure stdout is line buffered.
     setvbuf(stdout, NULL, _IOLBF, 0);

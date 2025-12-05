@@ -388,8 +388,8 @@ static INLINE bool gives_discovered_check(const struct Position* position, const
                                  ^ captured_bitboard;
         const enum Square king = king_square(position, opponent);
 
-        // We manually inline square_is_attacked() here and modify it slightly (sorry for the mess). It is guaranteed
-        // that the king is not attacked by one of our pawns, knights or our king.
+        // We manually inline attackers_of_square() here and modify it. It is guaranteed that the king is not attacked
+        // by one of our pawns, knights or our king.
         const bool king_is_attacked = (bishop_attacks(king, occupancy) & bishop_queen_occupancy(position, side_to_move))
                                    != EMPTY_BITBOARD
                                    || (rook_attacks(king, occupancy) & rook_queen_occupancy(position, side_to_move))

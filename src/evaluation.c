@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#include "bitboard.h"
+#include "board.h"
 #include "piece.h"
 #include "position.h"
 #include "util.h"

@@ -5,20 +5,11 @@
 #include <limits.h>
 
 #include "position.h"
+#include "score.h"
 
 
 
-typedef int Score;
-
-
-constexpr Score DRAW_SCORE = 0;
-constexpr Score MATE_SCORE = SHRT_MAX / 2;
-
-
-// Initializes the piece square tables used for evaluating a position.
-void initialize_piece_square_tables();
-
-// Evaluates `position` and returns its score.
+// Returns the score of `position`.
 Score evaluate_position(const struct Position* position);
 
 

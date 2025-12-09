@@ -8,6 +8,7 @@
 
 #include "bitboard.h"
 #include "move.h"
+#include "score.h"
 #include "util.h"
 #include "zobrist.h"
 
@@ -22,6 +23,10 @@ struct PositionInfo {
     enum CastlingRights castling_rights;
     enum Square en_passant_square;
     size_t halfmove_clock;
+
+    Score middle_game_score[COLOR_COUNT];
+    Score end_game_score[COLOR_COUNT];
+    int game_phase;
 
     struct PositionInfo* previous_info;
     ZobristKey zobrist_key;
@@ -160,65 +165,73 @@ static INLINE void place_piece(struct Position* position, const enum Piece piece
     assert(is_valid_piece(piece));
     assert(is_valid_square(square));
 
-    const Bitboard bitboard           = square_bitboard(square);
+    const Bitboard bitboard         = square_bitboard(square);
+    const enum PieceType piece_type = type_of_piece(piece);
+    const enum Color piece_color    = color_of_piece(piece);
+
     position->piece_on_square[square] = piece;
-    position->occupancy_by_type[type_of_piece(piece)] |= bitboard;
-    position->occupancy_by_color[color_of_piece(piece)] |= bitboard;
-    position->info->zobrist_key ^= piece_zobrist_keys[piece][square];
-}
-
-// Places piece of `color` and `piece_type` on `square` in `position`.
-static INLINE void place_piece_type(struct Position* position, const enum Color color, const enum PieceType piece_type,
-                                    const enum Square square) {
-    assert(position != nullptr);
-    assert(is_valid_color(color));
-    assert(is_valid_piece_type(piece_type));
-    assert(is_valid_square(square));
-
-    const enum Piece piece  = create_piece(color, piece_type);
-    const Bitboard bitboard = square_bitboard(square);
     position->occupancy_by_type[piece_type] |= bitboard;
-    position->occupancy_by_color[color] |= bitboard;
-    position->piece_on_square[square] = piece;
-    position->info->zobrist_key ^= piece_zobrist_keys[piece][square];
+    position->occupancy_by_color[piece_color] |= bitboard;
+
+    position->info->middle_game_score[piece_color] += piece_square_middle_game[piece][square];
+    position->info->end_game_score[piece_color] += piece_square_end_game[piece][square];
+    position->info->game_phase += game_phase_increment[piece_type];
 }
 
 // Removes `piece` from `square` in `position`.
-static INLINE void remove_piece(struct Position* position, const enum Piece piece, const enum Square square) {
+static INLINE void remove_piece(struct Position* position, const enum Square square) {
+    assert(position != nullptr);
+
+    const enum Piece piece = piece_on_square(position, square);
+
+    assert(is_valid_piece(piece));
+    assert(is_valid_square(square));
+    assert(piece_on_square(position, square) == piece);
+
+    const Bitboard bitboard         = square_bitboard(square);
+    const enum PieceType piece_type = type_of_piece(piece);
+    const enum Color piece_color    = color_of_piece(piece);
+
+    position->piece_on_square[square] = PIECE_NONE;
+    position->occupancy_by_type[piece_type] ^= bitboard;
+    position->occupancy_by_color[piece_color] ^= bitboard;
+
+    position->info->middle_game_score[piece_color] -= piece_square_middle_game[piece][square];
+    position->info->end_game_score[piece_color] -= piece_square_end_game[piece][square];
+    position->info->game_phase -= game_phase_increment[piece_type];
+}
+
+// Replaces a piece on `square` with `piece` in `position`.
+static INLINE void replace_piece(struct Position* position, const enum Piece piece, const enum Square square) {
     assert(position != nullptr);
     assert(is_valid_piece(piece));
     assert(is_valid_square(square));
 
-    const Bitboard bitboard = square_bitboard(square);
-
-    assert((piece_occupancy_by_type(position, type_of_piece(piece)) & bitboard) != EMPTY_BITBOARD);
-    assert((piece_occupancy_by_color(position, color_of_piece(piece)) & bitboard) != EMPTY_BITBOARD);
-    assert(piece_on_square(position, square) == piece);
-
-    position->piece_on_square[square] = PIECE_NONE;
-    position->occupancy_by_type[type_of_piece(piece)] ^= bitboard;
-    position->occupancy_by_color[color_of_piece(piece)] ^= bitboard;
-    position->info->zobrist_key ^= piece_zobrist_keys[piece][square];
+    remove_piece(position, square);
+    place_piece(position, piece, square);
 }
 
-// Removes piece of `color` and `piece_type` from `square` in `position`.
-static INLINE void remove_piece_type(struct Position* position, const enum Color color, const enum PieceType piece_type,
-                                     const enum Square square) {
+// Moves a piece from `source` to `destination` in `position`.
+static INLINE void move_piece(struct Position* position, const enum Square source, const enum Square destination) {
     assert(position != nullptr);
-    assert(is_valid_color(color));
-    assert(is_valid_piece_type(piece_type));
-    assert(is_valid_square(square));
+    assert(is_valid_square(source));
+    assert(is_valid_square(destination));
+    assert(source != destination);
 
-    const Bitboard bitboard = square_bitboard(square);
+    const Bitboard bitboard      = square_bitboard(source) | square_bitboard(destination);
+    const enum Piece piece       = piece_on_square(position, source);
+    const enum Color piece_color = color_of_piece(piece);
 
-    assert((piece_occupancy_by_type(position, piece_type) & bitboard) != EMPTY_BITBOARD);
-    assert((piece_occupancy_by_color(position, color) & bitboard) != EMPTY_BITBOARD);
-    assert(piece_on_square(position, square) == create_piece(color, piece_type));
+    position->piece_on_square[source]      = PIECE_NONE;
+    position->piece_on_square[destination] = piece;
+    position->occupancy_by_type[type_of_piece(piece)] ^= bitboard;
+    position->occupancy_by_color[piece_color] ^= bitboard;
 
-    position->occupancy_by_type[piece_type] ^= bitboard;
-    position->occupancy_by_color[color] ^= bitboard;
-    position->piece_on_square[square] = PIECE_NONE;
-    position->info->zobrist_key ^= piece_zobrist_keys[create_piece(color, piece_type)][square];
+    position->info->middle_game_score[piece_color] += piece_square_middle_game[piece][destination]
+                                                    - piece_square_middle_game[piece][source];
+    position->info->end_game_score[piece_color] += piece_square_end_game[piece][destination]
+                                                 - piece_square_end_game[piece][source];
+    // Game phase does not change.
 }
 
 

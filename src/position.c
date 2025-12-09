@@ -12,7 +12,6 @@
 #include "board.h"
 #include "move.h"
 #include "piece.h"
-#include "score.h"
 #include "util.h"
 #include "zobrist.h"
 

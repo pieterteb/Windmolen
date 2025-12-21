@@ -12,7 +12,7 @@ int main(void) {
     initialize_zobrist_keys();
 
     // Make sure stdout is line buffered.
-    setvbuf(stdout, NULL, _IOLBF, 0);
+    setvbuf(stdout, nullptr, _IOLBF, 0);
 
     struct Engine engine;
     uci_loop(&engine);

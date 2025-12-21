@@ -6,26 +6,54 @@
 
 
 
-#define HASH_OPTION_NAME  "Hash"
-#define MIN_HASH_SIZE     ((uint64_t)1)
-#define MAX_HASH_SIZE     ((uint64_t)1)
-#define DEFAULT_HASH_SIZE ((uint64_t)1)
+enum OptionType {
+    OPTION_TYPE_CHECK,
+    OPTION_TYPE_SPIN,
+    OPTION_TYPE_COMBO,
+    OPTION_TYPE_BUTTON,
+    OPTION_TYPE_STRING,
 
-#define THREAD_OPTION_NAME   "Threads"
-#define MIN_THREAD_COUNT     ((uint64_t)1)
-#define MAX_THREAD_COUNT     ((uint64_t)1)
-#define DEFAULT_THREAD_COUNT ((uint64_t)1)
-
-#define MULTIPV_OPTION_NAME "MultiPV"
-#define MIN_MULTIPV         ((uint64_t)1)
-#define MAX_MULTIPV         ((uint64_t)1)
-#define DEFAULT_MULTIPV     ((uint64_t)1)
-
-struct Options {
-    uint64_t hash_size;
-    size_t thread_count;
-    size_t multipv;
+    OPTION_TYPE_COUNT
 };
+
+
+static constexpr const char OPTION_THREAD_COUNT_NAME[]    = "Threads";
+static constexpr enum OptionType OPTION_THREAD_COUNT_TYPE = OPTION_TYPE_SPIN;
+static constexpr size_t OPTION_THREAD_COUNT_DEFAULT       = 1;
+static constexpr size_t OPTION_THREAD_COUNT_MIN           = 1;
+static constexpr size_t OPTION_THREAD_COUNT_MAX           = 1024;
+
+static constexpr const char OPTION_HASH_SIZE_NAME[]    = "Hash";
+static constexpr enum OptionType OPTION_HASH_SIZE_TYPE = OPTION_TYPE_SPIN;
+static constexpr uint64_t OPTION_HASH_SIZE_DEFAULT     = 1;
+static constexpr uint64_t OPTION_HASH_SIZE_MIN         = 1;
+static constexpr uint64_t OPTION_HASH_SIZE_MAX         = 1;
+
+static constexpr const char OPTION_CLEAR_HASH_NAME[]    = "Clear Hash";
+static constexpr enum OptionType OPTION_CLEAR_HASH_TYPE = OPTION_TYPE_BUTTON;
+
+static constexpr const char OPTION_PONDER_MODE_NAME[]    = "Ponder";
+static constexpr enum OptionType OPTION_PONDER_MODE_TYPE = OPTION_TYPE_CHECK;
+static constexpr bool OPTION_PONDER_MODE_DEFAULT         = false;
+
+static constexpr const char OPTION_MOVE_OVERHEAD_NAME[]    = "Move Overhead";
+static constexpr enum OptionType OPTION_MOVE_OVERHEAD_TYPE = OPTION_TYPE_SPIN;
+static constexpr uint64_t OPTION_MOVE_OVERHEAD_DEFAULT     = 10;  // 10 ms.
+static constexpr uint64_t OPTION_MOVE_OVERHEAD_MIN         = 0;
+static constexpr uint64_t OPTION_MOVE_OVERHEAD_MAX         = 5000;  // 5 s.
+
+
+// This structure contains the values of the various options that are supported and can be changed by the UCI protocol.
+struct Options {
+    size_t thread_count;
+    uint64_t hash_size;
+    uint64_t move_overhead;
+    bool ponder_mode;
+};
+
+
+// Sets all options in `options` to their default values.
+void initialize_options(struct Options* options);
 
 
 

@@ -3,19 +3,22 @@
 
 
 #include <stdatomic.h>
-#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "evaluation.h"
+#include "move.h"
 #include "move_generation.h"
 #include "position.h"
 #include "threads.h"
+#include "util.h"
 
 
 
-constexpr size_t MAX_SEARCH_DEPTH = MAX_MOVES;
+static constexpr size_t MAX_SEARCH_DEPTH = MAX_MOVES;
 
 
+// This struct contains thread local search information.
 struct Searcher {
     struct Position root_position;
     Move root_moves[MAX_MOVES];
@@ -30,18 +33,18 @@ struct Searcher {
 
     struct ThreadPool* thread_pool;
     size_t thread_index;
-
-    bool search_aborted;
 };
 
-static inline bool is_main_thread(const struct Searcher* searcher) {
-    assert(searcher != NULL);
+// Returns whether `searcher` is the searcher belonging to the main thread.
+static INLINE bool is_main_thread(const struct Searcher* searcher) {
+    assert(searcher != nullptr);
 
     return searcher->thread_index == 0;
 }
 
 
-void start_searcher(struct Searcher* searcher);
+// Makes `searcher` search its position.
+void perform_search(struct Searcher* searcher);
 
 
 

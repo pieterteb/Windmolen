@@ -18,7 +18,7 @@
 // In the code however, we only ever use them for the side to move. Still, we keep them as they are likely to be needed
 // for future engine enhancements.
 
-// Struct used for undoing moves.
+// Structure used for undoing moves and detecting threefold repetitions.
 struct PositionInfo {
     enum CastlingRights castling_rights;
     enum Square en_passant_square;
@@ -36,6 +36,7 @@ struct PositionInfo {
     int repetition;
 };
 
+// Structure that describes a chess position.
 struct Position {
     Bitboard occupancy_by_type[PIECE_TYPE_COUNT - 1];  // We do not differentiate between white and black pawns here.
     Bitboard occupancy_by_color[COLOR_COUNT];

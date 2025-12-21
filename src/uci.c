@@ -8,23 +8,28 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "board.h"
 #include "engine.h"
+#include "move.h"
 #include "options.h"
 #include "perft.h"
+#include "piece.h"
 #include "position.h"
 #include "search.h"
 #include "time_manager.h"
 
 
 
-#define LINE_BUFFER_SIZE 65536
+static constexpr size_t LINE_BUFFER_SIZE = 65536;
+// clang-format off
+static constexpr const char DELIMETERS[] = " \t";
+// clang-format on
 
 
-const char delimeters[] = " \t";
-
-
-static Move parse_move(struct Position* position, const char* move_string) {
-    assert(move_string != NULL);
+// Parse a move from `move_string` given the current `position`.
+static Move parse_move(const struct Position* position, const char* move_string) {
+    assert(position != nullptr);
+    assert(move_string != nullptr);
     assert(move_string[4] == '\0' || move_string[5] == '\0');
 
     static const enum MoveType char_to_promotion[] = {['n'] = MOVE_TYPE_KNIGHT_PROMOTION,
@@ -36,19 +41,19 @@ static Move parse_move(struct Position* position, const char* move_string) {
     const enum Square destination = square_from_coordinates(char_to_file(move_string[2]), char_to_rank(move_string[3]));
     enum MoveType move_type       = MOVE_TYPE_NORMAL;
 
-    if (source == king_square(position, position->side_to_move) && abs(destination - source) == 2 * DIRECTION_EAST) {
+    if (move_string[4] != '\0') {
+        move_type = char_to_promotion[(int)move_string[4]];
+    } else if (source == king_square(position, position->side_to_move) && distance(source, destination) == 2) {
         move_type = MOVE_TYPE_CASTLE;
-    } else if (destination == position->info->en_passant_square
+    } else if (destination == en_passant_square(position)
                && type_of_piece(piece_on_square(position, source)) == PIECE_TYPE_PAWN) {
         move_type = MOVE_TYPE_EN_PASSANT;
-    } else if (move_string[4] != '\0') {
-        move_type = char_to_promotion[(int)move_string[4]];
     }
 
     return new_move(source, destination, move_type);
 }
 
-void print_move(Move move) {
+void print_move(const Move move) {
     assert(!is_weird_move(move));
 
     // clang-format off
@@ -82,15 +87,27 @@ static void uci_id() {
 }
 
 static void uci_options() {
-    printf("option name " HASH_OPTION_NAME " type spin default %" PRIu64 " min %" PRIu64 " max %" PRIu64 "\n",
-           DEFAULT_HASH_SIZE, MIN_HASH_SIZE, MAX_HASH_SIZE);
-    printf("option name " THREAD_OPTION_NAME " type spin default %zu min %zu max %zu\n", DEFAULT_THREAD_COUNT,
-           MIN_THREAD_COUNT, MAX_THREAD_COUNT);
-    printf("option name " MULTIPV_OPTION_NAME " type spin default %zu min %zu max %zu\n", DEFAULT_MULTIPV, MIN_MULTIPV,
-           MAX_MULTIPV);
+    // 7 is the length of the longest type + 1.
+    static const char type_to_string[PIECE_TYPE_COUNT][7] = {[OPTION_TYPE_CHECK]  = "check",
+                                                             [OPTION_TYPE_SPIN]   = "spin",
+                                                             [OPTION_TYPE_COMBO]  = "combo",
+                                                             [OPTION_TYPE_BUTTON] = "button",
+                                                             [OPTION_TYPE_STRING] = "string"};
+
+    printf("option name %s type %s default %zu min %zu max %zu\n", OPTION_THREAD_COUNT_NAME,
+           type_to_string[OPTION_THREAD_COUNT_TYPE], OPTION_THREAD_COUNT_DEFAULT, OPTION_THREAD_COUNT_MIN,
+           OPTION_THREAD_COUNT_MAX);
+    printf("option name %s type %s default %" PRIu64 " min %" PRIu64 " max %" PRIu64 "\n", OPTION_HASH_SIZE_NAME,
+           type_to_string[OPTION_HASH_SIZE_TYPE], OPTION_HASH_SIZE_DEFAULT, OPTION_HASH_SIZE_MIN, OPTION_HASH_SIZE_MAX);
+    printf("option name %s type %s\n", OPTION_CLEAR_HASH_NAME, type_to_string[OPTION_CLEAR_HASH_TYPE]);
+    printf("option name %s type %s default %s\n", OPTION_PONDER_MODE_NAME, type_to_string[OPTION_PONDER_MODE_TYPE],
+           OPTION_PONDER_MODE_DEFAULT ? "true" : "false");
+    printf("option name %s type %s default %" PRIu64 " min %" PRIu64 " max %" PRIu64 "\n", OPTION_MOVE_OVERHEAD_NAME,
+           type_to_string[OPTION_MOVE_OVERHEAD_TYPE], OPTION_MOVE_OVERHEAD_DEFAULT, OPTION_MOVE_OVERHEAD_MIN,
+           OPTION_MOVE_OVERHEAD_MAX);
 }
 
-void uci_best_move(Move best_move) {
+void uci_best_move(const Move best_move) {
     assert(!is_weird_move(best_move));
 
     printf("bestmove ");
@@ -100,70 +117,77 @@ void uci_best_move(Move best_move) {
 
 
 static void handle_setoption(struct Engine* engine) {
-    assert(engine != NULL);
+    assert(engine != nullptr);
 
     // strtok() has already been 'initialized' in the main UCI loop.
-    const char* argument = strtok(NULL, delimeters);
-    assert(strcmp(argument, "name") == 0);
+    strtok(nullptr, DELIMETERS);  // Skip "name".
 
-    argument = strtok(NULL, delimeters);
-    if (strcmp(argument, HASH_OPTION_NAME) == 0) {
-        argument = strtok(NULL, delimeters);
-        assert(strcmp(argument, "value") == 0);
-        engine->options.hash_size = (uint64_t)strtoull(strtok(NULL, delimeters), NULL, 10);
-    } else if (strcmp(argument, THREAD_OPTION_NAME) == 0) {
-        argument = strtok(NULL, delimeters);
-        assert(strcmp(argument, "value") == 0);
-        engine->options.thread_count = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+    char option_name[128] = "";
+    const char* temp      = strtok(nullptr, DELIMETERS);  // First word of option name.
+    while (temp != nullptr && strcmp(temp, "value") != 0) {
+        strcat(option_name, temp);
+        strcat(option_name, " ");
+        temp = strtok(nullptr, DELIMETERS);
+    }
+    option_name[strlen(option_name) - 1] = '\0';  // Set the last space to terminator.
 
-        construct_thread_pool(&engine->thread_pool, engine->options.thread_count);
-    } else if (strcmp(argument, MULTIPV_OPTION_NAME) == 0) {
-        argument = strtok(NULL, delimeters);
-        assert(strcmp(argument, "value") == 0);
-        engine->options.multipv = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+    if (strcmp(option_name, OPTION_THREAD_COUNT_NAME) == 0) {
+        engine->options.thread_count = (size_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
+        resize_thread_pool(&engine->thread_pool, engine->options.thread_count);
+    } else if (strcmp(option_name, OPTION_HASH_SIZE_NAME) == 0) {
+        engine->options.hash_size = (uint64_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
+    } else if (strcmp(option_name, OPTION_CLEAR_HASH_NAME) == 0) {
+        // TODO: Clear hash when hash is implemented.
+    } else if (strcmp(option_name, OPTION_PONDER_MODE_NAME) == 0) {
+        const char* ponder_mode = strtok(nullptr, DELIMETERS);
+        if (strcmp(ponder_mode, "false")) {
+            engine->options.ponder_mode = false;
+        } else if (strcmp(ponder_mode, "true")) {
+            engine->options.ponder_mode = true;
+        }
+    } else if (strcmp(option_name, OPTION_MOVE_OVERHEAD_NAME) == 0) {
+        engine->options.move_overhead      = 1000ULL * (uint64_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
+        engine->time_manager.move_overhead = engine->options.move_overhead;
     }
 }
 
-// THIS IS A TEMPORARY SOLUTION
-static struct PositionInfo temp_infos[8000];
-static size_t temp_info_count = 0;
-
 static void handle_position(struct Engine* engine) {
-    assert(engine != NULL);
+    assert(engine != nullptr);
 
-    temp_info_count = 0;
+    engine->info_history_count = 0;
 
     // strtok() has already been 'initialized' in the main UCI loop.
-    const char* argument = strtok(NULL, delimeters);
+    const char* argument = strtok(nullptr, DELIMETERS);
 
-    const char* fen_string = NULL;
+    const char* fen_string = nullptr;
     if (strcmp(argument, "fen") == 0) {
         fen_string = argument + strlen(argument) + 1;  // Move to first character after terminator.
         while (isspace(*fen_string))
             ++fen_string;  // Move pointer to start of fen string.
-        fen_string = setup_position_from_fen(&engine->position, &engine->info, fen_string);
+        fen_string = setup_position_from_fen(&engine->position, &engine->info_history[engine->info_history_count++],
+                                             fen_string);
     } else if (strcmp(argument, "startpos") == 0) {
-        setup_start_position(&engine->position, &engine->info);
+        setup_start_position(&engine->position, &engine->info_history[engine->info_history_count++]);
     } else if (strcmp(argument, "kiwipete") == 0) {
-        setup_kiwipete_position(&engine->position, &engine->info);
+        setup_kiwipete_position(&engine->position, &engine->info_history[engine->info_history_count++]);
     }
 
-    argument = strtok((char*)fen_string, delimeters);
-    if (argument == NULL)
+    argument = strtok((char*)fen_string, DELIMETERS);
+    if (argument == nullptr)
         return;
 
     if (strcmp(argument, "moves") == 0) {
-        argument = strtok(NULL, delimeters);
-        while (argument != NULL) {
+        argument = strtok(nullptr, DELIMETERS);
+        while (argument != nullptr) {
             const Move move = parse_move(&engine->position, argument);
-            do_move(&engine->position, &temp_infos[temp_info_count++], move);
-            argument = strtok(NULL, delimeters);
+            do_move(&engine->position, &engine->info_history[engine->info_history_count++], move);
+            argument = strtok(nullptr, DELIMETERS);
         }
     }
 }
 
 static void handle_go(struct Engine* engine) {
-    assert(engine != NULL);
+    assert(engine != nullptr);
 
     struct SearchArguments* search_arguments = &engine->search_arguments;
     struct TimeManager* time_manager         = &engine->time_manager;
@@ -172,57 +196,59 @@ static void handle_go(struct Engine* engine) {
     reset_search_arguments(search_arguments);
 
     // strtok() has already been 'initialized' in the main UCI loop.
-    const char* argument = strtok(NULL, delimeters);
+    const char* argument = strtok(nullptr, DELIMETERS);
 
     // All times are converted from milliseconds to microseconds.
-    while (argument != NULL) {
+    while (argument != nullptr) {
         if (strcmp(argument, "wtime") == 0) {
-            search_arguments->infinite = false;
-            time_manager->white_time   = 1000ULL * (uint64_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            search_arguments->infinite_search = false;
+            time_manager->white_time          = 1000ULL * (uint64_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else if (strcmp(argument, "btime") == 0) {
-            search_arguments->infinite = false;
-            time_manager->black_time   = 1000ULL * (uint64_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            search_arguments->infinite_search = false;
+            time_manager->black_time          = 1000ULL * (uint64_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else if (strcmp(argument, "winc") == 0) {
-            time_manager->white_increment = 1000ULL * (uint64_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            time_manager->white_increment = 1000ULL * (uint64_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else if (strcmp(argument, "binc") == 0) {
-            time_manager->black_increment = 1000ULL * (uint64_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            time_manager->black_increment = 1000ULL * (uint64_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else if (strcmp(argument, "ponder") == 0) {
             search_arguments->ponder = true;
         } else if (strcmp(argument, "movetime") == 0) {
-            search_arguments->infinite = false;
-            time_manager->move_time    = 1000ULL * (uint64_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            search_arguments->infinite_search = false;
+            time_manager->move_time           = 1000ULL * (uint64_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else if (strcmp(argument, "movestogo") == 0) {
-            time_manager->moves_to_go = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            search_arguments->infinite_search = false;
+            time_manager->moves_to_go         = (size_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else if (strcmp(argument, "nodes") == 0) {
             // Not fully correctly implemented. The search will stop if the maximum amount of nodes is reached, but this
             // amount may be exceeded by quite a bit.
-            search_arguments->infinite  = false;
-            search_arguments->max_nodes = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            search_arguments->infinite_search  = false;
+            search_arguments->max_search_nodes = (size_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else if (strcmp(argument, "depth") == 0) {
-            search_arguments->infinite  = false;
-            search_arguments->max_depth = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            search_arguments->infinite_search  = false;
+            search_arguments->max_search_depth = (size_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else if (strcmp(argument, "infinite") == 0) {
-            search_arguments->max_depth = MAX_SEARCH_DEPTH;
+            search_arguments->max_search_depth = MAX_SEARCH_DEPTH;
         } else if (strcmp(argument, "searchmoves") == 0) {
-            argument = strtok(NULL, delimeters);
-            while (argument != NULL) {
+            argument = strtok(nullptr, DELIMETERS);
+            while (argument != nullptr) {
                 search_arguments->search_moves[search_arguments->search_move_count++] = parse_move(&engine->position,
                                                                                                    argument);
-                argument                                                              = strtok(NULL, delimeters);
+                argument                                                              = strtok(nullptr, DELIMETERS);
             }
         } else if (strcmp(argument, "mate") == 0) {
-            // Not implemented yet.
-            search_arguments->infinite  = false;
-            search_arguments->mate_in_x = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+            // TODO: Not implemented yet.
+            search_arguments->infinite_search = false;
+            search_arguments->mate_in_x       = (size_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
         } else {
             if (strcmp(argument, "perft") == 0) {
                 // Regular perft.
-                const size_t nodes = perft(&engine->position, (size_t)strtoull(strtok(NULL, delimeters), NULL, 10));
+                const size_t nodes = perft(&engine->position,
+                                           (size_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10));
                 printf("Nodes searched: %zu\n", nodes);
             } else if (strcmp(argument, "extperft") == 0) {
                 // Extended perth.
                 struct ExtendedPerft ext_perft;
-                const size_t depth = (size_t)strtoull(strtok(NULL, delimeters), NULL, 10);
+                const size_t depth = (size_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
                 const size_t nodes = extended_perft(&engine->position, depth, &ext_perft);
                 printf("Nodes searched:            %zu\n\n", nodes);
                 printf("Captures:                  %zu\n", ext_perft.captures);
@@ -245,7 +271,7 @@ static void handle_go(struct Engine* engine) {
                                                            + ext_perft.double_discovered_mates);
             } else if (strcmp(argument, "divide") == 0) {
                 const size_t nodes_searched = divide(&engine->position,
-                                                     (size_t)strtoull(strtok(NULL, delimeters), NULL, 10));
+                                                     (size_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10));
                 printf("\nNodes searched: %zu\n", nodes_searched);
             } else if (strcmp(argument, "print") == 0) {
                 print_position(&engine->position);
@@ -257,27 +283,28 @@ static void handle_go(struct Engine* engine) {
             return;
         }
 
-        argument = strtok(NULL, delimeters);
+        argument = strtok(nullptr, DELIMETERS);
     }
 
     start_search(engine);
 }
 
 void uci_loop(struct Engine* engine) {
-    assert(engine != NULL);
+    assert(engine != nullptr);
 
     initialize_engine(engine);
 
     uci_startup_message();
 
     char line[LINE_BUFFER_SIZE];
-    const char* command = NULL;
+    const char* command = nullptr;
 
     while (true) {
-        while (command == NULL) {
+        while (command == nullptr) {
             fgets(line, LINE_BUFFER_SIZE, stdin);
-            line[strcspn(line, "\n")] = '\0';
-            command                   = strtok(line, delimeters);
+            line[strcspn(line, "\n")] = ' ';  // We make sure the last character is white space. This is necessary for
+                                              // option handling.
+            command = strtok(line, DELIMETERS);
         }
 
         if (strcmp(command, "go") == 0) {
@@ -305,10 +332,10 @@ void uci_loop(struct Engine* engine) {
             break;
         } else if (strcmp(command, "debug") == 0) {
             // We have no debug mode so consume the on/off token and do nothing.
-            command = strtok(NULL, delimeters);
+            command = strtok(nullptr, DELIMETERS);
         }
 
-        command = strtok(NULL, delimeters);
+        command = strtok(nullptr, DELIMETERS);
     }
 }
 

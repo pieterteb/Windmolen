@@ -178,6 +178,10 @@ static void handle_position(struct Engine* engine) {
         argument = strtok(nullptr, DELIMETERS);
         while (argument != nullptr) {
             const Move move = parse_move(&engine->position, argument);
+
+            if (is_irreversible(&engine->position, move))
+                engine->info_history_count = 0;
+
             do_move(&engine->position, &engine->info_history[engine->info_history_count++], move);
             argument = strtok(nullptr, DELIMETERS);
         }

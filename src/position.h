@@ -327,6 +327,15 @@ static INLINE bool is_capture(const struct Position* position, const Move move) 
         || type_of_move(move) == MOVE_TYPE_EN_PASSANT;
 }
 
+// Returns whether `move` is irreversible in `position`.
+static INLINE bool is_irreversible(const struct Position* position, const Move move) {
+    assert(position != nullptr);
+    assert(!is_weird_move(move));
+
+    return piece_on_square(position, move_destination(move)) != PIECE_NONE
+        || type_of_piece(piece_on_square(position, move_source(move))) == PIECE_TYPE_PAWN;
+}
+
 // Returns whether `move` is a direct check in `position`, i.e. a move such that the moved piece attacks the enemy king.
 static INLINE bool gives_direct_check(const struct Position* position, const Move move) {
     assert(position != nullptr);

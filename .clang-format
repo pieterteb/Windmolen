@@ -27,8 +27,6 @@ MaxEmptyLinesToKeep: 3
 #   Prefix: Upper
 #   Suffix: Upper
 PenaltyBreakAssignment: 1000
-QualifierAlignment: Custom
-QualifierOrder: [static, inline, const, type, restrict, volatile]
 ReflowComments: Always
 RemoveEmptyLinesInUnwrappedLines: true
 RemoveParentheses: MultipleParentheses

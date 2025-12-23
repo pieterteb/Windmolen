@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdatomic.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 
@@ -26,11 +27,10 @@ static void wait_until_thread_finished_searching(struct Thread* thread) {
     mtx_unlock(&thread->search_mutex);
 }
 
-// Waits until all threads in `thread_pool` are done searching and in an idle loop.
-static void wait_until_finished_searching(struct ThreadPool* thread_pool) {
+void wait_until_finished_searching(struct ThreadPool* thread_pool, const bool wait_for_main_thread) {
     assert(thread_pool != nullptr);
 
-    for (size_t i = 0; i < thread_pool->thread_count; ++i)
+    for (size_t i = wait_for_main_thread ? 0 : 1; i < thread_pool->thread_count; ++i)
         wait_until_thread_finished_searching(&thread_pool->threads[i]);
 }
 
@@ -114,25 +114,30 @@ void resize_thread_pool(struct ThreadPool* thread_pool, const size_t thread_coun
     assert(thread_pool != nullptr);
     assert(thread_count > 0 && thread_count <= OPTION_THREAD_COUNT_MAX);
     // Either this is the first time we construct the thread pool or we should not be searching.
-    assert(atomic_load(&thread_pool->stop_search) || thread_pool->thread_count == 0);
+    assert(atomic_load(&thread_pool->stop_search)
+           || (thread_pool->thread_count == 0 && thread_pool->threads == nullptr));
 
-    wait_until_finished_searching(thread_pool);
-
-    while (thread_count > thread_pool->thread_count)
-        construct_thread(&thread_pool->threads[thread_pool->thread_count++]);
+    wait_until_finished_searching(thread_pool, true);
 
     while (thread_count < thread_pool->thread_count)
         destroy_thread(&thread_pool->threads[thread_pool->thread_count--]);
+
+    thread_pool->threads = realloc(thread_pool->threads, thread_count * sizeof(*thread_pool->threads));
+
+    while (thread_count > thread_pool->thread_count)
+        construct_thread(&thread_pool->threads[thread_pool->thread_count++]);
 }
 
 void destroy_thread_pool(struct ThreadPool* thread_pool) {
     assert(thread_pool != nullptr);
     assert(atomic_load(&thread_pool->stop_search));
 
-    wait_until_finished_searching(thread_pool);
+    wait_until_finished_searching(thread_pool, true);
 
     for (size_t i = 0; i < thread_pool->thread_count; ++i)
         destroy_thread(&thread_pool->threads[i]);
+
+    free(thread_pool->threads);
 }
 
 
@@ -142,7 +147,7 @@ void start_searching(struct ThreadPool* thread_pool, const struct Position* root
 
     // Make sure all threads are idle. This is necessary in case a search is stopped and another search is started
     // quickly after that.
-    wait_until_finished_searching(thread_pool);
+    wait_until_finished_searching(thread_pool, true);
 
     thread_pool->stop_search                 = false;
     thread_pool->search_aborted              = false;
@@ -169,10 +174,16 @@ void start_searching(struct ThreadPool* thread_pool, const struct Position* root
         memcpy(searcher->root_moves, root_moves, root_move_count * sizeof(*searcher->root_moves));
         searcher->root_move_count = root_move_count;
 
-        searcher->principal_variation_length = 0;
-
         // We set best_move to the first move such that we always have a move to return in case of short search times.
-        searcher->best_move      = root_moves[0];
+        searcher->principal_variation_table[0][0] = root_moves[0];
+        memset(searcher->principal_variation_length, 0,
+               MAX_SEARCH_DEPTH * sizeof(*searcher->principal_variation_length));
+
+        // The default score is MIN_SCORE. We need to do this in the following special case:
+        // Suppose a search ends very early. It is possible that one thread has computed a legitimate score of a certain
+        // move, and this will be that thread's best score. We want to always prefer a legitimate score over the default
+        // score. So if another thread was not able to evaluate at least one move, it will have a score of MIN_SCORE and
+        // hence will never be preferred over the other thread.
         searcher->best_score     = MIN_SCORE;
         searcher->nodes_searched = 0;
 

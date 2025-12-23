@@ -45,6 +45,7 @@ void initialize_engine(struct Engine* engine) {
 
     // We need to make sure the thread pool starts with 0 threads to properly resize the thread pool.
     engine->thread_pool.thread_count = 0;
+    engine->thread_pool.threads      = nullptr;
     resize_thread_pool(&engine->thread_pool, engine->options.thread_count);
 
     // We default to the regular start position of chess.

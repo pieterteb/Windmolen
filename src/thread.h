@@ -35,7 +35,7 @@ struct Thread {
 // thread. This thread takes care of search related actions that need to be executed by only one thread, for example,
 // checking whether search time is exceeded and collecting the best move from other threads.
 struct ThreadPool {
-    struct Thread threads[OPTION_THREAD_COUNT_MAX];
+    struct Thread* threads;
     size_t thread_count;
 
     struct TimeManager* time_manager;
@@ -52,6 +52,9 @@ static INLINE const struct Thread* main_thread(const struct ThreadPool* thread_p
     return &thread_pool->threads[0];
 }
 
+
+// Waits until all threads in `thread_pool` are done searching and in an idle loop.
+void wait_until_finished_searching(struct ThreadPool* thread_pool, const bool wait_for_main_thread);
 
 // Resize `thread_pool` to consist of `thread_count` different threads.
 void resize_thread_pool(struct ThreadPool* thread_pool, const size_t thread_count);

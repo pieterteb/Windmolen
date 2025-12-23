@@ -35,7 +35,7 @@ static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool
     const struct Searcher* searcher;
     for (size_t i = 1; i < thread_pool->thread_count; ++i) {
         searcher = &thread_pool->threads[i].searcher;
-        if (searcher->best_score > best_searcher->best_score)
+        if (searcher->best_score > atomic_load(&best_searcher->best_score))
             best_searcher = searcher;
     }
 
@@ -79,6 +79,14 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
             best_score = score;
             if (score > alpha)
                 alpha = score;
+
+            // Update the current principal variation. This is the new best move followed by the principal variation of
+            // that best move. Notice that principle_variation_table[ply + 1] was already computed in the alphabeta call
+            // above, so this works recursively and is well defined.
+            searcher->principal_variation_table[ply][0] = movelist[i];
+            memcpy(&searcher->principal_variation_table[ply][1], &searcher->principal_variation_table[ply + 1][0],
+                   searcher->principal_variation_length[ply + 1] * sizeof(Move));
+            searcher->principal_variation_length[ply] = searcher->principal_variation_length[ply + 1] + 1;
         }
         if (score >= beta)
             return best_score;
@@ -110,6 +118,14 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
         if (score > best_score && !atomic_load(&searcher->thread_pool->search_aborted)) {
             best_score       = score;
             *best_move_index = i;
+
+            // Update the current principal variation. This is the new best move followed by the principal variation of
+            // that best move. Notice that principle_variation_table[1] was already computed in the alphabeta call
+            // above, so this works recursively and is well defined.
+            searcher->principal_variation_table[0][0] = searcher->root_moves[i];
+            memcpy(&searcher->principal_variation_table[0][1], &searcher->principal_variation_table[1][0],
+                   searcher->principal_variation_length[1] * sizeof(Move));
+            searcher->principal_variation_length[0] = searcher->principal_variation_length[1] + 1;
         }
 
         undo_move(&searcher->root_position, searcher->root_moves[i]);
@@ -136,7 +152,8 @@ static void long_info(const struct ThreadPool* thread_pool, const size_t depth, 
 
     const struct Searcher* winner = best_searcher(thread_pool);
 
-    uci_long_info(depth, multipv, winner->best_score, nodes_searched, elapsed_time, winner->best_move);
+    uci_long_info(depth, multipv, winner->best_score, nodes_searched, elapsed_time,
+                  winner->principal_variation_table[0], winner->principal_variation_length[0]);
 }
 
 // Make `searcher` perform iterative deepening.
@@ -150,16 +167,15 @@ static void iterative_deepening(struct Searcher* searcher) {
         size_t best_move_index = SIZE_MAX;
         const Score best_score = root_search(searcher, depth, &best_move_index);
 
-        // If at least one move has been completely searched, we update the current best move. Else, the search result
+        // If we have completely searched at least one root move, we update the best score. Else, the search result
         // can not be trusted.
-        if (best_move_index != SIZE_MAX) {
-            searcher->best_score = best_score;
-            searcher->best_move  = searcher->root_moves[best_move_index];
+        if (best_move_index != SIZE_MAX)
+            atomic_store(&searcher->best_score, best_score);
 
-            // Make sure the new best move is checked first in the next iteration.
-            searcher->root_moves[best_move_index] = searcher->root_moves[0];
-            searcher->root_moves[0]               = searcher->best_move;
-        }
+        // Make sure the new best move is checked first in the next iteration. If we have not completely searched at
+        // least one move, this will be invalid, but we will not do another iteration anyway.
+        searcher->root_moves[best_move_index] = searcher->root_moves[0];
+        searcher->root_moves[0]               = searcher->principal_variation_table[0][0];
 
         if (is_main_thread(searcher)) {
             const uint64_t elapsed_time = get_time_us() - start_time;
@@ -189,5 +205,10 @@ void perform_search(struct Searcher* searcher) {
                             || searcher->thread_pool->search_arguments->infinite_search;
     while (!atomic_load(&searcher->thread_pool->stop_search) && stop_required) {}
 
-    uci_best_move(best_searcher(searcher->thread_pool)->best_move);
+    // Other threads might still be stopping their search which can cause and incorrect results in
+    // uci_best_move(). Therefore, we wait until all threads except for the main thread (as the main thread is right
+    // here) finished searching.
+    wait_until_finished_searching(searcher->thread_pool, false);
+
+    uci_best_move(best_move(best_searcher(searcher->thread_pool)));
 }

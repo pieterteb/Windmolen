@@ -21,11 +21,12 @@ struct Searcher {
     Move root_moves[MAX_MOVES];
     size_t root_move_count;
 
-    Move principal_variation[MAX_SEARCH_DEPTH];
-    size_t principal_variation_length;
+    // principal_variation_table[i][j] is the jth move of the principle variation at depth i. We have 0 <= j <=
+    // principle_variation_length[i].
+    Move principal_variation_table[MAX_SEARCH_DEPTH][MAX_SEARCH_DEPTH];
+    size_t principal_variation_length[MAX_SEARCH_DEPTH];
 
-    Move best_move;
-    Score best_score;
+    _Atomic(Score) best_score;
     _Atomic(uint64_t) nodes_searched;
 
     struct ThreadPool* thread_pool;
@@ -37,6 +38,14 @@ static INLINE bool is_main_thread(const struct Searcher* searcher) {
     assert(searcher != nullptr);
 
     return searcher->thread_index == 0;
+}
+
+// Returns the best move of `searcher`.
+static INLINE Move best_move(const struct Searcher* searcher) {
+    assert(searcher != nullptr);
+
+    // This move is guaranteed to exist by definition of start_searching().
+    return searcher->principal_variation_table[0][0];
 }
 
 

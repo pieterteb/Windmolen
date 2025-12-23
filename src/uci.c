@@ -340,7 +340,10 @@ void uci_loop(struct Engine* engine) {
 
 
 void uci_long_info(const size_t depth, const size_t multipv, Score score, const size_t nodes, const uint64_t time,
-                   const Move best_move) {
+                   const Move* principal_variation, const size_t principal_variation_length) {
+    assert(principal_variation != nullptr);
+    assert(principal_variation_length > 0);
+
     const uint64_t time_ms = time / 1000;
     const size_t nps       = (time == 0) ? 0 : 1000000 * nodes / time;
 
@@ -356,7 +359,12 @@ void uci_long_info(const size_t depth, const size_t multipv, Score score, const 
     printf("nps %zu ", nps);
     printf("tbhits 0 ");
     printf("time %" PRIu64 " ", time_ms);
-    printf("pv ");
-    print_move(best_move);
+    printf("pv");
+
+    for (size_t i = 0; i < principal_variation_length; ++i) {
+        putchar(' ');
+        print_move(principal_variation[i]);
+    }
+
     putchar('\n');
 }

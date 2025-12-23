@@ -51,14 +51,15 @@ static INLINE bool is_mate_score(const Score score) {
     return score > LONGEST_MATE || score < -LONGEST_MATE;
 }
 
-// Computes the number of plies in which it is mate from `score`, assuming `score` is a mate score.
-static INLINE size_t mate_score_to_plies(const Score score) {
+// Computes the number of plies in which it is mate from `score` and returns that as a score that is output to UCI,
+// assuming `score` is a mate score.
+static INLINE Score mate_score_in_plies(const Score score) {
     assert(is_mate_score(score));
 
     if (score < 0)
-        return (size_t)(score + MATE_SCORE);
+        return -MATE_SCORE - score;
 
-    return (size_t)(MATE_SCORE - score);
+    return MATE_SCORE - score;
 }
 
 

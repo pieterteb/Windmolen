@@ -353,7 +353,7 @@ void uci_long_info(const size_t depth, const size_t multipv, Score score, const 
 
     const bool mate = is_mate_score(score);
     if (mate)
-        score = (Score)mate_score_to_plies(score);
+        score = mate_score_in_plies(score);
 
     printf("info multipv %zu ", multipv);
     printf("depth %zu ", depth);

@@ -15,7 +15,7 @@
 #include "perft.h"
 #include "piece.h"
 #include "position.h"
-#include "search.h"
+#include "score.h"
 #include "time_manager.h"
 
 
@@ -339,18 +339,14 @@ void uci_loop(struct Engine* engine) {
 }
 
 
-void uci_long_info(size_t depth, size_t multipv, Score score, size_t nodes, uint64_t time, Move best_move) {
-    uint64_t time_ms = time / 1000;
-    size_t nps       = (time == 0) ? 0 : 1000000 * nodes / time;
+void uci_long_info(const size_t depth, const size_t multipv, Score score, const size_t nodes, const uint64_t time,
+                   const Move best_move) {
+    const uint64_t time_ms = time / 1000;
+    const size_t nps       = (time == 0) ? 0 : 1000000 * nodes / time;
 
-    bool mate = false;
-    if (score >= MATE_SCORE - (Score)MAX_SEARCH_DEPTH) {
-        mate  = true;
-        score = MATE_SCORE - score;
-    } else if (score <= -MATE_SCORE + (Score)MAX_SEARCH_DEPTH) {
-        mate  = true;
-        score = -MATE_SCORE - score;
-    }
+    const bool mate = is_mate_score(score);
+    if (mate)
+        score = (Score)mate_score_to_plies(score);
 
     printf("info multipv %zu ", multipv);
     printf("depth %zu ", depth);

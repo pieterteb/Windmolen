@@ -24,5 +24,5 @@ Score evaluate_position(const struct Position* position) {
         middle_game_phase = 24;  // In case of an early promotion.
     const int end_game_phase = 24 - middle_game_phase;
 
-    return (middle_game_score * middle_game_phase + end_game_score * end_game_phase) / 24;
+    return (Score)(middle_game_score * middle_game_phase + end_game_score * end_game_phase) / 24;
 }

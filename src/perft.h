@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "constants.h"
 #include "move.h"
 #include "move_generation.h"
 #include "position.h"

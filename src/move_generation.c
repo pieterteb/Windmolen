@@ -4,6 +4,7 @@
 
 #include "bitboard.h"
 #include "board.h"
+#include "constants.h"
 #include "move.h"
 #include "piece.h"
 #include "position.h"

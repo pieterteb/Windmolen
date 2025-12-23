@@ -5,19 +5,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "constants.h"
 #include "move.h"
 #include "options.h"
 #include "position.h"
 #include "thread.h"
 #include "time_manager.h"
 
-
-
-// According to official FIDE rules, after 50 consecutive reversible moves have been played, both players are allowed to
-// claim a draw, but are not required to. Both players may decide to play on, resulting in legal chess positions in
-// which more than 50 consecutive reversible moves have been played. However, after 75 consecutive reversible moves, the
-// game ends in a draw, unless the last move was a checkmate of course.
-static constexpr size_t HALFMOVE_CLOCK_LIMIT = 150;
 
 
 // This structure stores any arguments that might be passed with a search command in the UCI protocol.

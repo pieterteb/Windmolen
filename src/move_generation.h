@@ -4,13 +4,10 @@
 
 #include <stddef.h>
 
+#include "constants.h"
 #include "move.h"
 #include "position.h"
 
-
-
-// An upperbound for the maximum number of pseudolegal moves in a chess position.
-constexpr size_t MAX_MOVES = 256;
 
 
 // Generates all legal moves in `position` to `movelist` and returns the number of legal moves found.

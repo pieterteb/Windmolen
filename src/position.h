@@ -174,8 +174,8 @@ static INLINE void place_piece(struct Position* position, const enum Piece piece
     position->occupancy_by_type[piece_type] |= bitboard;
     position->occupancy_by_color[piece_color] |= bitboard;
 
-    position->info->middle_game_score[piece_color] += piece_square_middle_game[piece][square];
-    position->info->end_game_score[piece_color] += piece_square_end_game[piece][square];
+    position->info->middle_game_score[piece_color] += piece_square_value_middle_game[piece][square];
+    position->info->end_game_score[piece_color] += piece_square_value_end_game[piece][square];
     position->info->game_phase += game_phase_increment[piece_type];
 }
 
@@ -197,8 +197,8 @@ static INLINE void remove_piece(struct Position* position, const enum Square squ
     position->occupancy_by_type[piece_type] ^= bitboard;
     position->occupancy_by_color[piece_color] ^= bitboard;
 
-    position->info->middle_game_score[piece_color] -= piece_square_middle_game[piece][square];
-    position->info->end_game_score[piece_color] -= piece_square_end_game[piece][square];
+    position->info->middle_game_score[piece_color] -= piece_square_value_middle_game[piece][square];
+    position->info->end_game_score[piece_color] -= piece_square_value_end_game[piece][square];
     position->info->game_phase -= game_phase_increment[piece_type];
 }
 
@@ -228,10 +228,10 @@ static INLINE void move_piece(struct Position* position, const enum Square sourc
     position->occupancy_by_type[type_of_piece(piece)] ^= bitboard;
     position->occupancy_by_color[piece_color] ^= bitboard;
 
-    position->info->middle_game_score[piece_color] += piece_square_middle_game[piece][destination]
-                                                    - piece_square_middle_game[piece][source];
-    position->info->end_game_score[piece_color] += piece_square_end_game[piece][destination]
-                                                 - piece_square_end_game[piece][source];
+    position->info->middle_game_score[piece_color] += (Score)(piece_square_value_middle_game[piece][destination]
+                                                              - piece_square_value_middle_game[piece][source]);
+    position->info->end_game_score[piece_color] += (Score)(piece_square_value_end_game[piece][destination]
+                                                           - piece_square_value_end_game[piece][source]);
     // Game phase does not change.
 }
 

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "constants.h"
 #include "evaluation.h"
 #include "move.h"
 #include "move_generation.h"
@@ -43,7 +44,7 @@ static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool
 
 
 // Performs alphabeta search on non-root nodes.
-static Score alphabeta(struct Searcher* searcher, struct Position* position, Score alpha, Score beta,
+static Score alphabeta(struct Searcher* searcher, struct Position* position, Score alpha, const Score beta,
                        const size_t depth, const size_t ply) {
     assert(searcher != nullptr);
     assert(position != nullptr);
@@ -51,26 +52,27 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
     atomic_store(&searcher->nodes_searched, atomic_load(&searcher->nodes_searched) + 1);
 
     if (depth == 0) {
-        Score score = evaluate_position(position);
-        return (position->side_to_move == COLOR_WHITE) ? score : -score;
+        const Score score = evaluate_position(position);
+
+        return (position->side_to_move == COLOR_WHITE) ? score : (Score)-score;
     }
 
     if (is_main_thread(searcher) && !searcher->thread_pool->search_arguments->infinite_search)
         stop_if_time_exceeded(searcher);
 
     Move movelist[MAX_MOVES];
-    size_t move_count = generate_legal_moves(position, movelist);
+    const size_t move_count = generate_legal_moves(position, movelist);
 
     // Check if it is a stalemate position. If move_count == 0 but it ís check, it is mate which will be handled
     // automatically after this if statement. Also check the 50-move-rule and threefold repetition.
     if ((move_count == 0 && !in_check(position)) || is_draw(position, ply))
         return DRAW_SCORE;
 
-    Score best_score = -MATE_SCORE + (Score)ply;
+    Score best_score = (Score)-mate_score(ply);
     struct PositionInfo info;
     for (size_t i = 0; i < move_count; ++i) {
         do_move(position, &info, movelist[i]);
-        Score score = -alphabeta(searcher, position, -beta, -alpha, depth - 1, ply + 1);
+        Score score = (Score)-alphabeta(searcher, position, (Score)-beta, (Score)-alpha, depth - 1, ply + 1);
         undo_move(position, movelist[i]);
 
         if (score > best_score) {
@@ -99,12 +101,12 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
 
     atomic_store(&searcher->nodes_searched, atomic_load(&searcher->nodes_searched) + 1);
 
-    Score best_score = -MATE_SCORE;
+    Score best_score = (Score)-mate_score(0);
     struct PositionInfo info;
     for (size_t i = 0; i < searcher->root_move_count; ++i) {
         do_move(&searcher->root_position, &info, searcher->root_moves[i]);
 
-        Score score = -alphabeta(searcher, &searcher->root_position, -MATE_SCORE, MATE_SCORE, depth - 1, 1);
+        Score score = (Score)-alphabeta(searcher, &searcher->root_position, MIN_SCORE, MAX_SCORE, depth - 1, 1);
         if (score > best_score && !atomic_load(&searcher->thread_pool->search_aborted)) {
             best_score       = score;
             *best_move_index = i;
@@ -121,7 +123,8 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
 
 
 // Collects info from `thread_pool` and prints this to UCI together with `depth`, `multipv` and `elapsed_time`.
-static void long_info(const struct ThreadPool* thread_pool, size_t depth, size_t multipv, uint64_t elapsed_time) {
+static void long_info(const struct ThreadPool* thread_pool, const size_t depth, const size_t multipv,
+                      const uint64_t elapsed_time) {
     assert(thread_pool != nullptr);
     assert(depth > 0);
     assert(multipv > 0);

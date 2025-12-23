@@ -6,16 +6,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "evaluation.h"
+#include "constants.h"
 #include "move.h"
-#include "move_generation.h"
 #include "position.h"
+#include "score.h"
 #include "threads.h"
 #include "util.h"
 
-
-
-static constexpr size_t MAX_SEARCH_DEPTH = MAX_MOVES;
 
 
 // This struct contains thread local search information.

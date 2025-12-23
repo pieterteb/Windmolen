@@ -21,9 +21,7 @@
 
 
 static constexpr size_t LINE_BUFFER_SIZE = 65536;
-// clang-format off
 static constexpr const char DELIMETERS[] = " \t";
-// clang-format on
 
 
 // Parse a move from `move_string` given the current `position`.
@@ -317,16 +315,17 @@ void uci_loop(struct Engine* engine) {
             handle_position(engine);
         } else if (strcmp(command, "isready") == 0) {
             puts("readyok");
-            fflush(stdout);
         } else if (strcmp(command, "ucinewgame") == 0) {
-            // We currently do not need to do anything to reset the game state.
+            // We currently do not need to do anything to reset the game state. However, for conveniance, we set the
+            // position to the start position.
+            engine->info_history_count = 0;
+            setup_start_position(&engine->position, &engine->info_history[engine->info_history_count++]);
         } else if (strcmp(command, "setoption") == 0) {
             handle_setoption(engine);
         } else if (strcmp(command, "uci") == 0) {
             uci_id();
             uci_options();
             puts("uciok");
-            fflush(stdout);
         } else if (strcmp(command, "quit") == 0) {
             quit_engine(engine);
             break;

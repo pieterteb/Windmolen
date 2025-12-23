@@ -48,8 +48,9 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
                        const size_t depth, const size_t ply) {
     assert(searcher != nullptr);
     assert(position != nullptr);
+    assert(alpha < beta);
 
-    atomic_store(&searcher->nodes_searched, atomic_load(&searcher->nodes_searched) + 1);
+    atomic_fetch_add(&searcher->nodes_searched, 1);
 
     if (depth == 0) {
         const Score score = evaluate_position(position);
@@ -63,9 +64,15 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
     Move movelist[MAX_MOVES];
     const size_t move_count = generate_legal_moves(position, movelist);
 
-    // Check if it is a stalemate position. If move_count == 0 but it ís check, it is mate which will be handled
-    // automatically after this if statement. Also check the 50-move-rule and threefold repetition.
-    if ((move_count == 0 && !in_check(position)) || is_draw(position, ply))
+    // If there are no moves, we are mated or its stalemate.
+    if (move_count == 0) {
+        if (in_check(position))
+            return (Score)-mate_score(ply);
+
+        return DRAW_SCORE;
+    }
+
+    if (is_draw(position, ply))
         return DRAW_SCORE;
 
     Score best_score = (Score)-mate_score(ply);
@@ -77,6 +84,14 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
         undo_move(position, movelist[i]);
 
         if (score > best_score) {
+            // Update the current principal variation. This is the new best move followed by the principal variation of
+            // that best move. Notice that principle_variation_table[ply + 1] was already computed in the alphabeta call
+            // above, so this works recursively and is well defined.
+            searcher->principal_variation_table[ply][0] = movelist[i];
+            memcpy(&searcher->principal_variation_table[ply][1], &searcher->principal_variation_table[ply + 1][0],
+                   searcher->principal_variation_length[ply + 1] * sizeof(Move));
+            searcher->principal_variation_length[ply] = searcher->principal_variation_length[ply + 1] + 1;
+
             // Cut node.
             if (score >= beta)
                 return score;
@@ -85,14 +100,6 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
 
             if (score > alpha)
                 alpha = score;
-
-            // Update the current principal variation. This is the new best move followed by the principal variation of
-            // that best move. Notice that principle_variation_table[ply + 1] was already computed in the alphabeta call
-            // above, so this works recursively and is well defined.
-            searcher->principal_variation_table[ply][0] = movelist[i];
-            memcpy(&searcher->principal_variation_table[ply][1], &searcher->principal_variation_table[ply + 1][0],
-                   searcher->principal_variation_length[ply + 1] * sizeof(Move));
-            searcher->principal_variation_length[ply] = searcher->principal_variation_length[ply + 1] + 1;
         }
 
         if (atomic_load(&searcher->thread_pool->stop_search)) {
@@ -111,7 +118,7 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
     assert(best_move_index != nullptr);
     assert(depth > 0);
 
-    atomic_store(&searcher->nodes_searched, atomic_load(&searcher->nodes_searched) + 1);
+    atomic_fetch_add(&searcher->nodes_searched, 1);
 
     Score best_score     = (Score)-mate_score(0);
     Score alpha          = MIN_SCORE;
@@ -124,12 +131,6 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
         undo_move(&searcher->root_position, searcher->root_moves[i]);
 
         if (score > best_score && !atomic_load(&searcher->thread_pool->search_aborted)) {
-            best_score       = score;
-            *best_move_index = i;
-
-            if (score > alpha)
-                alpha = score;
-
             // Update the current principal variation. This is the new best move followed by the principal variation of
             // that best move. Notice that principle_variation_table[1] was already computed in the alphabeta call
             // above, so this works recursively and is well defined.
@@ -137,6 +138,12 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
             memcpy(&searcher->principal_variation_table[0][1], &searcher->principal_variation_table[1][0],
                    searcher->principal_variation_length[1] * sizeof(Move));
             searcher->principal_variation_length[0] = searcher->principal_variation_length[1] + 1;
+
+            best_score       = score;
+            *best_move_index = i;
+
+            if (score > alpha)
+                alpha = score;
         }
 
         if (atomic_load(&searcher->thread_pool->stop_search))
@@ -181,21 +188,18 @@ static void iterative_deepening(struct Searcher* searcher) {
         if (best_move_index != SIZE_MAX) {
             atomic_store(&searcher->best_score, best_score);
 
-            // If there is a forced mate, we can stop the search early as there will be no better moves.
-            if (is_mate_score(best_score))
-                break;
+            // Make sure the new best move is checked first in the next iteration.
+            searcher->root_moves[best_move_index] = searcher->root_moves[0];
+            searcher->root_moves[0]               = searcher->principal_variation_table[0][0];
         }
-
-        // Make sure the new best move is checked first in the next iteration. If we have not completely searched at
-        // least one move, this will be invalid, but we will not do another iteration anyway.
-        searcher->root_moves[best_move_index] = searcher->root_moves[0];
-        searcher->root_moves[0]               = searcher->principal_variation_table[0][0];
 
         if (is_main_thread(searcher)) {
             const uint64_t elapsed_time = get_time_us() - start_time;
             long_info(searcher->thread_pool, depth, 1, elapsed_time);
 
-            if (searcher->nodes_searched > searcher->thread_pool->search_arguments->max_search_nodes)
+            // We stop if we have searched too many nodes or we have found mate.
+            if (searcher->nodes_searched > searcher->thread_pool->search_arguments->max_search_nodes
+                || is_mate_score(best_searcher(searcher->thread_pool)->best_score))
                 atomic_store(&searcher->thread_pool->stop_search, true);
         }
 

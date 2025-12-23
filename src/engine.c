@@ -4,6 +4,7 @@
 #include <stdatomic.h>
 #include <stddef.h>
 
+#include "constants.h"
 #include "options.h"
 #include "position.h"
 #include "thread.h"

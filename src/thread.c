@@ -173,7 +173,7 @@ void start_searching(struct ThreadPool* thread_pool, const struct Position* root
 
         // We set best_move to the first move such that we always have a move to return in case of short search times.
         searcher->best_move      = root_moves[0];
-        searcher->best_score     = -MATE_SCORE;
+        searcher->best_score     = MIN_SCORE;
         searcher->nodes_searched = 0;
 
         searcher->thread_pool  = thread_pool;

@@ -69,6 +69,7 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
         return DRAW_SCORE;
 
     Score best_score = (Score)-mate_score(ply);
+
     struct PositionInfo info;
     for (size_t i = 0; i < move_count; ++i) {
         do_move(position, &info, movelist[i]);
@@ -76,7 +77,12 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
         undo_move(position, movelist[i]);
 
         if (score > best_score) {
+            // Cut node.
+            if (score >= beta)
+                return score;
+
             best_score = score;
+
             if (score > alpha)
                 alpha = score;
 
@@ -88,8 +94,6 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
                    searcher->principal_variation_length[ply + 1] * sizeof(Move));
             searcher->principal_variation_length[ply] = searcher->principal_variation_length[ply + 1] + 1;
         }
-        if (score >= beta)
-            return best_score;
 
         if (atomic_load(&searcher->thread_pool->stop_search)) {
             if (is_main_thread(searcher))
@@ -109,15 +113,22 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
 
     atomic_store(&searcher->nodes_searched, atomic_load(&searcher->nodes_searched) + 1);
 
-    Score best_score = (Score)-mate_score(0);
+    Score best_score     = (Score)-mate_score(0);
+    Score alpha          = MIN_SCORE;
+    constexpr Score beta = MAX_SCORE;
+
     struct PositionInfo info;
     for (size_t i = 0; i < searcher->root_move_count; ++i) {
         do_move(&searcher->root_position, &info, searcher->root_moves[i]);
+        Score score = (Score)-alphabeta(searcher, &searcher->root_position, -beta, (Score)-alpha, depth - 1, 1);
+        undo_move(&searcher->root_position, searcher->root_moves[i]);
 
-        Score score = (Score)-alphabeta(searcher, &searcher->root_position, MIN_SCORE, MAX_SCORE, depth - 1, 1);
         if (score > best_score && !atomic_load(&searcher->thread_pool->search_aborted)) {
             best_score       = score;
             *best_move_index = i;
+
+            if (score > alpha)
+                alpha = score;
 
             // Update the current principal variation. This is the new best move followed by the principal variation of
             // that best move. Notice that principle_variation_table[1] was already computed in the alphabeta call
@@ -127,8 +138,6 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
                    searcher->principal_variation_length[1] * sizeof(Move));
             searcher->principal_variation_length[0] = searcher->principal_variation_length[1] + 1;
         }
-
-        undo_move(&searcher->root_position, searcher->root_moves[i]);
 
         if (atomic_load(&searcher->thread_pool->stop_search))
             break;
@@ -169,8 +178,13 @@ static void iterative_deepening(struct Searcher* searcher) {
 
         // If we have completely searched at least one root move, we update the best score. Else, the search result
         // can not be trusted.
-        if (best_move_index != SIZE_MAX)
+        if (best_move_index != SIZE_MAX) {
             atomic_store(&searcher->best_score, best_score);
+
+            // If there is a forced mate, we can stop the search early as there will be no better moves.
+            if (is_mate_score(best_score))
+                break;
+        }
 
         // Make sure the new best move is checked first in the next iteration. If we have not completely searched at
         // least one move, this will be invalid, but we will not do another iteration anyway.

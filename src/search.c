@@ -64,6 +64,9 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
     Move movelist[MAX_MOVES];
     const size_t move_count = generate_legal_moves(position, movelist);
 
+    // Reset principal variation length for this depth.
+    searcher->principal_variation_length[ply] = 0;
+
     // If there are no moves, we are mated or its stalemate.
     if (move_count == 0) {
         if (in_check(position))

@@ -6,11 +6,11 @@
 
 
 // -2 because white and black pawns are the same, and the king has no value.
-[[maybe_unused]] static const Score piece_values_middle_game[PIECE_TYPE_COUNT - 2] = {82, 337, 365, 477, 1025};
-[[maybe_unused]] static const Score piece_values_end_game[PIECE_TYPE_COUNT - 2]    = {94, 281, 297, 512, 936};
+[[maybe_unused]] static const Value piece_values_middle_game[PIECE_TYPE_COUNT - 2] = {82, 337, 365, 477, 1025};
+[[maybe_unused]] static const Value piece_values_end_game[PIECE_TYPE_COUNT - 2]    = {94, 281, 297, 512, 936};
 
 // clang-format off
-const Score piece_square_value_middle_game[PIECE_COUNT][SQUARE_COUNT] = {
+const Value piece_square_value_middle_game[PIECE_COUNT][SQUARE_COUNT] = {
     [PIECE_WHITE_PAWN] = {
         82,   82,   82,   82,   82,   82,   82,   82,
         47,   81,   62,   59,   67,  106,  120,   60,
@@ -143,7 +143,7 @@ const Score piece_square_value_middle_game[PIECE_COUNT][SQUARE_COUNT] = {
        -15,   36,   12,  -54,    8,  -28,   24,   14
     }
 };
-const Score piece_square_value_end_game[PIECE_COUNT][SQUARE_COUNT] = {
+const Value piece_square_value_end_game[PIECE_COUNT][SQUARE_COUNT] = {
     [PIECE_WHITE_PAWN] = {
         94,  94,  94,  94,  94,  94,  94,  94,
        107, 102, 102, 104, 107,  94,  96,  87,

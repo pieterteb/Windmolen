@@ -343,7 +343,7 @@ void uci_loop(struct Engine* engine) {
 }
 
 
-void uci_long_info(const size_t depth, const size_t multipv, Score score, const size_t nodes, const uint64_t time,
+void uci_long_info(const size_t depth, const size_t multipv, Value value, const size_t nodes, const uint64_t time,
                    const Move* principal_variation, const size_t principal_variation_length) {
     assert(principal_variation != nullptr);
     assert(principal_variation_length > 0);
@@ -351,14 +351,14 @@ void uci_long_info(const size_t depth, const size_t multipv, Score score, const 
     const uint64_t time_ms = time / 1000;
     const size_t nps       = (time == 0) ? 0 : 1000000 * nodes / time;
 
-    const bool mate = is_mate_score(score);
+    const bool mate = is_mate_value(value);
     if (mate)
-        score = mate_score_in_plies(score);
+        value = mate_score_in_plies(value);
 
     printf("info multipv %zu ", multipv);
     printf("depth %zu ", depth);
     printf("seldepth %zu ", depth);
-    printf(mate ? "score mate %d " : "score cp %d ", score);
+    printf(mate ? "score mate %d " : "score cp %d ", value);
     printf("nodes %zu ", nodes);
     printf("nps %zu ", nps);
     printf("tbhits 0 ");

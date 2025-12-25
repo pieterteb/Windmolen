@@ -35,7 +35,7 @@ static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool
     const struct Searcher* searcher;
     for (size_t i = 1; i < thread_pool->thread_count; ++i) {
         searcher = &thread_pool->threads[i].searcher;
-        if (searcher->best_score > atomic_load(&best_searcher->best_score))
+        if (searcher->best_value > atomic_load(&best_searcher->best_value))
             best_searcher = searcher;
     }
 
@@ -44,18 +44,18 @@ static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool
 
 
 // Performs alphabeta search on non-root nodes.
-static Score alphabeta(struct Searcher* searcher, struct Position* position, Score alpha, const Score beta,
+static Value alphabeta(struct Searcher* searcher, struct Position* position, Value alpha, const Value beta,
                        const size_t depth, const size_t ply) {
     assert(searcher != nullptr);
     assert(position != nullptr);
-    assert(alpha < beta);
+    assert(alpha <= beta);
 
     atomic_fetch_add(&searcher->nodes_searched, 1);
 
     if (depth == 0) {
-        const Score score = evaluate_position(position);
+        const Value value = evaluate_position(position);
 
-        return (position->side_to_move == COLOR_WHITE) ? score : (Score)-score;
+        return (position->side_to_move == COLOR_WHITE) ? value : -value;
     }
 
     if (is_main_thread(searcher) && !searcher->thread_pool->search_arguments->infinite_search)
@@ -70,23 +70,34 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
     // If there are no moves, we are mated or its stalemate.
     if (move_count == 0) {
         if (in_check(position))
-            return (Score)-mate_score(ply);
+            return -mate_value(ply);
 
-        return DRAW_SCORE;
+        return DRAW_VALUE;
     }
 
     if (is_draw(position, ply))
-        return DRAW_SCORE;
+        return DRAW_VALUE;
 
-    Score best_score = (Score)-mate_score(ply);
+    Value best_value = MIN_VALUE;
 
     struct PositionInfo info;
     for (size_t i = 0; i < move_count; ++i) {
         do_move(position, &info, movelist[i]);
-        Score score = (Score)-alphabeta(searcher, position, (Score)-beta, (Score)-alpha, depth - 1, ply + 1);
+
+        const Value value = -alphabeta(searcher, position, -beta, -alpha, depth - 1, ply + 1);
+
         undo_move(position, movelist[i]);
 
-        if (score > best_score) {
+        if (value > best_value) {
+            // Cut node.
+            if (value >= beta)
+                return value;
+
+            best_value = value;
+
+            if (value > alpha)
+                alpha = value;
+
             // Update the current principal variation. This is the new best move followed by the principal variation of
             // that best move. Notice that principle_variation_table[ply + 1] was already computed in the alphabeta call
             // above, so this works recursively and is well defined.
@@ -94,15 +105,6 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
             memcpy(&searcher->principal_variation_table[ply][1], &searcher->principal_variation_table[ply + 1][0],
                    searcher->principal_variation_length[ply + 1] * sizeof(Move));
             searcher->principal_variation_length[ply] = searcher->principal_variation_length[ply + 1] + 1;
-
-            // Cut node.
-            if (score >= beta)
-                return score;
-
-            best_score = score;
-
-            if (score > alpha)
-                alpha = score;
         }
 
         if (atomic_load(&searcher->thread_pool->stop_search)) {
@@ -112,28 +114,35 @@ static Score alphabeta(struct Searcher* searcher, struct Position* position, Sco
         }
     }
 
-    return best_score;
+    return best_value;
 }
 
 // Performs search on root nodes.
-static Score root_search(struct Searcher* searcher, const size_t depth, size_t* best_move_index) {
+static Value root_search(struct Searcher* searcher, const size_t depth, size_t* best_move_index) {
     assert(searcher != nullptr);
     assert(best_move_index != nullptr);
     assert(depth > 0);
 
     atomic_fetch_add(&searcher->nodes_searched, 1);
 
-    Score best_score     = (Score)-mate_score(0);
-    Score alpha          = MIN_SCORE;
-    constexpr Score beta = MAX_SCORE;
+    // In root search, alpha is equivalent to the best value.
+    Value alpha          = MIN_VALUE;
+    constexpr Value beta = MAX_VALUE;
 
     struct PositionInfo info;
     for (size_t i = 0; i < searcher->root_move_count; ++i) {
         do_move(&searcher->root_position, &info, searcher->root_moves[i]);
-        Score score = (Score)-alphabeta(searcher, &searcher->root_position, -beta, (Score)-alpha, depth - 1, 1);
+
+        const Value value = -alphabeta(searcher, &searcher->root_position, -beta, -alpha, depth - 1, 1);
+
         undo_move(&searcher->root_position, searcher->root_moves[i]);
 
-        if (score > best_score && !atomic_load(&searcher->thread_pool->search_aborted)) {
+        // If the search has not been aborted at this point, it means that the current move has been searched
+        // completely, meaning we can trust the result stored in value.
+        if (value > alpha && !atomic_load(&searcher->thread_pool->search_aborted)) {
+            alpha            = value;
+            *best_move_index = i;
+
             // Update the current principal variation. This is the new best move followed by the principal variation of
             // that best move. Notice that principle_variation_table[1] was already computed in the alphabeta call
             // above, so this works recursively and is well defined.
@@ -141,19 +150,13 @@ static Score root_search(struct Searcher* searcher, const size_t depth, size_t* 
             memcpy(&searcher->principal_variation_table[0][1], &searcher->principal_variation_table[1][0],
                    searcher->principal_variation_length[1] * sizeof(Move));
             searcher->principal_variation_length[0] = searcher->principal_variation_length[1] + 1;
-
-            best_score       = score;
-            *best_move_index = i;
-
-            if (score > alpha)
-                alpha = score;
         }
 
         if (atomic_load(&searcher->thread_pool->stop_search))
             break;
     }
 
-    return best_score;
+    return alpha;
 }
 
 
@@ -171,7 +174,7 @@ static void long_info(const struct ThreadPool* thread_pool, const size_t depth, 
 
     const struct Searcher* winner = best_searcher(thread_pool);
 
-    uci_long_info(depth, multipv, winner->best_score, nodes_searched, elapsed_time,
+    uci_long_info(depth, multipv, winner->best_value, nodes_searched, elapsed_time,
                   winner->principal_variation_table[0], winner->principal_variation_length[0]);
 }
 
@@ -184,12 +187,12 @@ static void iterative_deepening(struct Searcher* searcher) {
 
     for (size_t depth = 1; depth <= max_depth; ++depth) {
         size_t best_move_index = SIZE_MAX;
-        const Score best_score = root_search(searcher, depth, &best_move_index);
+        const Value best_value = root_search(searcher, depth, &best_move_index);
 
-        // If we have completely searched at least one root move, we update the best score. Else, the search result
+        // If we have completely searched at least one root move, we update the best value. Else, the search result
         // can not be trusted.
         if (best_move_index != SIZE_MAX) {
-            atomic_store(&searcher->best_score, best_score);
+            atomic_store(&searcher->best_value, best_value);
 
             // Make sure the new best move is checked first in the next iteration.
             searcher->root_moves[best_move_index] = searcher->root_moves[0];
@@ -202,7 +205,7 @@ static void iterative_deepening(struct Searcher* searcher) {
 
             // We stop if we have searched too many nodes or we have found mate.
             if (searcher->nodes_searched > searcher->thread_pool->search_arguments->max_search_nodes
-                || is_mate_score(best_searcher(searcher->thread_pool)->best_score))
+                || is_mate_value(best_searcher(searcher->thread_pool)->best_value))
                 atomic_store(&searcher->thread_pool->stop_search, true);
         }
 

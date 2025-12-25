@@ -24,8 +24,8 @@ struct PositionInfo {
     enum Square en_passant_square;
     size_t halfmove_clock;
 
-    Score middle_game_score[COLOR_COUNT];
-    Score end_game_score[COLOR_COUNT];
+    Value middle_game_score[COLOR_COUNT];
+    Value end_game_score[COLOR_COUNT];
     int game_phase;
 
     struct PositionInfo* previous_info;
@@ -228,10 +228,10 @@ static INLINE void move_piece(struct Position* position, const enum Square sourc
     position->occupancy_by_type[type_of_piece(piece)] ^= bitboard;
     position->occupancy_by_color[piece_color] ^= bitboard;
 
-    position->info->middle_game_score[piece_color] += (Score)(piece_square_value_middle_game[piece][destination]
-                                                              - piece_square_value_middle_game[piece][source]);
-    position->info->end_game_score[piece_color] += (Score)(piece_square_value_end_game[piece][destination]
-                                                           - piece_square_value_end_game[piece][source]);
+    position->info->middle_game_score[piece_color] += piece_square_value_middle_game[piece][destination]
+                                                    - piece_square_value_middle_game[piece][source];
+    position->info->end_game_score[piece_color] += piece_square_value_end_game[piece][destination]
+                                                 - piece_square_value_end_game[piece][source];
     // Game phase does not change.
 }
 

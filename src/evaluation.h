@@ -9,8 +9,8 @@
 
 
 
-// Returns the score of `position`.
-Score evaluate_position(const struct Position* position);
+// Returns the value of `position`.
+Value evaluate_position(const struct Position* position);
 
 
 

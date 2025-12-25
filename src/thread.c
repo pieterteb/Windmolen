@@ -179,12 +179,12 @@ void start_searching(struct ThreadPool* thread_pool, const struct Position* root
         memset(searcher->principal_variation_length, 0,
                MAX_SEARCH_DEPTH * sizeof(*searcher->principal_variation_length));
 
-        // The default score is MIN_SCORE. We need to do this in the following special case:
-        // Suppose a search ends very early. It is possible that one thread has computed a legitimate score of a certain
-        // move, and this will be that thread's best score. We want to always prefer a legitimate score over the default
-        // score. So if another thread was not able to evaluate at least one move, it will have a score of MIN_SCORE and
+        // The default value is MIN_VALUE. We need to do this for the following special case:
+        // Suppose a search ends very early. It is possible that one thread has computed a legitimate value of a certain
+        // move, and this will be that thread's best value. We want to always prefer a legitimate value over the default
+        // value. So if another thread was not able to evaluate at least one move, it will have a value of MIN_VALUE and
         // hence will never be preferred over the other thread.
-        searcher->best_score     = MIN_SCORE;
+        searcher->best_value     = MIN_VALUE;
         searcher->nodes_searched = 0;
 
         searcher->thread_pool  = thread_pool;

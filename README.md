@@ -1,4 +1,4 @@
-Currently, Windmolen is a completely functional UCI chess engine (no Chess960 support) written in C. It uses a basic alpha-beta search and basic evaluation.
+Windmolen is a completely functional UCI chess engine (no Chess960 support) written in C.
 
 Usage:
 ```bash

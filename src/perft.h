@@ -17,7 +17,7 @@
 
 
 // Computes the number of leaf nodes in the chess search tree at nonzero `depth` in `position`.
-static size_t perft_depth_nonzero(struct Position* position, const size_t depth) {
+static size_t perft_nonzero_depth(struct Position* position, const size_t depth) {
     assert(position != nullptr);
     assert(depth > 0);
 
@@ -31,7 +31,7 @@ static size_t perft_depth_nonzero(struct Position* position, const size_t depth)
     struct PositionInfo position_info;
     for (size_t i = 0; i < move_count; ++i) {
         do_move(position, &position_info, movelist[i]);
-        nodes += perft_depth_nonzero(position, depth - 1);
+        nodes += perft_nonzero_depth(position, depth - 1);
         undo_move(position, movelist[i]);
     }
 
@@ -45,7 +45,7 @@ static INLINE size_t perft(struct Position* position, const size_t depth) {
     if (depth == 0)
         return 1;
 
-    return perft_depth_nonzero(position, depth);
+    return perft_nonzero_depth(position, depth);
 }
 
 // Computes the number of leaf nodes in the chess search tree at nonzero `depth` in `position`. Additionally, prints the
@@ -94,7 +94,7 @@ struct ExtendedPerft {
 };
 
 // Same as perft_depth_nonzero(), except it computes extra information and stores that in `ext_perft`.
-static size_t extended_perft_depth_nonzero(struct Position* position, size_t depth, struct ExtendedPerft* ext_perft) {
+static size_t extended_perft_nonzero_depth(struct Position* position, size_t depth, struct ExtendedPerft* ext_perft) {
     assert(position != nullptr);
     assert(ext_perft != nullptr);
     assert(depth > 0);
@@ -174,7 +174,7 @@ static size_t extended_perft_depth_nonzero(struct Position* position, size_t dep
     struct PositionInfo position_info;
     for (size_t i = 0; i < move_count; ++i) {
         do_move(position, &position_info, movelist[i]);
-        nodes += extended_perft_depth_nonzero(position, depth - 1, ext_perft);
+        nodes += extended_perft_nonzero_depth(position, depth - 1, ext_perft);
         undo_move(position, movelist[i]);
     }
 
@@ -191,7 +191,7 @@ static size_t extended_perft(struct Position* position, size_t depth, struct Ext
     if (depth == 0)
         return 1;
 
-    return extended_perft_depth_nonzero(position, depth, ext_perft);
+    return extended_perft_nonzero_depth(position, depth, ext_perft);
 }
 
 

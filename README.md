@@ -1,4 +1,4 @@
-Windmolen is a completely functional UCI chess engine (no Chess960 support) written in C.
+Windmolen is UCI chess engine (no Chess960 support) written in C.
 
 Usage:
 ```bash

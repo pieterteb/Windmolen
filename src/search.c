@@ -197,6 +197,11 @@ static void iterative_deepening(struct Searcher* searcher) {
             // Make sure the new best move is checked first in the next iteration.
             searcher->root_moves[best_move_index] = searcher->root_moves[0];
             searcher->root_moves[0]               = searcher->principal_variation_table[0][0];
+        } else {
+            // if best_move_index == SIZE_MAX, the search was aborted for sure and not a single move has been searched
+            // completely, this means that, essantially, we still have not searched the current depth, and thus we
+            // decrease it for the long_info() call later on.
+            --depth;
         }
 
         if (is_main_thread(searcher)) {

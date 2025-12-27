@@ -69,7 +69,7 @@ static Move* white_pseudolegal_moves(const struct Position* position, Move movel
     constexpr enum Color OPPONENT     = COLOR_BLACK;
 
     // All squares that do not contain one of our own pieces are potential targets.
-    Bitboard target = ~position->occupancy_by_color[SIDE_TO_MOVE];
+    Bitboard target = ~piece_occupancy_by_color(position, SIDE_TO_MOVE);
 
 
     /* Regular king moves. */
@@ -206,7 +206,7 @@ static Move* black_pseudolegal_moves(const struct Position* position, Move movel
     constexpr enum Color OPPONENT     = COLOR_WHITE;
 
     // All squares that do not contain one of our own pieces are potential targets.
-    Bitboard target = ~position->occupancy_by_color[SIDE_TO_MOVE];
+    Bitboard target = ~piece_occupancy_by_color(position, SIDE_TO_MOVE);
 
 
     /* Regular king moves. */
@@ -331,6 +331,218 @@ static Move* black_pseudolegal_moves(const struct Position* position, Move movel
     return movelist;
 }
 
+// Computes all pseudolegal captures for white in `position`, stores them in `capture_list` and returns the end of the
+// array. A pseudolegal capture here, is defined as a normal capture that may or may not put the side to move in check.
+// So in order to filter out the legal captures, we would have to check that a non-king piece does not reveal an attack
+// on the king or that the king destination square is not attacked.
+static Move* white_pseudolegal_captures(const struct Position* position, Move capture_list[static MAX_MOVES]) {
+    assert(position != nullptr);
+    assert(capture_list != nullptr);
+    assert(position->side_to_move == COLOR_WHITE);
+
+    constexpr enum Color SIDE_TO_MOVE = COLOR_WHITE;
+    constexpr enum Color OPPONENT     = COLOR_BLACK;
+
+    // Enemy pieces are the target.
+    Bitboard target = piece_occupancy_by_color(position, OPPONENT);
+
+
+    const Bitboard checkers = position->info->checkers;
+
+    // If we are in double check, there are no legal captures.
+    if (popcount64_greater_than_one(checkers))
+        return capture_list;
+
+
+    /* King captures. */
+    const enum Square king_source = king_square(position, SIDE_TO_MOVE);
+    capture_list = splat_piece_moves(capture_list, piece_base_attacks(PIECE_TYPE_KING, king_source) & target,
+                                     king_source);
+
+    // If in check, we update the target such that it is the attacing piece.
+    if (checkers != EMPTY_BITBOARD)
+        target = checkers;
+
+
+    /* Pawn captures. */
+    const Bitboard friendly_pawns      = piece_occupancy(position, SIDE_TO_MOVE, PIECE_TYPE_PAWN);
+    const Bitboard non_promotion_pawns = friendly_pawns & ~RANK_7_BITBOARD;
+
+    /* Non-promotion captures. */
+    Bitboard attacks_east = shift_bitboard_northeast(non_promotion_pawns) & target;
+    Bitboard attacks_west = shift_bitboard_northwest(non_promotion_pawns) & target;
+    capture_list          = splat_pawn_moves(capture_list, attacks_east, DIRECTION_NORTHEAST);
+    capture_list          = splat_pawn_moves(capture_list, attacks_west, DIRECTION_NORTHWEST);
+
+    /* En passant. */
+    const enum Square en_passant = en_passant_square(position);
+    if (en_passant != SQUARE_NONE) {
+        assert(rank_of_square(en_passant) == RANK_6);
+        // Notice how we are always considering en passant captures, even if we are in check and the en passant pawn is
+        // not the attacker of the king. We deal with this later in is_legal_en_passant().
+
+        // A white pawn attacks the en passant square if a black pawn on the en passant square would be attacking that
+        // white pawn.
+        Bitboard en_passant_attackers = non_promotion_pawns & piece_base_attacks(PIECE_TYPE_BLACK_PAWN, en_passant);
+
+        while (en_passant_attackers != EMPTY_BITBOARD)
+            *capture_list++ = new_move((enum Square)pop_lsb64(&en_passant_attackers), en_passant, MOVE_TYPE_EN_PASSANT);
+    }
+
+    /* Promotion captures. */
+    const Bitboard promotion_pawns = friendly_pawns & RANK_7_BITBOARD;
+
+    if (promotion_pawns != EMPTY_BITBOARD) {
+        attacks_east = shift_bitboard_northeast(promotion_pawns) & target;
+        attacks_west = shift_bitboard_northwest(promotion_pawns) & target;
+
+        enum Square destination;
+        while (attacks_east != EMPTY_BITBOARD) {
+            destination  = (enum Square)pop_lsb64(&attacks_east);
+            capture_list = new_promotions(capture_list, square_southwest(destination), destination);
+        }
+        while (attacks_west != EMPTY_BITBOARD) {
+            destination  = (enum Square)pop_lsb64(&attacks_west);
+            capture_list = new_promotions(capture_list, square_southeast(destination), destination);
+        }
+    }
+
+
+    /* Knight captures. */
+    Bitboard knights = piece_occupancy(position, SIDE_TO_MOVE, PIECE_TYPE_KNIGHT);
+    while (knights != EMPTY_BITBOARD) {
+        enum Square knight_square = (enum Square)pop_lsb64(&knights);
+        capture_list = splat_piece_moves(capture_list, piece_base_attacks(PIECE_TYPE_KNIGHT, knight_square) & target,
+                                         knight_square);
+    }
+
+
+    /* Bishop/Queen captures. */
+    Bitboard bishops_and_queens = bishop_queen_occupancy(position, SIDE_TO_MOVE);
+    while (bishops_and_queens != EMPTY_BITBOARD) {
+        enum Square piece_square = (enum Square)pop_lsb64(&bishops_and_queens);
+        capture_list = splat_piece_moves(capture_list, bishop_attacks(piece_square, position->total_occupancy) & target,
+                                         piece_square);
+    }
+
+
+    /* Rook/Queen captures. */
+    Bitboard rooks_and_queens = rook_queen_occupancy(position, SIDE_TO_MOVE);
+    while (rooks_and_queens != EMPTY_BITBOARD) {
+        enum Square piece_square = (enum Square)pop_lsb64(&rooks_and_queens);
+        capture_list = splat_piece_moves(capture_list, rook_attacks(piece_square, position->total_occupancy) & target,
+                                         piece_square);
+    }
+
+    return capture_list;
+}
+
+// Computes all pseudolegal captures for black in `position`, stores them in `capture_list` and returns the end of the
+// array. A pseudolegal capture here, is defined as a normal capture that may or may not put the side to move in check.
+// So in order to filter out the legal captures, we would have to check that a non-king piece does not reveal an attack
+// on the king or that the king destination square is not attacked.
+static Move* black_pseudolegal_captures(const struct Position* position, Move capture_list[static MAX_MOVES]) {
+    assert(position != nullptr);
+    assert(capture_list != nullptr);
+    assert(position->side_to_move == COLOR_BLACK);
+
+    constexpr enum Color SIDE_TO_MOVE = COLOR_BLACK;
+    constexpr enum Color OPPONENT     = COLOR_WHITE;
+
+    // Enemy pieces are the target.
+    Bitboard target = piece_occupancy_by_color(position, OPPONENT);
+
+
+    const Bitboard checkers = position->info->checkers;
+
+    // If we are in double check, there are no legal captures.
+    if (popcount64_greater_than_one(checkers))
+        return capture_list;
+
+
+    /* King captures. */
+    const enum Square king_source = king_square(position, SIDE_TO_MOVE);
+    capture_list = splat_piece_moves(capture_list, piece_base_attacks(PIECE_TYPE_KING, king_source) & target,
+                                     king_source);
+
+    // If in check, we update the target such that it is the attacing piece.
+    if (checkers != EMPTY_BITBOARD)
+        target = checkers;
+
+
+    /* Pawn captures. */
+    const Bitboard friendly_pawns      = piece_occupancy(position, SIDE_TO_MOVE, PIECE_TYPE_PAWN);
+    const Bitboard non_promotion_pawns = friendly_pawns & ~RANK_2_BITBOARD;
+
+    /* Non-promotion captures. */
+    Bitboard attacks_east = shift_bitboard_southeast(non_promotion_pawns) & target;
+    Bitboard attacks_west = shift_bitboard_southwest(non_promotion_pawns) & target;
+    capture_list          = splat_pawn_moves(capture_list, attacks_east, DIRECTION_SOUTHEAST);
+    capture_list          = splat_pawn_moves(capture_list, attacks_west, DIRECTION_SOUTHWEST);
+
+    /* En passant. */
+    const enum Square en_passant = en_passant_square(position);
+    if (en_passant != SQUARE_NONE) {
+        assert(rank_of_square(en_passant) == RANK_3);
+        // Notice how we are always considering en passant captures, even if we are in check and the en passant pawn is
+        // not the attacker of the king. We deal with this later in is_legal_en_passant().
+
+        // A black pawn attacks the en passant square if a white pawn on the en passant square would be attacking that
+        // black pawn.
+        Bitboard en_passant_attackers = non_promotion_pawns & piece_base_attacks(PIECE_TYPE_WHITE_PAWN, en_passant);
+
+        while (en_passant_attackers != EMPTY_BITBOARD)
+            *capture_list++ = new_move((enum Square)pop_lsb64(&en_passant_attackers), en_passant, MOVE_TYPE_EN_PASSANT);
+    }
+
+    /* Promotion captures. */
+    const Bitboard promotion_pawns = friendly_pawns & RANK_2_BITBOARD;
+
+    if (promotion_pawns != EMPTY_BITBOARD) {
+        attacks_east = shift_bitboard_southeast(promotion_pawns) & target;
+        attacks_west = shift_bitboard_southwest(promotion_pawns) & target;
+
+        enum Square destination;
+        while (attacks_east != EMPTY_BITBOARD) {
+            destination  = (enum Square)pop_lsb64(&attacks_east);
+            capture_list = new_promotions(capture_list, square_northwest(destination), destination);
+        }
+        while (attacks_west != EMPTY_BITBOARD) {
+            destination  = (enum Square)pop_lsb64(&attacks_west);
+            capture_list = new_promotions(capture_list, square_northeast(destination), destination);
+        }
+    }
+
+
+    /* Knight captures. */
+    Bitboard knights = piece_occupancy(position, SIDE_TO_MOVE, PIECE_TYPE_KNIGHT);
+    while (knights != EMPTY_BITBOARD) {
+        enum Square knight_square = (enum Square)pop_lsb64(&knights);
+        capture_list = splat_piece_moves(capture_list, piece_base_attacks(PIECE_TYPE_KNIGHT, knight_square) & target,
+                                         knight_square);
+    }
+
+
+    /* Bishop/Queen captures. */
+    Bitboard bishops_and_queens = bishop_queen_occupancy(position, SIDE_TO_MOVE);
+    while (bishops_and_queens != EMPTY_BITBOARD) {
+        enum Square piece_square = (enum Square)pop_lsb64(&bishops_and_queens);
+        capture_list = splat_piece_moves(capture_list, bishop_attacks(piece_square, position->total_occupancy) & target,
+                                         piece_square);
+    }
+
+
+    /* Rook/Queen captures. */
+    Bitboard rooks_and_queens = rook_queen_occupancy(position, SIDE_TO_MOVE);
+    while (rooks_and_queens != EMPTY_BITBOARD) {
+        enum Square piece_square = (enum Square)pop_lsb64(&rooks_and_queens);
+        capture_list = splat_piece_moves(capture_list, rook_attacks(piece_square, position->total_occupancy) & target,
+                                         piece_square);
+    }
+
+    return capture_list;
+}
+
 
 // Returns whether a pseudolegal king `move` is legal in `position`.
 static INLINE bool is_legal_king_move(const struct Position* position, const Move move) {
@@ -425,6 +637,38 @@ static bool is_legal_en_passant(const struct Position* position, const Move move
     return !king_is_attacked;
 }
 
+
+size_t generate_legal_captures(const struct Position* position, Move capture_list[static MAX_MOVES]) {
+    assert(position != nullptr);
+    assert(capture_list != nullptr);
+
+    const enum Color side_to_move = position->side_to_move;
+
+    Move* current = capture_list;
+    capture_list  = (side_to_move == COLOR_WHITE) ? white_pseudolegal_captures(position, capture_list)
+                                                  : black_pseudolegal_captures(position, capture_list);
+
+    const Bitboard pinned  = position->info->blockers[side_to_move] & piece_occupancy_by_color(position, side_to_move);
+    const enum Square king = king_square(position, side_to_move);
+
+    size_t size = 0;
+    while (current != capture_list) {
+        const enum Square source = move_source(*current);
+
+        // To make sure a pseudolegal capture is legal, we need to check whether it puts our king in check, which is
+        // only possible if we move the king, if we move a pinned piece or if we capture en passant.
+        if ((source == king && !is_legal_king_move(position, *current))
+            || ((pinned & square_bitboard(source)) != EMPTY_BITBOARD && !is_legal_pinned_move(position, *current))
+            || (type_of_move(*current) == MOVE_TYPE_EN_PASSANT && !is_legal_en_passant(position, *current))) {
+            *current = *(--capture_list);
+        } else {
+            ++current;
+            ++size;
+        }
+    }
+
+    return size;
+}
 
 size_t generate_legal_moves(const struct Position* position, Move movelist[static MAX_MOVES]) {
     assert(position != nullptr);

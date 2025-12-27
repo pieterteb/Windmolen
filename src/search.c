@@ -43,6 +43,48 @@ static const struct Searcher* best_searcher(const struct ThreadPool* thread_pool
 }
 
 
+static Value quiescence_search(struct Searcher* searcher, struct Position* position, Value alpha, const Value beta) {
+    assert(searcher != nullptr);
+    assert(position != nullptr);
+    assert(alpha <= beta);
+
+    atomic_fetch_add(&searcher->nodes_searched, 1);
+
+    // We can assume that their is always at least one move that can match or beat the lower bound.
+    const Value static_evaluation = evaluate_position(position);
+    Value best_value              = (position->side_to_move == COLOR_WHITE) ? static_evaluation : -static_evaluation;
+
+    if (best_value >= beta)
+        return best_value;
+
+    if (best_value > alpha)
+        alpha = best_value;
+
+    Move capture_list[MAX_MOVES];
+    const size_t capture_count = generate_legal_captures(position, capture_list);
+
+    struct PositionInfo info;
+    for (size_t i = 0; i < capture_count; ++i) {
+        do_move(position, &info, capture_list[i]);
+
+        const Value value = -quiescence_search(searcher, position, -beta, -alpha);
+
+        undo_move(position, capture_list[i]);
+
+        if (value >= beta)
+            return value;
+
+        if (value > best_value) {
+            best_value = value;
+        }
+
+        if (value > alpha)
+            alpha = value;
+    }
+
+    return best_value;
+}
+
 // Performs alphabeta search on non-root nodes.
 static Value alphabeta(struct Searcher* searcher, struct Position* position, Value alpha, const Value beta,
                        const size_t depth, const size_t ply) {
@@ -52,11 +94,8 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
 
     atomic_fetch_add(&searcher->nodes_searched, 1);
 
-    if (depth == 0) {
-        const Value value = evaluate_position(position);
-
-        return (position->side_to_move == COLOR_WHITE) ? value : -value;
-    }
+    if (depth == 0)
+        return quiescence_search(searcher, position, alpha, beta);
 
     if (is_main_thread(searcher) && !searcher->thread_pool->search_arguments->infinite_search)
         stop_if_time_exceeded(searcher);

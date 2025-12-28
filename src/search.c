@@ -10,6 +10,7 @@
 #include "evaluation.h"
 #include "move.h"
 #include "move_generation.h"
+#include "move_picker.h"
 #include "position.h"
 #include "thread.h"
 #include "time_manager.h"
@@ -63,6 +64,8 @@ static Value quiescence_search(struct Searcher* searcher, struct Position* posit
     Move capture_list[MAX_MOVES];
     const size_t capture_count = generate_legal_captures(position, capture_list);
 
+    mvv_lva_sort(capture_list, capture_count, position);
+
     struct PositionInfo info;
     for (size_t i = 0; i < capture_count; ++i) {
         do_move(position, &info, capture_list[i]);
@@ -74,9 +77,8 @@ static Value quiescence_search(struct Searcher* searcher, struct Position* posit
         if (value >= beta)
             return value;
 
-        if (value > best_value) {
+        if (value > best_value)
             best_value = value;
-        }
 
         if (value > alpha)
             alpha = value;

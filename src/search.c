@@ -105,6 +105,8 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
     Move movelist[MAX_MOVES];
     const size_t move_count = generate_legal_moves(position, movelist);
 
+    // mvv_lva_sort(movelist, move_count, position);
+
     // Reset principal variation length for this depth.
     searcher->principal_variation_length[ply] = 0;
 

@@ -266,6 +266,9 @@ static void iterative_deepening(struct Searcher* searcher) {
 void perform_search(struct Searcher* searcher) {
     assert(searcher != nullptr);
 
+    // Order the root moves.
+    mvv_lva_sort(searcher->root_moves, searcher->root_move_count, &searcher->root_position);
+
     iterative_deepening(searcher);
 
     if (!is_main_thread(searcher))

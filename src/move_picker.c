@@ -62,10 +62,6 @@ void mvv_lva_sort(Move move_list[static MAX_MOVES], const size_t move_count, con
 
         ++capture_value_count[capture_values[i]];
     }
-// #include <stdio.h>
-//     for (size_t i = 0; i <= NON_CAPTURE_VALUE; ++i) {
-//         printf("value %zu: %zu\n", i, capture_value_count[i]);
-//     }
 
     // Compute the index at which a certain value starts.
     for (size_t i = 1; i <= NON_CAPTURE_VALUE; ++i)

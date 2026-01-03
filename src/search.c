@@ -64,15 +64,18 @@ static Value quiescence_search(struct Searcher* searcher, struct Position* posit
     Move capture_list[MAX_MOVES];
     const size_t capture_count = generate_legal_captures(position, capture_list);
 
-    mvv_lva_sort(capture_list, capture_count, position);
+    int8_t capture_values[MAX_MOVES];
+    compute_capture_mvv_lva_values(position, capture_list, capture_count, capture_values);
 
     struct PositionInfo info;
     for (size_t i = 0; i < capture_count; ++i) {
-        do_move(position, &info, capture_list[i]);
+        const Move move = pick_move(capture_list, capture_values, capture_count, i);
+
+        do_move(position, &info, move);
 
         const Value value = -quiescence_search(searcher, position, -beta, -alpha);
 
-        undo_move(position, capture_list[i]);
+        undo_move(position, move);
 
         if (value >= beta)
             return value;
@@ -102,10 +105,8 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
     if (is_main_thread(searcher) && !searcher->thread_pool->search_arguments->infinite_search)
         stop_if_time_exceeded(searcher);
 
-    Move movelist[MAX_MOVES];
-    const size_t move_count = generate_legal_moves(position, movelist);
-
-    mvv_lva_sort(movelist, move_count, position);
+    Move move_list[MAX_MOVES];
+    const size_t move_count = generate_legal_moves(position, move_list);
 
     // Reset principal variation length for this depth.
     searcher->principal_variation_length[ply] = 0;
@@ -121,15 +122,20 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
     if (is_draw(position, ply))
         return DRAW_VALUE;
 
+    int8_t move_values[MAX_MOVES];
+    compute_mvv_lva_values(position, move_list, move_count, move_values);
+
     Value best_value = MIN_VALUE;
 
     struct PositionInfo info;
     for (size_t i = 0; i < move_count; ++i) {
-        do_move(position, &info, movelist[i]);
+        const Move move = pick_move(move_list, move_values, move_count, i);
+
+        do_move(position, &info, move);
 
         const Value value = -alphabeta(searcher, position, -beta, -alpha, depth - 1, ply + 1);
 
-        undo_move(position, movelist[i]);
+        undo_move(position, move);
 
         if (value > best_value) {
             // Cut node.
@@ -144,7 +150,7 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
             // Update the current principal variation. This is the new best move followed by the principal variation of
             // that best move. Notice that principle_variation_table[ply + 1] was already computed in the alphabeta call
             // above, so this works recursively and is well defined.
-            searcher->principal_variation_table[ply][0] = movelist[i];
+            searcher->principal_variation_table[ply][0] = move;
             memcpy(&searcher->principal_variation_table[ply][1], &searcher->principal_variation_table[ply + 1][0],
                    searcher->principal_variation_length[ply + 1] * sizeof(Move));
             searcher->principal_variation_length[ply] = searcher->principal_variation_length[ply + 1] + 1;
@@ -168,17 +174,23 @@ static Value root_search(struct Searcher* searcher, const size_t depth, size_t* 
 
     atomic_fetch_add(&searcher->nodes_searched, 1);
 
+
+    int8_t move_values[MAX_MOVES];
+    compute_mvv_lva_values(&searcher->root_position, searcher->root_moves, searcher->root_move_count, move_values);
+
     // In root search, alpha is equivalent to the best value.
     Value alpha          = MIN_VALUE;
     constexpr Value beta = MAX_VALUE;
 
     struct PositionInfo info;
     for (size_t i = 0; i < searcher->root_move_count; ++i) {
-        do_move(&searcher->root_position, &info, searcher->root_moves[i]);
+        const Move move = pick_move(searcher->root_moves, move_values, searcher->root_move_count, i);
+
+        do_move(&searcher->root_position, &info, move);
 
         const Value value = -alphabeta(searcher, &searcher->root_position, -beta, -alpha, depth - 1, 1);
 
-        undo_move(&searcher->root_position, searcher->root_moves[i]);
+        undo_move(&searcher->root_position, move);
 
         // If the search has not been aborted at this point, it means that the current move has been searched
         // completely, meaning we can trust the result stored in value.
@@ -189,7 +201,7 @@ static Value root_search(struct Searcher* searcher, const size_t depth, size_t* 
             // Update the current principal variation. This is the new best move followed by the principal variation of
             // that best move. Notice that principle_variation_table[1] was already computed in the alphabeta call
             // above, so this works recursively and is well defined.
-            searcher->principal_variation_table[0][0] = searcher->root_moves[i];
+            searcher->principal_variation_table[0][0] = move;
             memcpy(&searcher->principal_variation_table[0][1], &searcher->principal_variation_table[1][0],
                    searcher->principal_variation_length[1] * sizeof(Move));
             searcher->principal_variation_length[0] = searcher->principal_variation_length[1] + 1;
@@ -265,9 +277,6 @@ static void iterative_deepening(struct Searcher* searcher) {
 
 void perform_search(struct Searcher* searcher) {
     assert(searcher != nullptr);
-
-    // Order the root moves.
-    mvv_lva_sort(searcher->root_moves, searcher->root_move_count, &searcher->root_position);
 
     iterative_deepening(searcher);
 

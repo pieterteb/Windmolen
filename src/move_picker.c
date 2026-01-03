@@ -143,3 +143,33 @@ Move pick_move(Move move_list[static MAX_MOVES], int8_t move_values[MAX_MOVES], 
 
     return best_move;
 }
+
+Move pick_root_move(Move root_move_list[static MAX_MOVES], int8_t root_move_values[MAX_MOVES],
+                    const size_t root_move_count, const size_t start_index) {
+    assert(root_move_list != nullptr);
+    assert(root_move_values != nullptr);
+    assert(root_move_count > 0);
+    assert(start_index < root_move_count);
+
+    // To pick a move, we search for the move with the highest value, i.e. the highest priority. This is the move we
+    // will search next. If the move at the start index is not the best move, we need to swap it with the best move.
+
+    size_t best_index = start_index;
+
+    for (size_t i = start_index; i < root_move_count; ++i)
+        if (root_move_values[i] > root_move_values[best_index])
+            best_index = i;
+
+    const Move best_move = root_move_list[best_index];
+
+    if (best_index != start_index) {
+        root_move_list[best_index]  = root_move_list[start_index];
+        root_move_list[start_index] = best_move;
+
+        // We do not need the value of the best_index move anymore as it has already been sorted, so no need to swap. We
+        // can just copy.
+        root_move_values[best_index] = root_move_values[start_index];
+    }
+
+    return best_move;
+}

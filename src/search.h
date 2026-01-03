@@ -21,6 +21,9 @@ struct Searcher {
     Move root_moves[MAX_MOVES];
     size_t root_move_count;
 
+    int8_t root_move_values[MAX_MOVES];
+    size_t sorted_until_index;
+
     // principal_variation_table[i][j] is the jth move of the principle variation at depth i. We have 0 <= j <=
     // principle_variation_length[i].
     Move principal_variation_table[MAX_SEARCH_DEPTH][MAX_SEARCH_DEPTH];

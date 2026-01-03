@@ -174,17 +174,17 @@ static Value root_search(struct Searcher* searcher, const size_t depth, size_t* 
 
     atomic_fetch_add(&searcher->nodes_searched, 1);
 
-
-    int8_t move_values[MAX_MOVES];
-    compute_mvv_lva_values(&searcher->root_position, searcher->root_moves, searcher->root_move_count, move_values);
-
     // In root search, alpha is equivalent to the best value.
     Value alpha          = MIN_VALUE;
     constexpr Value beta = MAX_VALUE;
 
     struct PositionInfo info;
     for (size_t i = 0; i < searcher->root_move_count; ++i) {
-        const Move move = pick_move(searcher->root_moves, move_values, searcher->root_move_count, i);
+        Move move = searcher->root_moves[i];
+        if (i >= searcher->sorted_until_index) {
+            move = pick_root_move(searcher->root_moves, searcher->root_move_values, searcher->root_move_count, i);
+            ++searcher->sorted_until_index;
+        }
 
         do_move(&searcher->root_position, &info, move);
 

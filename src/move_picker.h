@@ -27,6 +27,11 @@ void compute_capture_mvv_lva_values(const struct Position* position, Move captur
 Move pick_move(Move move_list[static MAX_MOVES], int8_t move_values[MAX_MOVES], const size_t move_count,
                const size_t start_index);
 
+// Pick the root move with the highest 'root_move_value' from 'root_move_list' starting from 'start_index'. Using this
+// function ensures moves with higher search priority are searched first.
+Move pick_root_move(Move root_move_list[static MAX_MOVES], int8_t root_move_values[MAX_MOVES],
+                    const size_t root_move_count, const size_t start_index);
+
 
 
 #endif /* #ifndef WINDMOLEN_MOVE_PICKER_H_ */

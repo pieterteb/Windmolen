@@ -320,9 +320,9 @@ void uci_loop(struct Engine* engine) {
         } else if (strcmp(command, "isready") == 0) {
             puts("readyok");
         } else if (strcmp(command, "ucinewgame") == 0) {
-            // We currently do not need to do anything to reset the game state. However, for conveniance, we set the
-            // position to the start position.
-            engine->info_history_count = 0;
+            engine->info_history_count = 0;  // Reset the position info stack.
+
+            // For conveniance, we set the position back to the start position.
             setup_start_position(&engine->position, &engine->info_history[engine->info_history_count++]);
         } else if (strcmp(command, "setoption") == 0) {
             handle_setoption(engine);

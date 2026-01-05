@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdatomic.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -10,6 +11,7 @@
 #include "engine.h"
 #include "move.h"
 #include "move_generation.h"
+#include "move_picker.h"
 #include "search.h"
 #include "time_manager.h"
 
@@ -163,6 +165,9 @@ void start_searching(struct ThreadPool* thread_pool, const struct Position* root
         root_move_count = generate_legal_moves(root_position, root_moves);
     }
 
+    int8_t root_move_values[MAX_MOVES];
+    compute_mvv_lva_values(root_position, root_moves, root_move_count, root_move_values);
+
     if (!search_arguments->infinite_search)
         update_time_manager(thread_pool->time_manager, root_position->side_to_move);
 
@@ -173,6 +178,10 @@ void start_searching(struct ThreadPool* thread_pool, const struct Position* root
         memcpy(&searcher->root_position, root_position, sizeof(*root_position));
         memcpy(searcher->root_moves, root_moves, root_move_count * sizeof(*searcher->root_moves));
         searcher->root_move_count = root_move_count;
+
+        // Root moves have not been sorted yet.
+        searcher->sorted_until_index = 0;
+        memcpy(searcher->root_move_values, root_move_values, root_move_count * sizeof(*root_move_values));
 
         // We set best_move to the first move such that we always have a move to return in case of short search times.
         searcher->principal_variation_table[0][0] = root_moves[0];

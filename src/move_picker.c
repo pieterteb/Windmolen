@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <string.h>
+#include <stdint.h>
 
 #include "constants.h"
 #include "move.h"
@@ -11,67 +11,165 @@
 
 
 
-void mvv_lva_sort(Move move_list[static MAX_MOVES], const size_t move_count, const struct Position* position) {
-    assert(move_list != nullptr);
+// clang-format off
+
+// The value of a capture with `victim_type` and `aggressor_type` that represents what priority it is given in
+// the Most Valuable Victim - Least Valuable Aggressor capture ordering, is obtained with
+// move_value[victim_type][aggressor_type].
+static const int8_t capture_value[PIECE_TYPE_COUNT - 2][PIECE_TYPE_COUNT - 1] = {
+    [PIECE_TYPE_PAWN] = {
+        [PIECE_TYPE_PAWN] = 6,
+        [PIECE_TYPE_KNIGHT] = 5,
+        [PIECE_TYPE_BISHOP] = 4,
+        [PIECE_TYPE_ROOK] = 3,
+        [PIECE_TYPE_QUEEN] = 2,
+        [PIECE_TYPE_KING] = 1
+    },
+
+    [PIECE_TYPE_KNIGHT] = {
+        [PIECE_TYPE_PAWN] = 12,
+        [PIECE_TYPE_KNIGHT] = 11,
+        [PIECE_TYPE_BISHOP] = 10,
+        [PIECE_TYPE_ROOK] = 9,
+        [PIECE_TYPE_QUEEN] = 8,
+        [PIECE_TYPE_KING] = 7
+    },
+
+    [PIECE_TYPE_BISHOP] = {
+        [PIECE_TYPE_PAWN] = 18,
+        [PIECE_TYPE_KNIGHT] = 17,
+        [PIECE_TYPE_BISHOP] = 16,
+        [PIECE_TYPE_ROOK] = 15,
+        [PIECE_TYPE_QUEEN] = 14,
+        [PIECE_TYPE_KING] = 13
+    },
+
+    [PIECE_TYPE_ROOK] = {
+        [PIECE_TYPE_PAWN] = 24,
+        [PIECE_TYPE_KNIGHT] = 23,
+        [PIECE_TYPE_BISHOP] = 22,
+        [PIECE_TYPE_ROOK] = 21,
+        [PIECE_TYPE_QUEEN] = 20,
+        [PIECE_TYPE_KING] = 19
+    },
+
+    [PIECE_TYPE_QUEEN] = {
+        [PIECE_TYPE_PAWN] = 30,
+        [PIECE_TYPE_KNIGHT] = 29,
+        [PIECE_TYPE_BISHOP] = 28,
+        [PIECE_TYPE_ROOK] = 27,
+        [PIECE_TYPE_QUEEN] = 26,
+        [PIECE_TYPE_KING] = 25
+    }
+};
+// clang-format on
+
+
+void compute_mvv_lva_values(const struct Position* position, Move move_list[static MAX_MOVES], const size_t move_count,
+                            int8_t move_values[static MAX_MOVES]) {
     assert(position != nullptr);
+    assert(move_list != nullptr);
+    assert(move_values != nullptr);
 
-    // We assign each move an integer that represents what priority it is given in the Most Valuable Victim - Least
-    // Valuable Aggressor capture ordering. The lower the value, the higher the priority. The value of a capture is
-    // computed by aggressor_value + victim_value. A non-capture will get a value of NON_CAPTURE. Finally, we use a
-    // counting sort algorithm to sort the captures.
+    // We assign each move a value. The higher the value, the higher the priority it gets when picking a move.
 
-    if (move_count == 0)
-        return;
-
-    // clang-format off
-    static const int aggressor_value[] = {
-        [PIECE_TYPE_PAWN]   = 0,
-        [PIECE_TYPE_KNIGHT] = 1,
-        [PIECE_TYPE_BISHOP] = 2,
-        [PIECE_TYPE_ROOK]   = 3,
-        [PIECE_TYPE_QUEEN]  = 4,
-        [PIECE_TYPE_KING]   = 5,
-    };
-    static const int victim_value[] = {
-        [PIECE_TYPE_PAWN]   = (PIECE_TYPE_COUNT - 1) * 4,
-        [PIECE_TYPE_KNIGHT] = (PIECE_TYPE_COUNT - 1) * 3,
-        [PIECE_TYPE_BISHOP] = (PIECE_TYPE_COUNT - 1) * 2,
-        [PIECE_TYPE_ROOK]   = (PIECE_TYPE_COUNT - 1) * 1,
-        [PIECE_TYPE_QUEEN]  = (PIECE_TYPE_COUNT - 1) * 0,
-    };
-    // clang-format on
-
-    assert(aggressor_value[PIECE_TYPE_KING] + victim_value[PIECE_TYPE_PAWN] == 29);
-    constexpr int NON_CAPTURE_VALUE = 30;  // victim_value[PIECE_TYPE_NONE]
-
-    int capture_values[MAX_MOVES];
-    size_t capture_value_count[NON_CAPTURE_VALUE + 1] = {0};
+    const int8_t NON_CAPTURE_VALUE = 0;
 
     for (size_t i = 0; i < move_count; ++i) {
         const enum PieceType aggressor_type = type_of_piece(piece_on_square(position, move_source(move_list[i])));
         const enum Piece victim             = piece_on_square(position, move_destination(move_list[i]));
 
         if (type_of_move(move_list[i]) == MOVE_TYPE_EN_PASSANT) {
-            capture_values[i] = aggressor_value[PIECE_TYPE_PAWN] + victim_value[PIECE_TYPE_PAWN];
-        } else if (victim == PIECE_NONE) {
-            capture_values[i] = 30;
+            move_values[i] = capture_value[PIECE_TYPE_PAWN][PIECE_TYPE_PAWN];
         } else {
-            const enum PieceType victim_type = type_of_piece(victim);
-            capture_values[i]                = aggressor_value[aggressor_type] + victim_value[victim_type];
+            move_values[i] = (victim == PIECE_NONE) ? NON_CAPTURE_VALUE
+                                                    : capture_value[type_of_piece(victim)][aggressor_type];
         }
+    }
+}
 
-        ++capture_value_count[capture_values[i]];
+void compute_capture_mvv_lva_values(const struct Position* position, Move capture_list[static MAX_MOVES],
+                                    const size_t capture_count, int8_t capture_values[static MAX_MOVES]) {
+    assert(position != nullptr);
+    assert(capture_list != nullptr);
+    assert(capture_values != nullptr);
+
+    // We assign each capture a value. The higher the value, the higher the priority it gets when picking a move. In
+    // this function, it is assumed that all moves are captures.
+
+    for (size_t i = 0; i < capture_count; ++i) {
+        if (type_of_move(capture_list[i]) == MOVE_TYPE_EN_PASSANT) {
+            capture_values[i] = capture_value[PIECE_TYPE_PAWN][PIECE_TYPE_PAWN];
+        } else {
+            const enum PieceType victim_type = type_of_piece(
+            piece_on_square(position, move_destination(capture_list[i])));
+
+            const enum PieceType aggressor_type = type_of_piece(
+            piece_on_square(position, move_source(capture_list[i])));
+
+            capture_values[i] = capture_value[victim_type][aggressor_type];
+        }
+    }
+}
+
+
+Move pick_move(Move move_list[static MAX_MOVES], int8_t move_values[MAX_MOVES], const size_t move_count,
+               const size_t start_index) {
+    assert(move_list != nullptr);
+    assert(move_values != nullptr);
+    assert(move_count > 0);
+    assert(start_index < move_count);
+
+    // To pick a move, we search for the move with the highest value, i.e. the highest priority. This is the move we
+    // will search next. If the move at the start index is not the best move, we need to swap it with the best move.
+    // However, since in the next pick_move() call, start_index will be 1 greater than in the current call, it is not
+    // necessary to update the move located at start_index, as we will never search it again. Therefore, we only update
+    // the move at best_index.
+
+    size_t best_index = start_index;
+
+    for (size_t i = start_index; i < move_count; ++i)
+        if (move_values[i] > move_values[best_index])
+            best_index = i;
+
+    // Retrieve best move and place the move that is located at the start index further in the move list such that it
+    // can be considered in a future pick_move() call.
+    const Move best_move = move_list[best_index];
+
+    if (best_index != start_index) {
+        move_list[best_index]   = move_list[start_index];
+        move_values[best_index] = move_values[start_index];
     }
 
-    // Compute the index at which a certain value starts.
-    for (size_t i = 1; i <= NON_CAPTURE_VALUE; ++i)
-        capture_value_count[i] += capture_value_count[i - 1];
+    return best_move;
+}
 
-    Move temp_move_list[MAX_MOVES];
-    for (int i = (int)move_count - 1; i >= 0; --i) {
-        const int value                              = capture_values[i];
-        temp_move_list[--capture_value_count[value]] = move_list[i];
+Move pick_root_move(Move root_move_list[static MAX_MOVES], int8_t root_move_values[MAX_MOVES],
+                    const size_t root_move_count, const size_t start_index) {
+    assert(root_move_list != nullptr);
+    assert(root_move_values != nullptr);
+    assert(root_move_count > 0);
+    assert(start_index < root_move_count);
+
+    // To pick a move, we search for the move with the highest value, i.e. the highest priority. This is the move we
+    // will search next. If the move at the start index is not the best move, we need to swap it with the best move.
+
+    size_t best_index = start_index;
+
+    for (size_t i = start_index; i < root_move_count; ++i)
+        if (root_move_values[i] > root_move_values[best_index])
+            best_index = i;
+
+    const Move best_move = root_move_list[best_index];
+
+    if (best_index != start_index) {
+        root_move_list[best_index]  = root_move_list[start_index];
+        root_move_list[start_index] = best_move;
+
+        // We do not need the value of the best_index move anymore as it has already been sorted, so no need to swap. We
+        // can just copy.
+        root_move_values[best_index] = root_move_values[start_index];
     }
 
-    memcpy(move_list, temp_move_list, move_count * sizeof(*move_list));
+    return best_move;
 }

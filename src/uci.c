@@ -86,11 +86,11 @@ static void uci_id() {
 
 static void uci_options() {
     // 7 is the length of the longest type + 1.
-    static const char type_to_string[PIECE_TYPE_COUNT][7] = {[OPTION_TYPE_CHECK]  = "check",
-                                                             [OPTION_TYPE_SPIN]   = "spin",
-                                                             [OPTION_TYPE_COMBO]  = "combo",
-                                                             [OPTION_TYPE_BUTTON] = "button",
-                                                             [OPTION_TYPE_STRING] = "string"};
+    const char type_to_string[PIECE_TYPE_COUNT][7] = {[OPTION_TYPE_CHECK]  = "check",
+                                                      [OPTION_TYPE_SPIN]   = "spin",
+                                                      [OPTION_TYPE_COMBO]  = "combo",
+                                                      [OPTION_TYPE_BUTTON] = "button",
+                                                      [OPTION_TYPE_STRING] = "string"};
 
     printf("option name %s type %s default %zu min %zu max %zu\n", OPTION_THREAD_COUNT_NAME,
            type_to_string[OPTION_THREAD_COUNT_TYPE], OPTION_THREAD_COUNT_DEFAULT, OPTION_THREAD_COUNT_MIN,

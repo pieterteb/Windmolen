@@ -579,7 +579,7 @@ void print_position_debug(const struct Position* position) {
     printf("Middle game score (white -- black): %d -- %d\n", position->info->middle_game_score[COLOR_WHITE],
            position->info->middle_game_score[COLOR_BLACK]);
     printf("End game score (white -- black):    %d -- %d\n", position->info->end_game_score[COLOR_WHITE],
-           position->info->middle_game_score[COLOR_BLACK]);
+           position->info->end_game_score[COLOR_BLACK]);
     printf("Game phase:                         %d\n", position->info->game_phase);
     putchar('\n');
 

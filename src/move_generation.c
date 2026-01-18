@@ -590,8 +590,7 @@ static INLINE bool is_legal_pinned_move(const struct Position* position, const M
         != EMPTY_BITBOARD;
 }
 
-// Returns whether a pseudolegal en passant capture `move` is legal.
-static bool is_legal_en_passant(const struct Position* position, const Move move) {
+bool is_legal_en_passant(const struct Position* position, const Move move) {
     assert(position != nullptr);
     assert(!is_weird_move(move));
     assert(type_of_move(move) == MOVE_TYPE_EN_PASSANT);

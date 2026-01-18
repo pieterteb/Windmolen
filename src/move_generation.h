@@ -10,6 +10,10 @@
 
 
 
+// Returns whether a pseudolegal en passant capture `move` is legal.
+bool is_legal_en_passant(const struct Position* position, const Move move);
+
+
 // Generates all legal captrues in `position` to `capture_list` and returns the number of legal captures found.
 size_t generate_legal_captures(const struct Position* position, Move capture_list[static MAX_MOVES]);
 

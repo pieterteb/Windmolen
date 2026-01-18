@@ -11,6 +11,7 @@
 #include "bitboard.h"
 #include "board.h"
 #include "move.h"
+#include "move_generation.h"
 #include "piece.h"
 #include "util.h"
 #include "zobrist.h"
@@ -199,34 +200,79 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
         new_info->halfmove_clock = 0;  // Irreversible move was played.
     }
 
+    // Update Zobrist key for moved piece.
+    zobrist_key ^= piece_zobrist_keys[piece][source];
+
+    // We update the board by moving the piece if not a castle move. Castling and en passant have been handled earlier.
+    // Zobrist keys will be updated after updating the board.
+    if (move_type != MOVE_TYPE_CASTLE) {
+        remove_piece(position, source);  // Remove the piece from the source square.
+
+        if (move_type == MOVE_TYPE_PROMOTION)
+            piece = create_piece(side_to_move, promotion_piece_type(move));  // Change piece in case of promotion.
+
+        if (captured_piece != PIECE_NONE && move_type != MOVE_TYPE_EN_PASSANT)
+            replace_piece(position, piece, destination);
+        else
+            place_piece(position, piece, destination);
+    }
+
+    // Update Zobrist key for moved piece which is potentially updated.
+    zobrist_key ^= piece_zobrist_keys[piece][destination];
+
+    // All bitboards have been updated at this point.
+    position->total_occupancy = piece_occupancy_by_color(position, COLOR_WHITE)
+                              | piece_occupancy_by_color(position, COLOR_BLACK);
+
+    new_info->checkers               = compute_checkers(position, opponent);
+    new_info->blockers[side_to_move] = compute_blockers(position, side_to_move);
+    new_info->blockers[opponent]     = compute_blockers(position, opponent);
+
+    // Update side to move.
+    position->side_to_move = opponent;
+
+
+    // The remaining Zobrist keys will be updated.
+
     // Reset the en passant square and update the Zobrist key.
     if (new_info->en_passant_square != SQUARE_NONE) {
         zobrist_key ^= en_passant_zobrist_keys[file_of_square(new_info->en_passant_square)];
         new_info->en_passant_square = SQUARE_NONE;
     }
 
-    // Update Zobrist key for moved piece.
-    zobrist_key ^= piece_zobrist_keys[piece][source];
-
     if (type_of_piece(piece) == PIECE_TYPE_PAWN) {
         // Clever trick to detect a double pawn push.
         if (((int)source ^ (int)destination) == 16) {
-            // Update en passant square.
-            new_info->en_passant_square = square_step(
-            source, (side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH);
-            zobrist_key ^= en_passant_zobrist_keys[file_of_square(new_info->en_passant_square)];
-        }
+            // Update en passant square only if it can result in a legal en passant capture. Otherwise, the position is
+            // not considered different from a position without the en passant square, so we must not update the Zobrist
+            // key to ensure correctness of threefold repetition detection.
 
-        if (move_type == MOVE_TYPE_PROMOTION)
-            piece = create_piece(side_to_move, promotion_piece_type(move));  // Change piece in case of promotion.
+            const enum Square en_passant_square = square_step(
+            source, (side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH);
+
+            Bitboard en_passant_attackers = piece_occupancy(position, opponent, PIECE_TYPE_PAWN)
+                                          & piece_base_attacks(pawn_type_from_color(side_to_move), en_passant_square);
+
+            while (en_passant_attackers != EMPTY_BITBOARD) {
+                const Move potential_capture = new_move((enum Square)pop_lsb64(&en_passant_attackers),
+                                                        en_passant_square, MOVE_TYPE_EN_PASSANT);
+
+                if (is_legal_en_passant(position, potential_capture)) {
+                    // A legal en passant capture exists so we update the en passant square.
+
+                    new_info->en_passant_square = en_passant_square;
+                    zobrist_key ^= en_passant_zobrist_keys[file_of_square(en_passant_square)];
+
+                    break;
+                }
+            }
+        }
 
         new_info->halfmove_clock = 0;  // Irreversible move was played.
     } else if (type_of_piece(piece) == PIECE_TYPE_KING) {
         // Update the king square.
         position->king_square[side_to_move] = destination;
     }
-
-    zobrist_key ^= piece_zobrist_keys[piece][destination];
 
     // clang-format off
     static const enum CastlingRights castling_rights_mask[SQUARE_COUNT] = {
@@ -247,28 +293,8 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
         zobrist_key ^= castle_zobrist_keys[new_info->castling_rights];
     }
 
-    // We move the piece if not a castle move. Castling and en passant have been handled earlier. Zobrist keys have
-    // already been updated.
-    if (move_type != MOVE_TYPE_CASTLE) {
-        remove_piece(position, source);  // Remove the piece from the source square.
-
-        if (captured_piece != PIECE_NONE && move_type != MOVE_TYPE_EN_PASSANT)
-            replace_piece(position, piece, destination);
-        else
-            place_piece(position, piece, destination);
-    }
-
-    // All bitboards have been updated at this point.
-    position->total_occupancy = piece_occupancy_by_color(position, COLOR_WHITE)
-                              | piece_occupancy_by_color(position, COLOR_BLACK);
-
-    new_info->checkers               = compute_checkers(position, opponent);
-    new_info->blockers[side_to_move] = compute_blockers(position, side_to_move);
-    new_info->blockers[opponent]     = compute_blockers(position, opponent);
-
-    // Update side to move and new Zobrist key.
-    position->side_to_move = opponent;
-    new_info->zobrist_key  = zobrist_key;
+    // Update the position Zobrist key.
+    new_info->zobrist_key = zobrist_key;
 
     // At this point, the Zobrist key has been calculated so we can update repetition.
     new_info->repetition = compute_repetition(position);
@@ -593,7 +619,7 @@ void print_position_debug(const struct Position* position) {
                           ? position->info->halfmove_clock
                           : position->plies_since_start);
 
-    size_t game_ply           = position->fullmove_counter * 2 + position->side_to_move;
+    size_t game_ply           = (position->fullmove_counter - 1) * 2 + position->side_to_move;
     struct PositionInfo* info = position->info;
     for (size_t i = 0; i <= count; ++i) {
         printf("%8zu | 0x%016" PRIx64 " | %24zu\n", game_ply, info->zobrist_key,

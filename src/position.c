@@ -584,6 +584,23 @@ void print_position_debug(const struct Position* position) {
     putchar('\n');
 
     printf("Repetition:                         %d\n", position->info->repetition);
+    putchar('\n');
+
+    printf("Game Ply |    Zobrist Hash    | Last Repetition Game Ply\n");
+    printf("---------+--------------------+-------------------------\n");
+
+    const size_t count = ((position->info->halfmove_clock < position->plies_since_start)
+                          ? position->info->halfmove_clock
+                          : position->plies_since_start);
+
+    size_t game_ply           = position->fullmove_counter * 2 + position->side_to_move;
+    struct PositionInfo* info = position->info;
+    for (size_t i = 0; i <= count; ++i) {
+        printf("%8zu | 0x%016" PRIx64 " | %24zu\n", game_ply, info->zobrist_key,
+               game_ply - (size_t)abs(info->repetition));
+        --game_ply;
+        info = info->previous_info;
+    }
 }
 
 #endif /* #ifndef NDEBUG */

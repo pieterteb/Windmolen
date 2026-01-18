@@ -179,10 +179,9 @@ static void handle_position(struct Engine* engine) {
         while (argument != nullptr) {
             const Move move = parse_move(&engine->position, argument);
 
-            if (is_irreversible(&engine->position, move))
-                engine->info_history_count = 0;
-
             do_move(&engine->position, &engine->info_history[engine->info_history_count++], move);
+            engine->info_history_count %= HALFMOVE_CLOCK_LIMIT;
+
             argument = strtok(nullptr, DELIMETERS);
         }
     }

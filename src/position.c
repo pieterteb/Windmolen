@@ -566,3 +566,24 @@ void print_position(const struct Position* position) {
     print_fen(position);
     printf("\nZobrist Hash: 0x%016" PRIx64 "\n", position->info->zobrist_key);
 }
+
+
+#ifndef NDEBUG
+
+void print_position_debug(const struct Position* position) {
+    assert(position != nullptr);
+
+    print_position(position);
+    putchar('\n');
+
+    printf("Middle game score (white -- black): %d -- %d\n", position->info->middle_game_score[COLOR_WHITE],
+           position->info->middle_game_score[COLOR_BLACK]);
+    printf("End game score (white -- black):    %d -- %d\n", position->info->end_game_score[COLOR_WHITE],
+           position->info->middle_game_score[COLOR_BLACK]);
+    printf("Game phase:                         %d\n", position->info->game_phase);
+    putchar('\n');
+
+    printf("Repetition:                         %d\n", position->info->repetition);
+}
+
+#endif /* #ifndef NDEBUG */

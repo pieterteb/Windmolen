@@ -232,7 +232,7 @@ extern void initialize_bitboards();
 
 
 // Prints `bitboard` in a human readable format to `stdout`. Useful for debugging.
-[[maybe_unused]] void print_bitboard(const Bitboard bitboard);
+__attribute__((unused)) void print_bitboard(const Bitboard bitboard);
 
 
 

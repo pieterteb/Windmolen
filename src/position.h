@@ -450,5 +450,13 @@ void print_fen(const struct Position* position);
 void print_position(const struct Position* position);
 
 
+#ifndef NDEBUG
+
+// Prints detailed description of `position` to `stdout`. Useful for debugging purposes.
+void print_position_debug(const struct Position* position);
+
+#endif /* #ifndef NDEBUG */
+
+
 
 #endif /* #ifndef WINDMOLEN_POSITION_H_ */

@@ -1403,7 +1403,7 @@ static void initialize_rook_magics() {
 }
 
 
-[[maybe_unused]] void print_bitboard(const Bitboard bitboard) {
+__attribute__((unused)) void print_bitboard(const Bitboard bitboard) {
     puts("+---+---+---+---+---+---+---+---+");
 
     for (enum Rank rank = RANK_8; rank < RANK_COUNT; --rank) {

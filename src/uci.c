@@ -277,6 +277,10 @@ static void handle_go(struct Engine* engine) {
                 printf("\nNodes searched: %zu\n", nodes_searched);
             } else if (strcmp(argument, "print") == 0) {
                 print_position(&engine->position);
+#ifndef NDEBUG
+            } else if (strcmp(argument, "print_debug") == 0) {
+                print_position_debug(&engine->position);
+#endif /* #ifndef NDEBUG */
             } else if (strcmp(argument, "fen") == 0) {
                 print_fen(&engine->position);
                 putchar('\n');

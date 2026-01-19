@@ -11,7 +11,6 @@
 #include "bitboard.h"
 #include "board.h"
 #include "move.h"
-#include "move_generation.h"
 #include "piece.h"
 #include "util.h"
 #include "zobrist.h"

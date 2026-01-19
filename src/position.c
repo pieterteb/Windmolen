@@ -614,16 +614,17 @@ void print_position_debug(const struct Position* position) {
     printf("Game Ply |    Zobrist Hash    | Last Repetition Game Ply\n");
     printf("---------+--------------------+-------------------------\n");
 
-    const size_t count = ((position->info->halfmove_clock < position->plies_since_start)
-                          ? position->info->halfmove_clock
-                          : position->plies_since_start);
+    const size_t reversible_move_count = (position->info->halfmove_clock < position->plies_since_start)
+                                       ? position->info->halfmove_clock
+                                       : position->plies_since_start;
+    size_t game_ply                    = (position->fullmove_counter - 1) * 2 + position->side_to_move;
 
-    size_t game_ply           = (position->fullmove_counter - 1) * 2 + position->side_to_move;
     struct PositionInfo* info = position->info;
-    for (size_t i = 0; i <= count; ++i) {
+    for (size_t i = 0; i <= reversible_move_count; ++i) {
         printf("%8zu | 0x%016" PRIx64 " | %24zu\n", game_ply, info->zobrist_key,
                game_ply - (size_t)abs(info->repetition));
         --game_ply;
+
         info = info->previous_info;
     }
 }

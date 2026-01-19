@@ -289,10 +289,10 @@ void perform_search(struct Searcher* searcher) {
                             || searcher->thread_pool->search_arguments->infinite_search;
     while (!atomic_load(&searcher->thread_pool->stop_search) && stop_required) {}
 
-    // Other threads might still be stopping their search which can cause and incorrect results in
-    // uci_best_move(). Therefore, we wait until all threads except for the main thread (as the main thread is right
-    // here) finished searching.
-    wait_until_finished_searching(searcher->thread_pool, false);
+    // Other threads might still be stopping their search which can cause incorrect results in uci_best_move().
+    // Therefore, we wait until all threads except for the main thread (as the main thread is right here) finished
+    // searching.
+    wait_until_finished_searching(searcher->thread_pool, /* Do not wait for main thread */ false);
 
     uci_best_move(best_move(best_searcher(searcher->thread_pool)));
 }

@@ -53,7 +53,8 @@ static INLINE const struct Thread* main_thread(const struct ThreadPool* thread_p
 }
 
 
-// Waits until all threads in `thread_pool` are done searching and in an idle loop.
+// Waits until all threads in `thread_pool` are done searching and in an idle loop. If `wait_for_main_thread` is
+// `false`, we do not wait for the main thread.
 void wait_until_finished_searching(struct ThreadPool* thread_pool, const bool wait_for_main_thread);
 
 // Resize `thread_pool` to consist of `thread_count` different threads.

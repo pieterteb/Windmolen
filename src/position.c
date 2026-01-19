@@ -199,16 +199,14 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
         new_info->halfmove_clock = 0;  // Irreversible move was played.
     }
 
-    // Update Zobrist key for moved piece.
-    zobrist_key ^= piece_zobrist_keys[piece][source];
-
-    // The remaining Zobrist keys will be updated.
-
     // Reset the en passant square and update the Zobrist key.
     if (new_info->en_passant_square != SQUARE_NONE) {
         zobrist_key ^= en_passant_zobrist_keys[file_of_square(new_info->en_passant_square)];
         new_info->en_passant_square = SQUARE_NONE;
     }
+
+    // Update Zobrist key for moved piece.
+    zobrist_key ^= piece_zobrist_keys[piece][source];
 
     if (type_of_piece(piece) == PIECE_TYPE_PAWN) {
         // Clever trick to detect a double pawn push.
@@ -249,7 +247,6 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
 
         new_info->halfmove_clock = 0;  // Irreversible move was played.
     } else if (type_of_piece(piece) == PIECE_TYPE_KING) {
-        // Update the king square.
         position->king_square[side_to_move] = destination;
     }
 

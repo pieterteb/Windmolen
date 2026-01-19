@@ -203,35 +203,6 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
     // Update Zobrist key for moved piece.
     zobrist_key ^= piece_zobrist_keys[piece][source];
 
-    // We update the board by moving the piece if not a castle move. Castling and en passant have been handled earlier.
-    // Zobrist keys will be updated after updating the board.
-    if (move_type != MOVE_TYPE_CASTLE) {
-        remove_piece(position, source);  // Remove the piece from the source square.
-
-        if (move_type == MOVE_TYPE_PROMOTION)
-            piece = create_piece(side_to_move, promotion_piece_type(move));  // Change piece in case of promotion.
-
-        if (captured_piece != PIECE_NONE && move_type != MOVE_TYPE_EN_PASSANT)
-            replace_piece(position, piece, destination);
-        else
-            place_piece(position, piece, destination);
-    }
-
-    // Update Zobrist key for moved piece which is potentially updated.
-    zobrist_key ^= piece_zobrist_keys[piece][destination];
-
-    // All bitboards have been updated at this point.
-    position->total_occupancy = piece_occupancy_by_color(position, COLOR_WHITE)
-                              | piece_occupancy_by_color(position, COLOR_BLACK);
-
-    new_info->checkers               = compute_checkers(position, opponent);
-    new_info->blockers[side_to_move] = compute_blockers(position, side_to_move);
-    new_info->blockers[opponent]     = compute_blockers(position, opponent);
-
-    // Update side to move.
-    position->side_to_move = opponent;
-
-
     // The remaining Zobrist keys will be updated.
 
     // Reset the en passant square and update the Zobrist key.
@@ -253,19 +224,28 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
             Bitboard en_passant_attackers = piece_occupancy(position, opponent, PIECE_TYPE_PAWN)
                                           & piece_base_attacks(pawn_type_from_color(side_to_move), en_passant_square);
 
-            while (en_passant_attackers != EMPTY_BITBOARD) {
-                const Move potential_capture = new_move((enum Square)pop_lsb64(&en_passant_attackers),
-                                                        en_passant_square, MOVE_TYPE_EN_PASSANT);
+            if (en_passant_attackers != EMPTY_BITBOARD) {
+                // We do not have a discovered check if the pawn is a not a blocker or the pawn is on the same file as
+                // the opponent king.
+                const bool not_discovered_check = (square_bitboard(source)
+                                                   & position->info->previous_info->blockers[opponent])
+                                               == EMPTY_BITBOARD
+                                               || file_of_square(source)
+                                                  == file_of_square(king_square(position, opponent));
 
-                if (is_legal_en_passant(position, potential_capture)) {
-                    // A legal en passant capture exists so we update the en passant square.
-
-                    new_info->en_passant_square = en_passant_square;
-                    zobrist_key ^= en_passant_zobrist_keys[file_of_square(en_passant_square)];
-
-                    break;
+                if (not_discovered_check) {
+                    // In this case, the pawn push is not a discovery, so we check whether at least one attacker is not
+                    // a blocker blockers or at least one attacker moves into the direction of the opponent king.
+                    if ((en_passant_attackers & ~position->info->previous_info->blockers[opponent]) != EMPTY_BITBOARD
+                        || (line_bitboard(en_passant_square, king_square(position, opponent)) & en_passant_attackers)
+                           != EMPTY_BITBOARD) {
+                        new_info->en_passant_square = en_passant_square;
+                        zobrist_key ^= en_passant_zobrist_keys[file_of_square(en_passant_square)];
+                    }
                 }
             }
+        } else if (move_type == MOVE_TYPE_PROMOTION) {
+            piece = create_piece(side_to_move, promotion_piece_type(move));  // Change piece in case of promotion.
         }
 
         new_info->halfmove_clock = 0;  // Irreversible move was played.
@@ -273,6 +253,9 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
         // Update the king square.
         position->king_square[side_to_move] = destination;
     }
+
+    // Update Zobrist key for moved piece which is potentially updated.
+    zobrist_key ^= piece_zobrist_keys[piece][destination];
 
     // clang-format off
     static const enum CastlingRights castling_rights_mask[SQUARE_COUNT] = {
@@ -292,6 +275,27 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
         new_info->castling_rights &= ~(castling_rights_mask[source] | castling_rights_mask[destination]);
         zobrist_key ^= castle_zobrist_keys[new_info->castling_rights];
     }
+
+    // We update the board by moving the piece if not a castle move. Castling and en passant have been handled earlier.
+    if (move_type != MOVE_TYPE_CASTLE) {
+        remove_piece(position, source);  // Remove the piece from the source square.
+
+        if (captured_piece != PIECE_NONE && move_type != MOVE_TYPE_EN_PASSANT)
+            replace_piece(position, piece, destination);
+        else
+            place_piece(position, piece, destination);
+    }
+
+    // All bitboards have been updated at this point.
+    position->total_occupancy = piece_occupancy_by_color(position, COLOR_WHITE)
+                              | piece_occupancy_by_color(position, COLOR_BLACK);
+
+    new_info->checkers               = compute_checkers(position, opponent);
+    new_info->blockers[side_to_move] = compute_blockers(position, side_to_move);
+    new_info->blockers[opponent]     = compute_blockers(position, opponent);
+
+    // Update side to move.
+    position->side_to_move = opponent;
 
     // Update the position Zobrist key.
     new_info->zobrist_key = zobrist_key;

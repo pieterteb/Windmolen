@@ -73,6 +73,15 @@ static INLINE enum File file_of_square(const enum Square square) {
     return square & 7;  // Fast modulo 8.
 }
 
+// Returns whether `square1` and `square2` lie on the same file, assuming both squares are valid.
+static INLINE bool same_file(const enum Square square1, const enum Square square2) {
+    assert(is_valid_square(square1));
+    assert(is_valid_square(square2));
+
+    // The squares lie on the same file if and only if their last 3 digits are identical.
+    return ((square1 ^ square2) & 7) == 0;
+}
+
 // Returns the file corresponding to `c` (lowercase), assuming `c` is one of a,b,...,h.
 static INLINE enum File char_to_file(const char c) {
     assert(c >= 'a' && c <= 'h');

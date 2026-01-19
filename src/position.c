@@ -227,8 +227,7 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
                 const bool not_discovered_check = (square_bitboard(source)
                                                    & position->info->previous_info->blockers[opponent])
                                                == EMPTY_BITBOARD
-                                               || file_of_square(source)
-                                                  == file_of_square(king_square(position, opponent));
+                                               || same_file(source, king_square(position, opponent));
 
                 if (not_discovered_check) {
                     // In this case, the pawn push is not a discovery, so we check whether at least one attacker is not

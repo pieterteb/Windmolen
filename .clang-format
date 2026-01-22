@@ -8,11 +8,11 @@ AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
-# BinPackLongBracedList: true # clang-format 21+
+BinPackLongBracedList: true # clang-format 21+
 BreakBeforeBinaryOperators: NonAssignment
 ColumnLimit: 120
 ContinuationIndentWidth: 0
-# EnumTrailingComma: Remove # clang-format 21+
+EnumTrailingComma: Remove # clang-format 21+
 IncludeBlocks: Preserve
 IndentGotoLabels: false
 IndentPPDirectives: AfterHash

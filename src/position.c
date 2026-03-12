@@ -218,11 +218,12 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
             const enum Square en_passant_square = square_step(
             source, (side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH);
 
-            Bitboard en_passant_attackers = piece_occupancy(position, opponent, PIECE_TYPE_PAWN)
-                                          & piece_base_attacks(pawn_type_from_color(side_to_move), en_passant_square);
+            const Bitboard en_passant_attackers = piece_occupancy(position, opponent, PIECE_TYPE_PAWN)
+                                                & piece_base_attacks(pawn_type_from_color(side_to_move),
+                                                                     en_passant_square);
 
             if (en_passant_attackers != EMPTY_BITBOARD) {
-                // We do not have a discovered check if the pawn is a not a blocker or the pawn is on the same file as
+                // We do not have a discovered check if the pawn is not a blocker or the pawn is on the same file as
                 // the opponent king.
                 const bool not_discovered_check = (square_bitboard(source)
                                                    & position->info->previous_info->blockers[opponent])
@@ -231,7 +232,7 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
 
                 if (not_discovered_check) {
                     // In this case, the pawn push is not a discovery, so we check whether at least one attacker is not
-                    // a blocker blockers or at least one attacker moves into the direction of the opponent king.
+                    // a blocker or at least one attacker moves into the direction of the opponent king.
                     if ((en_passant_attackers & ~position->info->previous_info->blockers[opponent]) != EMPTY_BITBOARD
                         || (line_bitboard(en_passant_square, king_square(position, opponent)) & en_passant_attackers)
                            != EMPTY_BITBOARD) {

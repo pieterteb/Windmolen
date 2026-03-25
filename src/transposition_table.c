@@ -19,7 +19,7 @@ struct TTEntry* tt_init(struct TTEntry* tt, size_t* tt_size, const size_t mb_siz
     while ((new_size << 1) <= entry_count)
         new_size <<= 1;
 
-    if (tt)
+    if (tt != nullptr)
         free(tt);
 
     *tt_size = new_size;

@@ -52,7 +52,7 @@ void initialize_engine(struct Engine* engine) {
     // Initialize transposition table.
     engine->thread_pool.tt      = nullptr;
     engine->thread_pool.tt_size = 0;
-    tt_init(engine->thread_pool.tt, &engine->thread_pool.tt_size, engine->options.hash_size);
+    engine->thread_pool.tt = tt_init(engine->thread_pool.tt, &engine->thread_pool.tt_size, engine->options.hash_size);
 
     // We default to the regular start position of chess.
     engine->info_history_count = 0;
@@ -78,5 +78,5 @@ void quit_engine(struct Engine* engine) {
     stop_search(engine);
 
     destroy_thread_pool(&engine->thread_pool);
-    tt_destroy(engine->thread_pool.transposition_table);
+    tt_destroy(engine->thread_pool.tt);
 }

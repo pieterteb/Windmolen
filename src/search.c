@@ -106,10 +106,22 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
     Value value;
     Move tt_best_move = NULL_MOVE;
 
+    // Reset principal variation length for this depth.
+    searcher->principal_variation_length[ply] = 0;
+
     // TODO: mate score tt storing.
     if (tt_probe(tt, tt_size, key, depth, alpha, beta, &value, &tt_best_move)) {
         if (!is_mate_value(value))
             return value;
+
+        // Update the current principal variation. This is the new best move followed by the principal variation of
+        // that best move. Notice that principle_variation_table[ply + 1] was already computed in the alphabeta call
+        // above, so this works recursively and is well defined.
+        searcher->principal_variation_table[ply][0] = tt_best_move;
+        memcpy(&searcher->principal_variation_table[ply][1], &searcher->principal_variation_table[ply + 1][0],
+               searcher->principal_variation_length[ply + 1] * sizeof(Move));
+
+        searcher->principal_variation_length[ply] = searcher->principal_variation_length[ply + 1] + 1;
     }
 
     atomic_fetch_add(&searcher->nodes_searched, 1);
@@ -122,9 +134,6 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
 
     Move move_list[MAX_MOVES];
     const size_t move_count = generate_legal_moves(position, move_list);
-
-    // Reset principal variation length for this depth.
-    searcher->principal_variation_length[ply] = 0;
 
     // If there are no moves, we are mated or its stalemate.
     if (move_count == 0) {
@@ -159,7 +168,8 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
         if (value > best_value) {
             // Cut node, beta cutoff.
             if (value >= beta) {
-                tt_store(tt, tt_size, key, depth, value, TT_VALUE_LOWERBOUND, move);
+                if (!is_mate_value(best_value))
+                    tt_store(tt, tt_size, key, depth, value, TT_VALUE_LOWERBOUND, move);
                 return value;
             }
 

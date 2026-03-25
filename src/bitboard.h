@@ -169,6 +169,31 @@ static INLINE Bitboard shift_bitboard_northwest(const Bitboard bitboard) {
     return (bitboard & ~FILE_A_BITBOARD) << 7;
 }
 
+// Shifts `bitboard` in `direction`.
+static INLINE Bitboard shift_bitboard(const Bitboard bitboard, const enum Direction direction) {
+    switch (direction) {
+        case DIRECTION_NORTH:
+            return shift_bitboard_north(bitboard);
+        case DIRECTION_SOUTH:
+            return shift_bitboard_south(bitboard);
+        case DIRECTION_EAST:
+            return shift_bitboard_east(bitboard);
+        case DIRECTION_WEST:
+            return shift_bitboard_west(bitboard);
+        case DIRECTION_NORTHEAST:
+            return shift_bitboard_northeast(bitboard);
+        case DIRECTION_NORTHWEST:
+            return shift_bitboard_northwest(bitboard);
+        case DIRECTION_SOUTHEAST:
+            return shift_bitboard_southeast(bitboard);
+        case DIRECTION_SOUTHWEST:
+            return shift_bitboard_southwest(bitboard);
+        default:
+            assert(false);
+            return EMPTY_BITBOARD;
+    }
+}
+
 
 struct Magic {
     Bitboard* attack_table;

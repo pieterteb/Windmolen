@@ -211,21 +211,46 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
     if (type_of_piece(piece) == PIECE_TYPE_PAWN) {
         // Clever trick to detect a double pawn push.
         if (((int)source ^ (int)destination) == 16) {
-            // Update en passant square.
-            new_info->en_passant_square = square_step(
-            source, (side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH);
-            zobrist_key ^= en_passant_zobrist_keys[file_of_square(new_info->en_passant_square)];
-        }
+            // Update en passant square only if it can result in a legal en passant capture. Otherwise, the position is
+            // not considered different from a position without the en passant square, so we must not update the Zobrist
+            // key to ensure correctness of threefold repetition detection.
 
-        if (move_type == MOVE_TYPE_PROMOTION)
+            const enum Square en_passant_square = square_step(
+            source, (side_to_move == COLOR_WHITE) ? DIRECTION_NORTH : DIRECTION_SOUTH);
+
+            const Bitboard en_passant_attackers = piece_occupancy(position, opponent, PIECE_TYPE_PAWN)
+                                                & piece_base_attacks(pawn_type_from_color(side_to_move),
+                                                                     en_passant_square);
+
+            if (en_passant_attackers != EMPTY_BITBOARD) {
+                // We do not have a discovered check if the pawn is not a blocker or the pawn is on the same file as
+                // the opponent king.
+                const bool not_discovered_check = (square_bitboard(source)
+                                                   & position->info->previous_info->blockers[opponent])
+                                               == EMPTY_BITBOARD
+                                               || same_file(source, king_square(position, opponent));
+
+                if (not_discovered_check) {
+                    // In this case, the pawn push is not a discovery, so we check whether at least one attacker is not
+                    // a blocker or at least one attacker moves into the direction of the opponent king.
+                    if ((en_passant_attackers & ~position->info->previous_info->blockers[opponent]) != EMPTY_BITBOARD
+                        || (line_bitboard(en_passant_square, king_square(position, opponent)) & en_passant_attackers)
+                           != EMPTY_BITBOARD) {
+                        new_info->en_passant_square = en_passant_square;
+                        zobrist_key ^= en_passant_zobrist_keys[file_of_square(en_passant_square)];
+                    }
+                }
+            }
+        } else if (move_type == MOVE_TYPE_PROMOTION) {
             piece = create_piece(side_to_move, promotion_piece_type(move));  // Change piece in case of promotion.
+        }
 
         new_info->halfmove_clock = 0;  // Irreversible move was played.
     } else if (type_of_piece(piece) == PIECE_TYPE_KING) {
-        // Update the king square.
         position->king_square[side_to_move] = destination;
     }
 
+    // Update Zobrist key for moved piece which is potentially updated.
     zobrist_key ^= piece_zobrist_keys[piece][destination];
 
     // clang-format off
@@ -247,8 +272,7 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
         zobrist_key ^= castle_zobrist_keys[new_info->castling_rights];
     }
 
-    // We move the piece if not a castle move. Castling and en passant have been handled earlier. Zobrist keys have
-    // already been updated.
+    // We update the board by moving the piece if not a castle move. Castling and en passant have been handled earlier.
     if (move_type != MOVE_TYPE_CASTLE) {
         remove_piece(position, source);  // Remove the piece from the source square.
 
@@ -266,9 +290,11 @@ void do_move(struct Position* position, struct PositionInfo* new_info, const Mov
     new_info->blockers[side_to_move] = compute_blockers(position, side_to_move);
     new_info->blockers[opponent]     = compute_blockers(position, opponent);
 
-    // Update side to move and new Zobrist key.
+    // Update side to move.
     position->side_to_move = opponent;
-    new_info->zobrist_key  = zobrist_key;
+
+    // Update the position Zobrist key.
+    new_info->zobrist_key = zobrist_key;
 
     // At this point, the Zobrist key has been calculated so we can update repetition.
     new_info->repetition = compute_repetition(position);
@@ -589,16 +615,17 @@ void print_position_debug(const struct Position* position) {
     printf("Game Ply |    Zobrist Hash    | Last Repetition Game Ply\n");
     printf("---------+--------------------+-------------------------\n");
 
-    const size_t count = ((position->info->halfmove_clock < position->plies_since_start)
-                          ? position->info->halfmove_clock
-                          : position->plies_since_start);
+    const size_t reversible_move_count = (position->info->halfmove_clock < position->plies_since_start)
+                                       ? position->info->halfmove_clock
+                                       : position->plies_since_start;
+    size_t game_ply                    = (position->fullmove_counter - 1) * 2 + position->side_to_move;
 
-    size_t game_ply           = position->fullmove_counter * 2 + position->side_to_move;
     struct PositionInfo* info = position->info;
-    for (size_t i = 0; i <= count; ++i) {
+    for (size_t i = 0; i <= reversible_move_count; ++i) {
         printf("%8zu | 0x%016" PRIx64 " | %24zu\n", game_ply, info->zobrist_key,
                game_ply - (size_t)abs(info->repetition));
         --game_ply;
+
         info = info->previous_info;
     }
 }

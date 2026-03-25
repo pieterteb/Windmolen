@@ -14,6 +14,7 @@
 #include "position.h"
 #include "thread.h"
 #include "time_manager.h"
+#include "transposition_table.h"
 #include "uci.h"
 #include "util.h"
 
@@ -97,6 +98,17 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
     assert(position != nullptr);
     assert(alpha <= beta);
 
+    struct TTEntry* tt   = searcher->thread_pool->tt;
+    const size_t tt_size = searcher->thread_pool->tt_size;
+
+    const ZobristKey key = position->info->zobrist_key;
+
+    Value value;
+    Move tt_best_move = NULL_MOVE;
+
+    if (tt_probe(tt, tt_size, key, depth, alpha, beta, &value, &tt_best_move))
+        return value;
+
     atomic_fetch_add(&searcher->nodes_searched, 1);
 
     if (depth == 0)
@@ -126,23 +138,30 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
     compute_mvv_lva_values(position, move_list, move_count, move_values);
 
     Value best_value = MIN_VALUE;
+    Move best_move   = NULL_MOVE;
+
+    const Value original_alpha = alpha;
 
     struct PositionInfo info;
+
     for (size_t i = 0; i < move_count; ++i) {
         const Move move = pick_move(move_list, move_values, move_count, i);
 
         do_move(position, &info, move);
 
-        const Value value = -alphabeta(searcher, position, -beta, -alpha, depth - 1, ply + 1);
+        value = -alphabeta(searcher, position, -beta, -alpha, depth - 1, ply + 1);
 
         undo_move(position, move);
 
         if (value > best_value) {
-            // Cut node.
-            if (value >= beta)
+            // Cut node, beta cutoff.
+            if (value >= beta) {
+                tt_store(tt, tt_size, key, depth, value, TT_VALUE_LOWERBOUND, move);
                 return value;
+            }
 
             best_value = value;
+            best_move  = move;
 
             if (value > alpha)
                 alpha = value;
@@ -153,6 +172,7 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
             searcher->principal_variation_table[ply][0] = move;
             memcpy(&searcher->principal_variation_table[ply][1], &searcher->principal_variation_table[ply + 1][0],
                    searcher->principal_variation_length[ply + 1] * sizeof(Move));
+
             searcher->principal_variation_length[ply] = searcher->principal_variation_length[ply + 1] + 1;
         }
 
@@ -161,6 +181,22 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
                 atomic_store(&searcher->thread_pool->search_aborted, true);
             break;
         }
+    }
+
+
+    // TODO: mate score tt storing.
+    // Do not store mate scores for now as they depend on ply and thus need special treatment.
+    if (!is_mate_value(best_value)) {
+        // Store transposition table entry.
+        uint8_t flag;
+        if (best_value <= original_alpha) {
+            flag = TT_VALUE_UPPERBOUND;
+        } else {
+            flag = TT_VALUE_EXACT;
+        }
+        // The lowerbound case was already dealt with inside the movelist loop.
+
+        tt_store(tt, tt_size, key, depth, best_value, flag, best_move);
     }
 
     return best_value;

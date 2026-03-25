@@ -9,6 +9,7 @@
 #include "position.h"
 #include "thread.h"
 #include "time_manager.h"
+#include "transposition_table.h"
 
 
 
@@ -48,6 +49,11 @@ void initialize_engine(struct Engine* engine) {
     engine->thread_pool.threads      = nullptr;
     resize_thread_pool(&engine->thread_pool, engine->options.thread_count);
 
+    // Initialize transposition table.
+    engine->thread_pool.tt      = nullptr;
+    engine->thread_pool.tt_size = 0;
+    tt_init(engine->thread_pool.tt, &engine->thread_pool.tt_size, engine->options.hash_size);
+
     // We default to the regular start position of chess.
     engine->info_history_count = 0;
     setup_start_position(&engine->position, &engine->info_history[engine->info_history_count]);
@@ -72,4 +78,5 @@ void quit_engine(struct Engine* engine) {
     stop_search(engine);
 
     destroy_thread_pool(&engine->thread_pool);
+    tt_destroy(engine->thread_pool.transposition_table);
 }

@@ -25,9 +25,9 @@ static constexpr size_t OPTION_THREAD_COUNT_MAX           = 1024;
 
 static constexpr const char OPTION_HASH_SIZE_NAME[]    = "Hash";
 static constexpr enum OptionType OPTION_HASH_SIZE_TYPE = OPTION_TYPE_SPIN;
-static constexpr uint64_t OPTION_HASH_SIZE_DEFAULT     = 1;
+static constexpr uint64_t OPTION_HASH_SIZE_DEFAULT     = 16;
 static constexpr uint64_t OPTION_HASH_SIZE_MIN         = 1;
-static constexpr uint64_t OPTION_HASH_SIZE_MAX         = 1;
+static constexpr uint64_t OPTION_HASH_SIZE_MAX         = UINT64_MAX / 1024 / 1024;
 
 static constexpr const char OPTION_CLEAR_HASH_NAME[]    = "Clear Hash";
 static constexpr enum OptionType OPTION_CLEAR_HASH_TYPE = OPTION_TYPE_BUTTON;

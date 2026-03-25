@@ -12,6 +12,7 @@
 #include "position.h"
 #include "search.h"
 #include "time_manager.h"
+#include "transposition_table.h"
 #include "util.h"
 
 
@@ -40,6 +41,9 @@ struct ThreadPool {
 
     struct TimeManager* time_manager;
     struct SearchArguments* search_arguments;
+
+    struct TTEntry* tt;
+    size_t tt_size;
 
     _Atomic(bool) stop_search;
     _Atomic(bool) search_aborted;

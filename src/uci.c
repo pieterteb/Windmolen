@@ -135,8 +135,6 @@ static void handle_setoption(struct Engine* engine) {
         resize_thread_pool(&engine->thread_pool, engine->options.thread_count);
     } else if (strcmp(option_name, OPTION_HASH_SIZE_NAME) == 0) {
         engine->options.hash_size = (uint64_t)strtoull(strtok(nullptr, DELIMETERS), nullptr, 10);
-        engine->thread_pool.tt    = tt_init(engine->thread_pool.tt, &engine->thread_pool.tt_size,
-                                            engine->options.hash_size);
     } else if (strcmp(option_name, OPTION_CLEAR_HASH_NAME) == 0) {
         tt_reset(engine->thread_pool.tt, engine->thread_pool.tt_size);
     } else if (strcmp(option_name, OPTION_PONDER_MODE_NAME) == 0) {
@@ -333,7 +331,8 @@ void uci_loop(struct Engine* engine) {
             setup_start_position(&engine->position, &engine->info_history[engine->info_history_count++]);
 
             // Reset transposition table.
-            tt_reset(engine->thread_pool.tt, engine->thread_pool.tt_size);
+            engine->thread_pool.tt = tt_init(engine->thread_pool.tt, &engine->thread_pool.tt_size,
+                                             engine->options.hash_size);
         } else if (strcmp(command, "setoption") == 0) {
             handle_setoption(engine);
         } else if (strcmp(command, "uci") == 0) {

@@ -106,8 +106,11 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
     Value value;
     Move tt_best_move = NULL_MOVE;
 
-    if (tt_probe(tt, tt_size, key, depth, alpha, beta, &value, &tt_best_move))
-        return value;
+    // TODO: mate score tt storing.
+    if (tt_probe(tt, tt_size, key, depth, alpha, beta, &value, &tt_best_move)) {
+        if (!is_mate_value(value))
+            return value;
+    }
 
     atomic_fetch_add(&searcher->nodes_searched, 1);
 

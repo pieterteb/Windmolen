@@ -186,7 +186,7 @@ static Value alphabeta(struct Searcher* searcher, struct Position* position, Val
 
     // TODO: mate score tt storing.
     // Do not store mate scores for now as they depend on ply and thus need special treatment.
-    if (!is_mate_value(best_value)) {
+    if (!atomic_load(&searcher->thread_pool->stop_search) && !is_mate_value(best_value)) {
         // Store transposition table entry.
         uint8_t flag;
         if (best_value <= original_alpha) {
